@@ -4,10 +4,218 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String         @id @default(uuid())
+  name              String
+  email             String         @unique
+  password          String
+  phone             String?
+  avatar            String?
+  city              String?
+  roleId            String
+  isActive          Boolean        @default(true)
+  emailVerifiedAt   DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  role              Role           @relation(fields: [roleId], references: [id])
+  oauthProviders    OAuthProvider[]
+  passwordReset     PasswordResetToken?
+  subscriptions     Subscription[]
+  favorites         Favorite[]
+  jobListings       JobListing[]
+  jobApplications   JobApplication[]
+  jobAlerts         Alert[]        @relation("JobAlerts")
+  realEstateListings RealEstateListing[]
+  propertyInquiries PropertyInquiry[]
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  users       User[]
+}
+
+model OAuthProvider {
+  id         String   @id @default(uuid())
+  userId     String
+  provider   String
+  providerId String
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  token     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Plan {
+  id            String         @id @default(uuid())
+  name          String
+  price         Decimal
+  durationDays  Int
+  maxListings   Int
+  maxPhotos     Int
+  canBoost      Boolean        @default(false)
+  canSponsor    Boolean        @default(false)
+  hasBadge      Boolean        @default(false)
+  hasStatistics Boolean        @default(false)
+  hasChat       Boolean        @default(false)
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id        String   @id @default(uuid())
+  userId    String
+  planId    String
+  status    String
+  startedAt DateTime
+  expiresAt DateTime
+
+  user      User     @relation(fields: [userId], references: [id])
+  plan      Plan     @relation(fields: [planId], references: [id])
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  itemId    String
+  itemType  String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Category {
+  id              String          @id @default(uuid())
+  parentId        String?
+  name            String
+  slug            String          @unique
+  isActive        Boolean         @default(true)
+  parent          Category?       @relation("CategoryChildren", fields: [parentId], references: [id])
+  children        Category[]      @relation("CategoryChildren")
+  jobListings     JobListing[]
+  realEstateListings RealEstateListing[]
+}
+
+model JobListing {
+  id                  String           @id @default(uuid())
+  userId              String
+  categoryId          String
+  title               String
+  description         String
+  requirements        String?
+  companyName         String
+  location            String
+  latitude            Decimal?
+  longitude           Decimal?
+  type                String
+  salaryMin           Decimal?
+  salaryMax           Decimal?
+  salaryPeriod        String?
+  applicationDeadline DateTime?
+  isActive            Boolean          @default(true)
+  isFeatured          Boolean          @default(false)
+  isSponsored         Boolean          @default(false)
+  boostExpiresAt      DateTime?
+  viewsCount          Int              @default(0)
+  skills              Json?
+  images              Json?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  user                User             @relation(fields: [userId], references: [id])
+  category            Category         @relation(fields: [categoryId], references: [id])
+  applications        JobApplication[]
+}
+
+model JobApplication {
+  id            String    @id @default(uuid())
+  jobListingId  String
+  userId        String
+  coverLetter   String?
+  cvPath        String?
+  status        String    @default("pending")
+  employerNotes String?
+  reviewedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  jobListing    JobListing @relation(fields: [jobListingId], references: [id])
+  user          User       @relation(fields: [userId], references: [id])
+}
+
+model Alert {
+  id        String   @id @default(uuid())
+  userId    String
+  module    String
+  filters   Json
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  user      User     @relation("JobAlerts", fields: [userId], references: [id])
+}
+
+model RealEstateListing {
+  id            String            @id @default(uuid())
+  userId        String
+  categoryId    String
+  title         String
+  description   String
+  type          String
+  propertyType  String
+  price         Decimal
+  surface       Decimal?
+  rooms         Int?
+  bathrooms     Int?
+  floor         Int?
+  location      String
+  latitude      Decimal?
+  longitude     Decimal?
+  contactPhone  String?
+  images        Json?
+  features      Json?
+  status        String            @default("pending")
+  isActive      Boolean           @default(true)
+  isFeatured    Boolean           @default(false)
+  isSponsored   Boolean           @default(false)
+  boostExpiresAt DateTime?
+  viewsCount    Int               @default(0)
+  adminNotes    String?
+  reviewedAt    DateTime?
+  reviewedBy    String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  user          User              @relation(fields: [userId], references: [id])
+  category      Category          @relation(fields: [categoryId], references: [id])
+  inquiries     PropertyInquiry[]
+}
+
+model PropertyInquiry {
+  id          String            @id @default(uuid())
+  listingId   String
+  userId      String
+  message     String
+  contactPhone String?
+  status      String            @default("pending")
+  createdAt   DateTime          @default(now())
+
+  listing     RealEstateListing @relation(fields: [listingId], references: [id])
+  user        User              @relation(fields: [userId], references: [id])
 }

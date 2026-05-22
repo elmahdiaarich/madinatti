@@ -6,23 +6,23 @@ Plateforme locale multi-services type Madinatti.ma
 
 - Frontend : Next.js + Tailwind CSS
 - Backend : Node.js + Express
-- Base de données : PostgreSQL + Prisma
+- Base de données : PostgreSQL + Prisma v6
 - Auth : JWT
 
 ## Prérequis
 
 - Node.js v22+
-- PostgreSQL installé et en cours d'exécution
+- PostgreSQL v18 installé et en cours d'exécution
 - Git
 
 ## Installation
 
-### Cloner le projet
+### 1 — Cloner le projet
 
 git clone LIEN_DU_REPO
-cd yourtown
+cd madinatti
 
-### Frontend
+### 2 — Frontend
 
 cd frontend
 npm install
@@ -30,14 +30,32 @@ npm run dev
 
 Le frontend tourne sur http://localhost:3000
 
-### Backend
+### 3 — Backend
 
 cd backend
 npm install
-npx prisma generate
 npm run dev
 
 Le backend tourne sur http://localhost:5000
+
+### 4 — Base de données
+
+Créer la base de données madinatti dans PostgreSQL :
+
+psql -U postgres -h localhost
+CREATE DATABASE madinatti;
+\q
+
+### 5 — Prisma
+
+Appliquer les migrations :
+npx prisma migrate deploy
+
+Générer le client :
+npx prisma generate
+
+Vérifier les tables :
+npx prisma studio
 
 ## Variables d'environnement
 
@@ -58,8 +76,8 @@ NEXT_PUBLIC_API_URL=http://localhost:5000
 - dotenv
 - bcryptjs
 - jsonwebtoken
-- prisma
-- @prisma/client
+- prisma@6
+- @prisma/client@6
 - nodemon (dev)
 
 ## Dépendances Frontend
