@@ -57,6 +57,9 @@ npx prisma generate
 Vérifier les tables :
 npx prisma studio
 
+excute the seeder:
+npx prisma db seed
+
 ## Variables d'environnement
 
 ### Backend — créer un fichier .env dans le dossier backend
