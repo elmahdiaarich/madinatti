@@ -90,3 +90,16 @@ NEXT_PUBLIC_API_URL=http://localhost:5000
 - tailwindcss
 - postcss
 - autoprefixer
+- axios
+
+## for mehdi
+git pull
+
+cd frontend
+rm -rf node_modules
+npm install
+
+cd ../backend
+rm -rf node_modules
+npm install
+npx prisma generate
