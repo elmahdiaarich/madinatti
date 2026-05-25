@@ -107,3 +107,6 @@ npx prisma generate
 ## pour tester reset-password ajouter en .env
 EMAIL_USER=mehdiultra20@gmail.com
 EMAIL_PASS=svev kvqu asig wlbw
+installer nodemailer :
+cd backend
+npm install nodemailer
