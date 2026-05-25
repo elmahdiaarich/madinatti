@@ -1,6 +1,8 @@
 const prisma = require('../config/db')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
+const crypto = require('crypto')
+const { sendResetPasswordEmail } = require('../services/mailService')
 
 // Inscription
 const register = async (req, res) => {
@@ -117,5 +119,118 @@ const login = async (req, res) => {
 const logout = async (req, res) => {
   res.status(200).json({ message: 'Déconnexion réussie' })
 }
+// forgot password 
+const forgotPassword = async (req, res) => {
+   try {
 
-module.exports = { register, login, logout }
+    const { email } = req.body
+
+    const user = await prisma.user.findUnique({
+      where: { email }
+    })
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'Utilisateur introuvable'
+      })
+    }
+
+    // Générer token aléatoire
+    const resetToken = crypto.randomBytes(32).toString('hex')
+
+    // Expiration 1 heure
+    const expiresAt = new Date(
+      Date.now() + 1000 * 60 * 60
+    )
+      await prisma.passwordResetToken.deleteMany({
+        where: {
+          userId: user.id
+        }
+      })
+    // Sauvegarder token DB
+    await prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        token: resetToken,
+        expiresAt
+      }
+    })
+
+    // Lien reset
+    const resetLink =
+      `http://localhost:3000/auth/reset-password?token=${resetToken}`
+
+    await sendResetPasswordEmail(
+    email,
+    resetLink
+  )
+
+    res.status(200).json({
+      message: 'Lien de réinitialisation généré'
+    })
+
+  } catch (error) {
+
+    console.log(error)
+
+    res.status(500).json({
+      message: 'Erreur serveur'
+    })
+  }
+}
+// reset password
+const resetPassword = async (req, res) => {
+
+  try {
+
+    const { token, password } = req.body
+
+    const resetToken =
+    await prisma.passwordResetToken.findFirst({
+    where: { token }
+    })
+
+    if (!resetToken) {
+      return res.status(400).json({
+        message: 'Token invalide'
+      })
+    }
+
+    if (new Date() > resetToken.expiresAt) {
+      return res.status(400).json({
+        message: 'Token expiré'
+      })
+    }
+
+    const hashedPassword =
+      await bcrypt.hash(password, 10)
+
+    await prisma.user.update({
+      where: {
+        id: resetToken.userId
+      },
+      data: {
+        password: hashedPassword
+      }
+    })
+
+    await prisma.passwordResetToken.delete({
+      where: {
+        id: resetToken.id
+      }
+    })
+
+    res.status(200).json({
+      message: 'Mot de passe modifié avec succès'
+    })
+
+  } catch (error) {
+
+    console.log(error)
+
+    res.status(500).json({
+      message: 'Erreur serveur'
+    })
+  }
+}
+module.exports = { register, login, logout, forgotPassword, resetPassword }
