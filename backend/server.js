@@ -12,7 +12,7 @@ app.use(express.json())
 app.use('/api/auth', authRoutes)
 
 app.get('/', (req, res) => {
-  res.json({ message: 'Madinatti API is running' })
+  res.json({ message: 'Madinatti API is running , it worked' })
 })
 
 const PORT = process.env.PORT || 5000
