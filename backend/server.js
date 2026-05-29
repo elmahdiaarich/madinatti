@@ -4,12 +4,15 @@ require('dotenv').config()
 
 const authRoutes = require('./routes/auth')
 
+
+const googleAuthRoutes = require("./routes/googleAuth")
 const app = express()
 
 app.use(cors())
 app.use(express.json())
 
 app.use('/api/auth', authRoutes)
+app.use("/api/auth", googleAuthRoutes)
 
 app.get('/', (req, res) => {
   res.json({ message: 'Madinatti API is running' })

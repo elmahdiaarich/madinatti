@@ -3,6 +3,9 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 const { sendResetPasswordEmail } = require('../services/mailService')
+const { OAuth2Client } = require('google-auth-library')
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 // Inscription
 const register = async (req, res) => {
@@ -233,4 +236,59 @@ const resetPassword = async (req, res) => {
     })
   }
 }
-module.exports = { register, login, logout, forgotPassword, resetPassword }
+// google login
+const googleLogin = async (req, res) => {
+  try {
+    const { token } = req.body
+
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID
+    })
+
+    const payload = ticket.getPayload()
+
+    const { email, name } = payload
+
+    // check if user exists
+    let user = await prisma.user.findUnique({
+      where: { email }
+    })
+
+    // create user if not exists
+    if (!user) {
+      const role = await prisma.role.findUnique({
+        where: { name: 'citizen' }
+      })
+
+      user = await prisma.user.create({
+        data: {
+          name,
+          email,
+          password: null,
+          phone: null,
+          city: null,
+          roleId: role.id
+        }
+      })
+    }
+
+    const jwt = require('jsonwebtoken')
+
+    const tokenJwt = jwt.sign(
+      { userId: user.id, role: 'citizen' },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    )
+
+    return res.json({
+      token: tokenJwt,
+      user
+    })
+
+  } catch (error) {
+    console.log(error)
+    return res.status(400).json({ message: 'Google login failed' })
+  }
+}
+module.exports = { register, login, logout, forgotPassword, resetPassword ,googleLogin}
