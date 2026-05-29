@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../../../context/AuthContext'
+import { Eye, EyeOff } from "lucide-react"
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
