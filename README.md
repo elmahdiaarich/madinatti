@@ -115,14 +115,14 @@ npm install nodemailer
 executer les commandes :
 cd frontend 
 npm install @react-oauth/google
-
+cd ..
 cd backend
  npm install google-auth-library
  npx prisma migrate deploy
  npx prisma generate
 
  ajouter dans backend/.env :
- GOOGLE_CLIENT_ID=votre_google_client_id
+ GOOGLE_CLIENT_ID=1002924147550-vn0hud4gv8r975gibga2crva2qvqms3i.apps.googleusercontent.com
 
  ajouter dans frontend/.env.local:
 
