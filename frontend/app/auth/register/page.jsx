@@ -23,8 +23,24 @@ export default function RegisterPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
+  const validateForm = () => {
+    if (!formData.name.trim()) return "Nom requis"
+    if (!formData.email.includes("@")) return "Email invalide"
+    if (formData.password.length < 6) return "Mot de passe trop court"
+    if (!formData.role) return "Rôle requis"
+
+    return null
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    const validationError = validateForm()
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
     setLoading(true)
     setError('')
 
