@@ -3,14 +3,16 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../../../context/AuthContext'
+import { GoogleLogin } from '@react-oauth/google'
+import axios from 'axios'
 
 export default function LoginPage() {
+  const { loginWithGoogle,login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const { login } = useAuth()
   const router = useRouter()
 
   const handleSubmit = async (e) => {
@@ -73,6 +75,8 @@ export default function LoginPage() {
             />
           </div>
 
+                
+
               <div className="text-right">
                <a
                   href="/auth/forgot-password"
@@ -97,6 +101,30 @@ export default function LoginPage() {
             </a>
           </p>
         </form>
+      <div className="mt-2">
+          <GoogleLogin
+            onSuccess={async (credentialResponse) => {
+              try {
+                const res = await axios.post(
+                  `${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`,
+                  {
+                    token: credentialResponse.credential
+                  }
+                )
+
+                console.log("BACKEND RESPONSE:", res.data)
+
+                loginWithGoogle(res.data.user, res.data.token)
+
+                alert("LOGIN SUCCESS")
+
+                router.push('/')
+              } catch (error) {
+                console.log("ERROR:", error.response?.data || error)
+              }
+            }}
+          />
+</div>
       </div>
     </div>
   )

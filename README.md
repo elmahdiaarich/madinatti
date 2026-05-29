@@ -110,3 +110,33 @@ EMAIL_PASS=svev kvqu asig wlbw
 installer nodemailer :
 cd backend
 npm install nodemailer
+
+## pour google auth 
+executer les commandes :
+cd frontend 
+npm install @react-oauth/google
+
+cd backend
+ npm install google-auth-library
+ npx prisma migrate deploy
+ npx prisma generate
+
+ ajouter dans backend/.env :
+ GOOGLE_CLIENT_ID=votre_google_client_id
+
+ ajouter dans frontend/.env.local:
+
+NEXT_PUBLIC_API_URL=http://localhost:5000
+GOOGLE_CLIENT_ID=1002924147550-vn0hud4gv8r975gibga2crva2qvqms3i.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=REMOVED
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=mysecretkey123
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=1002924147550-vn0hud4gv8r975gibga2crva2qvqms3i.apps.googleusercontent.com
+
+La table Role doit contenir au minimum :
+
+citizen
+business
+admin
+
+Sinon Google login ne pourra pas créer l'utilisateur.

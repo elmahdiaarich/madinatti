@@ -50,8 +50,13 @@ export const AuthProvider = ({ children }) => {
     setUser(null)
   }
 
+  const loginWithGoogle = (user, token) => {
+  setUser(user)
+  setToken(token)
+  localStorage.setItem("token", token)
+}
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, register }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, register, loginWithGoogle }}>
       {children}
     </AuthContext.Provider>
   )
