@@ -17,3 +17,14 @@ body {
   color: #000000;
   background-color: #FFFFFF;
 }
+
+/* register and login inputs */
+@layer components {
+  .input-green {
+    @apply bg-white border-2 border-[var(--color-primary)] text-black rounded-lg p-3 outline-none transition focus:ring-2 focus:ring-[var(--color-primary)];
+  }
+
+  .input-green:focus {
+    border-color: var(--color-primary-dark);
+  }
+}
