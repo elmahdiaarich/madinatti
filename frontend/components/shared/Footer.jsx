@@ -1,11 +1,12 @@
+import Logo_w from "./logos/Logo_white";
+
 export default function Footer() {
   return (
-    <footer className="bg-primary-dark text-white px-6 py-12">
+    <footer className="bg-[linear-gradient(135deg,var(--color-primary-dark)_0%,var(--color-primary-sage)_100%)] text-white px-6 py-12">
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <img src="/logo.png" alt="Madinatti" className="h-8" />
-            <span className="font-bold text-lg">Madinatti</span>
+            <Logo_w />
           </div>
           <p className="text-sm text-gray-300 mb-4">Votre ville connectée</p>
           <p className="text-xs text-gray-400">La plateforme qui connecte votre ville. Trouvez emplois, véhicules, actualités et événements près de chez vous.</p>

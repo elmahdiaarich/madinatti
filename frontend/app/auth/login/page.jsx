@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../../context/AuthContext";
 import { GoogleLogin } from "@react-oauth/google";
 import axios from "axios";
+import Logo from "../../../components/shared/logos/Logo";
 import Eye from "lucide-react/dist/esm/icons/eye";
 import EyeOff from "lucide-react/dist/esm/icons/eye-off";
 
@@ -38,10 +39,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-primary-mint">
+    <div className="min-h-screen flex items-center justify-center bg-white">
       <div className=" p-8 rounded-xl  w-full max-w-md">
         <div className="flex justify-center mb-6">
-          <img src="/logo.png" alt="Madinatti" className="h-12" />
+          <Logo />
         </div>
 
         <h1 className="text-2xl font-bold text-center text-primary-dark mb-6">
