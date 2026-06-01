@@ -282,13 +282,89 @@ const googleLogin = async (req, res) => {
     )
 
     return res.json({
-      token: tokenJwt,
-      user
-    })
+  token: tokenJwt,
+  user: {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    city: user.city,
+    avatar: user.avatar,
+    roleId: user.roleId,
+    profileCompleted: user.profileCompleted
+  }
+})
 
   } catch (error) {
     console.log(error)
     return res.status(400).json({ message: 'Google login failed' })
   }
 }
-module.exports = { register, login, logout, forgotPassword, resetPassword ,googleLogin}
+// Complete profile
+const completeProfile = async (req, res) => {
+  try {
+    const userId = req.user.userId
+
+    const { phone, city, role,avatar } = req.body
+
+    // 1. check role
+    const roleData = await prisma.role.findUnique({
+      where: { name: role }
+    })
+
+    if (!roleData) {
+      return res.status(400).json({ message: "Invalid role" })
+    }
+
+    // 2. update user
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        phone,
+        city,
+        avatar,
+        roleId: roleData.id,
+        profileCompleted: true
+      }
+    })
+
+    res.json({
+      message: "Profile completed successfully",
+      user
+    })
+
+  } catch (error) {
+    console.log(error)
+    res.status(500).json({ message: "Server error" })
+  }
+}
+const getMe = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        city: true,
+        avatar: true,
+        roleId: true,
+        profileCompleted: true,
+        isActive: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ user });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+module.exports = { register, login, logout, forgotPassword, resetPassword ,googleLogin, completeProfile,getMe}

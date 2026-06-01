@@ -1,0 +1,28 @@
+export const moroccanCities = [
+  "Casablanca",
+  "Rabat",
+  "Marrakech",
+  "Fès",
+  "Tanger",
+  "Agadir",
+  "Meknès",
+  "Oujda",
+  "Kénitra",
+  "Tétouan",
+  "Safi",
+  "El Jadida",
+  "Mohammédia",
+  "Béni Mellal",
+  "Nador",
+  "Khouribga",
+  "Settat",
+  "Larache",
+  "Ksar El Kebir",
+  "Errachidia",
+  "Ouarzazate",
+  "Laâyoune",
+  "Dakhla",
+  "Guelmim",
+  "Taza"
+]
+
