@@ -14,6 +14,7 @@
     "framer-motion": "^12.40.0",
     "google-auth-library": "^10.6.2",
     "lucide-react": "^1.17.0",
+    "morocco-cities": "^1.0.3",
     "next": "^14.2.35",
     "next-auth": "^4.24.14",
     "react": "^18.3.1",
