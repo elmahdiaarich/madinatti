@@ -4,13 +4,14 @@ const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 const { sendResetPasswordEmail } = require('../services/mailService')
 const { OAuth2Client } = require('google-auth-library')
+const { cloudinary } = require('../config/cloudinary')
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 // Inscription
 const register = async (req, res) => {
   try {
-    const { name, email, password, phone, city, role } = req.body
+    const { name, email, password, phone, city, role, companyName, companyWebsite } = req.body
 
     // Vérifier si l'email existe déjà
     const existingUser = await prisma.user.findUnique({
@@ -19,6 +20,11 @@ const register = async (req, res) => {
 
     if (existingUser) {
       return res.status(400).json({ message: 'Cet email est déjà utilisé' })
+    }
+
+    // Validation business
+    if (role === 'business' && !companyName) {
+      return res.status(400).json({ message: 'Nom de la société requis' })
     }
 
     // Récupérer le rôle
@@ -33,6 +39,24 @@ const register = async (req, res) => {
     // Hasher le mot de passe
     const hashedPassword = await bcrypt.hash(password, 10)
 
+    // Upload logo si présent
+    let companyLogoUrl = null
+    if (req.file) {
+      const result = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          {
+            folder: 'madinatti/logos',
+            transformation: [{ width: 300, height: 300, crop: 'limit' }]
+          },
+          (error, result) => {
+            if (error) reject(error)
+            else resolve(result)
+          }
+        ).end(req.file.buffer)
+      })
+      companyLogoUrl = result.secure_url
+    }
+
     // Créer l'utilisateur
     const user = await prisma.user.create({
       data: {
@@ -41,7 +65,10 @@ const register = async (req, res) => {
         password: hashedPassword,
         phone,
         city,
-        roleId: userRole.id
+        roleId: userRole.id,
+        companyName: role === 'business' ? companyName : null,
+        companyWebsite: role === 'business' ? companyWebsite : null,
+        companyLogo: role === 'business' ? companyLogoUrl : null,
       }
     })
 
@@ -73,7 +100,6 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body
 
-    // Vérifier si l'utilisateur existe
     const user = await prisma.user.findUnique({
       where: { email },
       include: { role: true }
@@ -83,19 +109,16 @@ const login = async (req, res) => {
       return res.status(400).json({ message: 'Email ou mot de passe incorrect' })
     }
 
-    // Vérifier le mot de passe
     const isValidPassword = await bcrypt.compare(password, user.password)
 
     if (!isValidPassword) {
       return res.status(400).json({ message: 'Email ou mot de passe incorrect' })
     }
 
-    // Vérifier si le compte est actif
     if (!user.isActive) {
       return res.status(400).json({ message: 'Compte désactivé' })
     }
 
-    // Générer le token JWT
     const token = jwt.sign(
       { userId: user.id, role: user.role.name },
       process.env.JWT_SECRET,
@@ -122,10 +145,10 @@ const login = async (req, res) => {
 const logout = async (req, res) => {
   res.status(200).json({ message: 'Déconnexion réussie' })
 }
-// forgot password 
-const forgotPassword = async (req, res) => {
-   try {
 
+// Forgot password
+const forgotPassword = async (req, res) => {
+  try {
     const { email } = req.body
 
     const user = await prisma.user.findUnique({
@@ -133,24 +156,16 @@ const forgotPassword = async (req, res) => {
     })
 
     if (!user) {
-      return res.status(404).json({
-        message: 'Utilisateur introuvable'
-      })
+      return res.status(404).json({ message: 'Utilisateur introuvable' })
     }
 
-    // Générer token aléatoire
     const resetToken = crypto.randomBytes(32).toString('hex')
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60)
 
-    // Expiration 1 heure
-    const expiresAt = new Date(
-      Date.now() + 1000 * 60 * 60
-    )
-      await prisma.passwordResetToken.deleteMany({
-        where: {
-          userId: user.id
-        }
-      })
-    // Sauvegarder token DB
+    await prisma.passwordResetToken.deleteMany({
+      where: { userId: user.id }
+    })
+
     await prisma.passwordResetToken.create({
       data: {
         userId: user.id,
@@ -159,84 +174,55 @@ const forgotPassword = async (req, res) => {
       }
     })
 
-    // Lien reset
-    const resetLink =
-      `http://localhost:3000/auth/reset-password?token=${resetToken}`
+    const resetLink = `http://localhost:3000/auth/reset-password?token=${resetToken}`
 
-    await sendResetPasswordEmail(
-    email,
-    resetLink
-  )
+    await sendResetPasswordEmail(email, resetLink)
 
-    res.status(200).json({
-      message: 'Lien de réinitialisation généré'
-    })
+    res.status(200).json({ message: 'Lien de réinitialisation généré' })
 
   } catch (error) {
-
     console.log(error)
-
-    res.status(500).json({
-      message: 'Erreur serveur'
-    })
+    res.status(500).json({ message: 'Erreur serveur' })
   }
 }
-// reset password
+
+// Reset password
 const resetPassword = async (req, res) => {
-
   try {
-
     const { token, password } = req.body
 
-    const resetToken =
-    await prisma.passwordResetToken.findFirst({
-    where: { token }
+    const resetToken = await prisma.passwordResetToken.findFirst({
+      where: { token }
     })
 
     if (!resetToken) {
-      return res.status(400).json({
-        message: 'Token invalide'
-      })
+      return res.status(400).json({ message: 'Token invalide' })
     }
 
     if (new Date() > resetToken.expiresAt) {
-      return res.status(400).json({
-        message: 'Token expiré'
-      })
+      return res.status(400).json({ message: 'Token expiré' })
     }
 
-    const hashedPassword =
-      await bcrypt.hash(password, 10)
+    const hashedPassword = await bcrypt.hash(password, 10)
 
     await prisma.user.update({
-      where: {
-        id: resetToken.userId
-      },
-      data: {
-        password: hashedPassword
-      }
+      where: { id: resetToken.userId },
+      data: { password: hashedPassword }
     })
 
     await prisma.passwordResetToken.delete({
-      where: {
-        id: resetToken.id
-      }
+      where: { id: resetToken.id }
     })
 
-    res.status(200).json({
-      message: 'Mot de passe modifié avec succès'
-    })
+    res.status(200).json({ message: 'Mot de passe modifié avec succès' })
 
   } catch (error) {
-
     console.log(error)
-
-    res.status(500).json({
-      message: 'Erreur serveur'
-    })
+    res.status(500).json({ message: 'Erreur serveur' })
   }
 }
-// google login
+
+// Google login
 const googleLogin = async (req, res) => {
   try {
     const { token } = req.body
@@ -247,15 +233,12 @@ const googleLogin = async (req, res) => {
     })
 
     const payload = ticket.getPayload()
-
     const { email, name } = payload
 
-    // check if user exists
     let user = await prisma.user.findUnique({
       where: { email }
     })
 
-    // create user if not exists
     if (!user) {
       const role = await prisma.role.findUnique({
         where: { name: 'citizen' }
@@ -268,12 +251,11 @@ const googleLogin = async (req, res) => {
           password: null,
           phone: null,
           city: null,
+          avatar: picture || null,
           roleId: role.id
         }
       })
     }
-
-    const jwt = require('jsonwebtoken')
 
     const tokenJwt = jwt.sign(
       { userId: user.id, role: 'citizen' },
@@ -282,41 +264,62 @@ const googleLogin = async (req, res) => {
     )
 
     return res.json({
-  token: tokenJwt,
-  user: {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    phone: user.phone,
-    city: user.city,
-    avatar: user.avatar,
-    roleId: user.roleId,
-    profileCompleted: user.profileCompleted
-  }
-})
+      token: tokenJwt,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        city: user.city,
+        avatar: user.avatar,
+        roleId: user.roleId,
+        profileCompleted: user.profileCompleted
+      }
+    })
 
   } catch (error) {
     console.log(error)
     return res.status(400).json({ message: 'Google login failed' })
   }
 }
+
 // Complete profile
 const completeProfile = async (req, res) => {
   try {
     const userId = req.user.userId
+    const { phone, city, role, avatar, companyName, companyWebsite } = req.body
 
-    const { phone, city, role,avatar } = req.body
-
-    // 1. check role
     const roleData = await prisma.role.findUnique({
       where: { name: role }
     })
 
     if (!roleData) {
-      return res.status(400).json({ message: "Invalid role" })
+      return res.status(400).json({ message: "Rôle invalide" })
     }
 
-    // 2. update user
+    // Validation business
+    if (role === 'business' && !companyName) {
+      return res.status(400).json({ message: "Nom de l'entreprise requis" })
+    }
+
+    // Upload logo si présent
+    let companyLogoUrl = null
+    if (req.file) {
+      const result = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          {
+            folder: 'madinatti/logos',
+            transformation: [{ width: 300, height: 300, crop: 'limit' }]
+          },
+          (error, result) => {
+            if (error) reject(error)
+            else resolve(result)
+          }
+        ).end(req.file.buffer)
+      })
+      companyLogoUrl = result.secure_url
+    }
+
     const user = await prisma.user.update({
       where: { id: userId },
       data: {
@@ -324,20 +327,25 @@ const completeProfile = async (req, res) => {
         city,
         avatar,
         roleId: roleData.id,
-        profileCompleted: true
+        profileCompleted: true,
+        companyName: role === 'business' ? companyName : null,
+        companyWebsite: role === 'business' ? companyWebsite : null,
+        companyLogo: role === 'business' ? companyLogoUrl : null,
       }
     })
 
     res.json({
-      message: "Profile completed successfully",
+      message: "Profil complété avec succès",
       user
     })
 
   } catch (error) {
     console.log(error)
-    res.status(500).json({ message: "Server error" })
+    res.status(500).json({ message: "Erreur serveur" })
   }
 }
+
+// Get me
 const getMe = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -354,6 +362,9 @@ const getMe = async (req, res) => {
         roleId: true,
         profileCompleted: true,
         isActive: true,
+        companyName: true,
+        companyLogo: true,
+        companyWebsite: true,
       },
     });
 
@@ -367,4 +378,5 @@ const getMe = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-module.exports = { register, login, logout, forgotPassword, resetPassword ,googleLogin, completeProfile,getMe}
+
+module.exports = { register, login, logout, forgotPassword, resetPassword, googleLogin, completeProfile, getMe }

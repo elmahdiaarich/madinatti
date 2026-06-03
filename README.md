@@ -140,3 +140,17 @@ business
 admin
 
 Sinon Google login ne pourra pas créer l'utilisateur.
+
+## cloudinary setup
+
+cd backend
+npm install cloudinary multer
+cd ..
+cd frontend
+npm install morocco-cities
+
+ajouter dans .env
+
+CLOUDINARY_CLOUD_NAME=driwajlgx
+CLOUDINARY_API_KEY=REMOVED
+CLOUDINARY_API_SECRET=REMOVED
