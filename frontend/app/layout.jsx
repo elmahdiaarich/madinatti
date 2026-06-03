@@ -21,6 +21,7 @@ export default function RootLayout({ children }) {
           src="https://accounts.google.com/gsi/client"
           strategy="afterInteractive"
         />
+      </head>
       <body>
         <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}>
 
@@ -33,7 +34,6 @@ export default function RootLayout({ children }) {
 
         </GoogleOAuthProvider>
       </body>
-      </head>
     </html>
   )
 }

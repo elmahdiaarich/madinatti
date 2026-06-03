@@ -24,8 +24,17 @@ export default function LoginPage() {
     try {
       const res = await login({ email, password });
 
-      if (res.token) router.push("/");
-      else setError(res.message);
+      if (res.token) {
+        const user = res.user;
+
+        if (user?.profileCompleted === false) {
+          router.push("/auth/complete-profile");
+        } else {
+          router.push("/");
+        }
+      } else {
+        setError(res.message);
+      }
     } catch {
       setError("Erreur serveur");
     } finally {
@@ -56,8 +65,11 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button className="bg-primary text-white p-3 rounded-lg">
-          Se connecter
+        <button
+          disabled={loading}
+          className="bg-primary text-white p-3 rounded-lg"
+        >
+          {loading ? "Connexion..." : "Se connecter"}
         </button>
       </form>
 
