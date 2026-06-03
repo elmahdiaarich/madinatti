@@ -49,6 +49,10 @@ model User {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   profileCompleted  Boolean        @default(false)
+    // Company fields (business only)
+  companyName       String?
+  companyLogo       String?
+  companyWebsite    String?
 
   role              Role           @relation(fields: [roleId], references: [id])
   oauthProviders    OAuthProvider[]
@@ -142,13 +146,21 @@ model Category {
   realEstateListings RealEstateListing[]
 }
 
+enum JobStatus {
+  DRAFT
+  PENDING
+  PUBLISHED
+  REJECTED
+  EXPIRED
+  CLOSED
+}
+
 model JobListing {
-  id                  String           @id @default(uuid())
+  id                  String        @id @default(uuid())
   userId              String
   categoryId          String
   title               String
   description         String
-  requirements        String?
   companyName         String
   location            String
   latitude            Decimal?
@@ -158,19 +170,26 @@ model JobListing {
   salaryMax           Decimal?
   salaryPeriod        String?
   applicationDeadline DateTime?
-  isActive            Boolean          @default(true)
-  isFeatured          Boolean          @default(false)
-  isSponsored         Boolean          @default(false)
+  status              JobStatus     @default(DRAFT)
+  isFeatured          Boolean       @default(false)
+  isSponsored         Boolean       @default(false)
   boostExpiresAt      DateTime?
-  viewsCount          Int              @default(0)
+  viewsCount          Int           @default(0)
   skills              Json?
-  images              Json?
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  adminNotes          String?
+  reviewedAt          DateTime?
+  reviewedBy          String?
+  publishedAt         DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
-  user                User             @relation(fields: [userId], references: [id])
-  category            Category         @relation(fields: [categoryId], references: [id])
+  user                User          @relation(fields: [userId], references: [id])
+  category            Category      @relation(fields: [categoryId], references: [id])
   applications        JobApplication[]
+
+  @@index([status])
+  @@index([categoryId])
+  @@index([createdAt])
 }
 
 model JobApplication {
