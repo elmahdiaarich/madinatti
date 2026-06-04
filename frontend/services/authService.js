@@ -3,9 +3,12 @@ import axios from 'axios'
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 console.log("API_URL =", API_URL)
 
-
 export const register = async (data) => {
-  const response = await axios.post(`${API_URL}/api/auth/register`, data)
+  const response = await axios.post(`${API_URL}/api/auth/register`, data, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
   return response.data
 }
 

@@ -15,15 +15,18 @@ const authMiddleware = require('../middlewares/authMiddleware')
 const googleAuth = require('./googleAuth')
 
 const { getMe } = require('../controllers/authController');
+const { upload } = require('../config/cloudinary')
+
 // mount google route properly
 router.use('/', googleAuth)
+router.post('/register', upload.single('companyLogo'), register)
 
 router.post('/register', register)
 router.post('/login', login)
 router.post('/logout', authMiddleware, logout)
 router.post('/forgot-password', forgotPassword)
 router.post('/reset-password', resetPassword)
-router.post('/complete-profile', authMiddleware, completeProfile )
+router.post('/complete-profile', authMiddleware, upload.single('companyLogo'), completeProfile)
 router.get('/me', authMiddleware, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({

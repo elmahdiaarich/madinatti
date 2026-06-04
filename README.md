@@ -151,3 +151,17 @@ Seed complet. Comptes de test :
    dar.invest@yourtown.ma / password123  (business)
    youssef@yourtown.ma   / password123  (citizen)
    salma@yourtown.ma     / password123  (citizen)
+
+## cloudinary setup
+
+cd backend
+npm install cloudinary multer
+cd ..
+cd frontend
+npm install morocco-cities
+
+ajouter dans .env
+
+CLOUDINARY_CLOUD_NAME=driwajlgx
+CLOUDINARY_API_KEY=REMOVED
+CLOUDINARY_API_SECRET=REMOVED
