@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seeds/index.js"
   },
   "keywords": [],
   "author": "",
@@ -27,7 +27,7 @@
     "prisma": "^6.19.3"
   },
   "prisma": {
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seeds/index.js"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
