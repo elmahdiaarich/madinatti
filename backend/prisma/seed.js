@@ -11,6 +11,7 @@ async function main() {
   // ─── ROLES ──────────────────────────────────────────────────────────────────
   const citizenRole = await prisma.role.upsert({
     where:  { name: 'citizen' },
+
     update: {},
     create: { name: 'citizen',  description: 'Utilisateur citoyen' }
   })
@@ -23,6 +24,7 @@ async function main() {
 
   const adminRole = await prisma.role.upsert({
     where:  { name: 'admin' },
+
     update: {},
     create: { name: 'admin',    description: 'Administrateur' }
   })
@@ -31,6 +33,7 @@ async function main() {
   console.log('✅ Roles seeded')
 
   // ─── PLANS ───────────────────────────────────────────────────────────────────
+
   await prisma.plan.upsert({
     where:  { id: 'standard' },
     update: {},
@@ -101,7 +104,19 @@ async function main() {
       isActive: true, emailVerifiedAt: new Date(),
       city: 'Rabat'
     }
+    create: { id: 'standard', name: 'Standard', price: 0, durationDays: 0, maxListings: 3, maxPhotos: 3, canBoost: false, canSponsor: false, hasBadge: false, hasStatistics: false, hasChat: false }
   })
+  await prisma.plan.upsert({
+    where: { id: 'premium_tier1' },
+    update: {},
+    create: { id: 'premium_tier1', name: 'Premium Tier 1', price: 99, durationDays: 30, maxListings: 10, maxPhotos: 10, canBoost: true, canSponsor: false, hasBadge: true, hasStatistics: true, hasChat: true }
+  })
+  await prisma.plan.upsert({
+    where: { id: 'premium_tier2' },
+    update: {},
+    create: { id: 'premium_tier2', name: 'Premium Tier 2', price: 199, durationDays: 30, maxListings: 999, maxPhotos: 999, canBoost: true, canSponsor: true, hasBadge: true, hasStatistics: true, hasChat: true }
+  })
+  console.log('✅ Plans created')
 
   const citizen1 = await prisma.user.upsert({
     where:  { email: 'youssef@yourtown.ma' },
