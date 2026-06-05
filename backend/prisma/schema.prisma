@@ -183,6 +183,11 @@ enum ContractType {
   ALTERNANCE
   STATUTAIRE
 }
+enum RemoteType {
+  ON_SITE      // Présentiel
+  REMOTE       // Full remote
+  HYBRID       // Hybride / parfois
+}
 
 model JobListing {
   id                  String        @id @default(uuid())
@@ -214,6 +219,9 @@ model JobListing {
   contractType        ContractType
   educationLevel      EducationLevel?
   experienceLevel     ExperienceLevel?
+  region              String?
+  remote              RemoteType    @default(ON_SITE)
+  languages           Json?
 
   user                User          @relation(fields: [userId], references: [id])
   category            Category      @relation(fields: [categoryId], references: [id])
@@ -286,6 +294,7 @@ model RealEstateListing {
   user          User           @relation(fields: [userId], references: [id])
   category      Category       @relation(fields: [categoryId], references: [id])
   inquiries     PropertyInquiry[]
+  region        String?
 
   @@index([categoryId])
   @@index([status])
