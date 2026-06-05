@@ -154,6 +154,35 @@ enum JobStatus {
   EXPIRED
   CLOSED
 }
+enum EducationLevel {
+  BEFORE_BAC
+  BAC
+  BAC_PLUS_1
+  BAC_PLUS_2
+  BAC_PLUS_3
+  BAC_PLUS_4
+  BAC_PLUS_5_PLUS
+}
+
+enum ExperienceLevel {
+  STUDENT_FRESH_GRAD
+  JUNIOR_LESS_2
+  MID_2_TO_5
+  SENIOR_5_TO_10
+  EXPERT_PLUS_10
+}
+
+enum ContractType {
+  CDI
+  CDD
+  INTERIM
+  FREELANCE
+  STAGE
+  ANAPEC
+  TEMPS_PARTIEL
+  ALTERNANCE
+  STATUTAIRE
+}
 
 model JobListing {
   id                  String        @id @default(uuid())
@@ -162,10 +191,10 @@ model JobListing {
   title               String
   description         String
   companyName         String
+  companyLogo         String?
   location            String
   latitude            Decimal?
   longitude           Decimal?
-  type                String
   salaryMin           Decimal?
   salaryMax           Decimal?
   salaryPeriod        String?
@@ -182,6 +211,9 @@ model JobListing {
   publishedAt         DateTime?
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
+  contractType        ContractType
+  educationLevel      EducationLevel?
+  experienceLevel     ExperienceLevel?
 
   user                User          @relation(fields: [userId], references: [id])
   category            Category      @relation(fields: [categoryId], references: [id])

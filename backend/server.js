@@ -17,6 +17,8 @@ app.use("/api/auth", googleAuthRoutes)
 app.get('/', (req, res) => {
   res.json({ message: 'Madinatti API is running' })
 })
+const jobRoutes = require('./routes/jobs');
+app.use('/api/jobs', jobRoutes);
 
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {
