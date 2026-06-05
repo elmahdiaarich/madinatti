@@ -1,3 +1,21 @@
+import {
+  Search,
+  MapPin,
+  ChevronDown,
+  ArrowRight,
+  Briefcase,
+  Home as HomeIcon,
+  Calendar,
+  Car,
+  Hotel,
+  Heart,
+  FileText,
+  Newspaper,
+  BookOpen,
+  Factory,
+  Map,
+} from "lucide-react";
+
 export const SERVICES = [
       {
     id: "emploi",
@@ -142,28 +160,39 @@ export const STATS = [
 ];
 
 export const FEATURES = [
-      {
-    title: "Trouver un logement",
-    icon: "🏠",
-    description:
-      "Explorez des appartements, villas, terrains et biens immobiliers dans votre ville.",
+  {
+    title: "Services géolocalisés",
+    description: "Trouvez instantanément les services autour de vous — emplois, commerces, santé — filtrés par ville et quartier.",
+    image: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=800&q=80",
+    span: "lg:col-span-2 lg:row-span-2",
+    textDark: false,
   },
   {
-    title: "Découvrir des opportunités",
-    icon: "💼",
-    description:
-      "Consultez les offres d'emploi et les opportunités professionnelles locales.",
+    title: "Offres d'emploi locales",
+    description: "Des centaines d'offres publiées par des entreprises de votre région, mises à jour quotidiennement.",
+    image: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=600&q=80",
+    span: "lg:col-span-1 lg:row-span-1",
+    textDark: false,
   },
   {
-    title: "Développer votre activité",
-    icon: "🏢",
-    description:
-      "Publiez vos annonces, présentez vos services et gagnez en visibilité.",
+    title: "Immobilier de proximité",
+    description: "Achetez, vendez ou louez en toute confiance grâce aux annonces vérifiées de votre ville.",
+    image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&q=80",
+    span: "lg:col-span-1 lg:row-span-1",
+    textDark: false,
   },
   {
-    title: "Vivre votre ville",
-    icon: "📍",
-    description:
-      "Retrouvez événements, actualités, entreprises et services à proximité.",
+    title: "Événements & culture",
+    description: "Ne ratez plus aucun concert, marché ou festival près de chez vous.",
+    image: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=600&q=80",
+    span: "lg:col-span-1 lg:row-span-1",
+    textDark: false,
+  },
+  {
+    title: "Annuaire & services publics",
+    description: "Mairie, police, hôpitaux — accédez aux contacts essentiels de votre ville en un clic.",
+    image: "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=600&q=80",
+    span: "lg:col-span-2 lg:row-span-1",
+    textDark: false,
   },
 ];

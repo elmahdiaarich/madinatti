@@ -20,233 +20,17 @@ import {
   Map,
 } from "lucide-react";
 import { cities } from "morocco-cities";
+import {
+  SERVICES,
+  STATS,
+  FEATURES,
+} from "@/constants/home.constants";
 
 const ALL_CITIES = cities.map((c) => ({ name: c.name, region: c.region_name }));
+const Services = SERVICES; 
+const Stats = STATS; 
+const Features = FEATURES; 
 
-const SERVICES = [
-  {
-    id: "emploi",
-    icon: Briefcase,
-    label: "Emploi",
-    description: "Offres, formations & mini-jobs",
-    href: "/jobs",
-    color: "bg-blue-50 text-blue-600",
-    categories: [
-      "Offres d'emploi",
-      "Formation",
-      "Mini-jobs",
-      "Accompagnement",
-      "Demande d'emploi",
-    ],
-  },
-  {
-    id: "immobilier",
-    icon: HomeIcon,
-    label: "Immobilier",
-    description: "Vente, location & déménagement",
-    href: "/real-estate",
-    color: "bg-orange-50 text-orange-600",
-    categories: [
-      "Vendre appartement",
-      "Acheter appartement",
-      "Louer maison",
-      "Déménagement",
-      "Artisans",
-    ],
-  },
-  {
-    id: "evenements",
-    icon: Calendar,
-    label: "Événements",
-    description: "Sorties, concerts & culture",
-    href: "/evenements",
-    color: "bg-purple-50 text-purple-600",
-    categories: [
-      "Théâtre",
-      "Concert",
-      "Marché",
-      "Activités enfants",
-      "Galerie",
-    ],
-  },
-  {
-    id: "voitures",
-    icon: Car,
-    label: "Automobile",
-    description: "Véhicules neufs & occasion",
-    href: "/voitures",
-    color: "bg-red-50 text-red-600",
-    categories: ["Voitures occasion", "Voitures neuves", "Motos", "Auto info"],
-  },
-  {
-    id: "tourisme",
-    icon: Hotel,
-    label: "Tourisme",
-    description: "Hôtels, restaurants & loisirs",
-    href: "/tourisme",
-    color: "bg-teal-50 text-teal-600",
-    categories: ["Hôtels", "Restaurants", "Cafés", "Musées", "Spas & Hammams"],
-  },
-  {
-    id: "sante",
-    icon: Heart,
-    label: "Santé",
-    description: "Cliniques, pharmacies & soins",
-    href: "/sante",
-    color: "bg-pink-50 text-pink-600",
-    categories: [
-      "Cliniques",
-      "Médecine",
-      "Pharmacies",
-      "Pharmacie de garde",
-      "Para",
-    ],
-  },
-  {
-    id: "annonces",
-    icon: FileText,
-    label: "Petites Annonces",
-    description: "Services à domicile & particuliers",
-    href: "/annonces",
-    color: "bg-yellow-50 text-yellow-600",
-    categories: [
-      "Ménage & nettoyage",
-      "Garde d'enfants",
-      "Cours particuliers",
-      "Soins seniors",
-    ],
-  },
-  {
-    id: "presse",
-    icon: Newspaper,
-    label: "Actualités",
-    description: "Presse, TV, radio & vidéo",
-    href: "/presse",
-    color: "bg-indigo-50 text-indigo-600",
-    categories: ["Journaux", "Presse locale", "Télé locale", "Radio locale"],
-  },
-  {
-    id: "annuaire",
-    icon: BookOpen,
-    label: "Annuaire",
-    description: "Entreprises & services publics",
-    href: "/annuaire",
-    color: "bg-emerald-50 text-emerald-600",
-    categories: ["Mairie", "Police", "Bureau des impôts", "Office de tourisme"],
-  },
-  {
-    id: "industrie",
-    icon: Factory,
-    label: "Industrie",
-    description: "Zones industrielles & commerce",
-    href: "/industrie",
-    color: "bg-gray-100 text-gray-600",
-    categories: ["Zone industrielle", "Free Zone", "Chambre de commerce"],
-  },
-  {
-    id: "plan",
-    icon: Map,
-    label: "Plan de Ville",
-    description: "Cartes, rues & monuments",
-    href: "/plan",
-    color: "bg-cyan-50 text-cyan-600",
-    categories: [
-      "Plan de ville",
-      "Rues & boulevards",
-      "Monuments",
-      "Navigation",
-    ],
-  },
-];
-
-const STATS = [
-  { value: "300+", label: "Villes couvertes" },
-  { value: "50k+", label: "Annonces actives" },
-  { value: "11", label: "Catégories" },
-  { value: "100%", label: "Marocain" },
-];
-
-const ACTORS = [
-  {
-    role: "Visiteur",
-    icon: "👁️",
-    color: "bg-gray-50 border-gray-200",
-    badge: "bg-gray-100 text-gray-600",
-    actions: [
-      "Consulter les annonces publiques",
-      "Explorer les services par ville",
-      "Voir les événements & actualités",
-      "Accéder au plan de ville",
-    ],
-  },
-  {
-    role: "Citoyen",
-    icon: "🙋",
-    color: "bg-blue-50 border-blue-200",
-    badge: "bg-blue-100 text-blue-700",
-    actions: [
-      "Tout ce que le visiteur peut faire",
-      "Postuler aux offres d'emploi",
-      "Gérer ses favoris & son profil",
-      "Soumettre des signalements",
-      "Contacter des annonceurs",
-    ],
-  },
-  {
-    role: "Entreprise",
-    icon: "🏢",
-    color: "bg-[var(--color-primary-mint)] border-[var(--color-primary)]",
-    badge: "bg-[var(--color-primary-mint)] text-[var(--color-primary-dark)]",
-    highlight: true,
-    actions: [
-      "Publier des offres d'emploi",
-      "Mettre en ligne des annonces",
-      "Gérer ses services & produits",
-      "Accéder aux statistiques",
-      "Promouvoir son activité",
-    ],
-  },
-  {
-    role: "Administrateur",
-    icon: "🛡️",
-    color: "bg-red-50 border-red-200",
-    badge: "bg-red-100 text-red-700",
-    actions: [
-      "Modérer les contenus publiés",
-      "Gérer les utilisateurs",
-      "Accéder au tableau de bord CMS",
-      "Valider les annonces",
-      "Configurer la plateforme",
-    ],
-  },
-];
-
-const FEATURES = [
-  {
-    title: "Trouver un logement",
-    icon: "🏠",
-    description:
-      "Explorez des appartements, villas, terrains et biens immobiliers dans votre ville.",
-  },
-  {
-    title: "Découvrir des opportunités",
-    icon: "💼",
-    description:
-      "Consultez les offres d'emploi et les opportunités professionnelles locales.",
-  },
-  {
-    title: "Développer votre activité",
-    icon: "🏢",
-    description:
-      "Publiez vos annonces, présentez vos services et gagnez en visibilité.",
-  },
-  {
-    title: "Vivre votre ville",
-    icon: "📍",
-    description:
-      "Retrouvez événements, actualités, entreprises et services à proximité.",
-  },
-];
 
 function CityDropdown({ selectedCity, onSelect }) {
   const [open, setOpen] = useState(false);
@@ -457,7 +241,7 @@ export default function HomePage() {
       {/* STATS */}
       <section className="border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-6 py-10 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-          {STATS.map((s, i) => (
+          {Stats.map((s, i) => (
             <motion.div
               key={s.label}
               initial={{ opacity: 0, y: 12 }}
@@ -485,7 +269,7 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {SERVICES.map((svc, i) => {
+          {Services.map((svc, i) => {
             const Icon = svc.icon;
             return (
               <motion.a
@@ -577,7 +361,6 @@ export default function HomePage() {
           <span className="inline-flex items-center rounded-full bg-[var(--color-primary-mint)] px-4 py-1 text-sm font-medium text-[var(--color-primary-dark)]">
             Une plateforme pour toute la ville
           </span>
-
           <h2 className="mt-4 text-4xl font-bold text-gray-900">
             Tout ce dont vous avez besoin,
             <span className="text-[var(--color-primary)]">
@@ -585,34 +368,44 @@ export default function HomePage() {
               au même endroit
             </span>
           </h2>
-
           <p className="mt-4 max-w-2xl mx-auto text-gray-600">
             Madinatti centralise les services, opportunités et informations
             locales pour simplifier votre quotidien.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {FEATURES.map((item, index) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-[280px]">
+          {Features.map((item, index) => (
             <motion.div
               key={item.title}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: index * 0.1 }}
-              className="group bg-white border border-gray-100 rounded-3xl p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+              className={`group relative overflow-hidden rounded-3xl ${item.span}`}
             >
-              <div className="w-14 h-14 rounded-2xl bg-[var(--color-primary-mint)] flex items-center justify-center text-2xl mb-5">
-                {item.icon}
+              {/* Background image */}
+              <img
+                src={item.image}
+                alt={item.title}
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+
+              {/* Gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
+
+              {/* Green accent top bar */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-[var(--color-primary)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+              {/* Content */}
+              <div className="absolute bottom-0 left-0 right-0 p-6">
+                <h3 className="text-white font-bold text-lg mb-2 leading-tight">
+                  {item.title}
+                </h3>
+                <p className="text-white/75 text-sm leading-relaxed transform translate-y-2 opacity-0 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                  {item.description}
+                </p>
               </div>
-
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                {item.title}
-              </h3>
-
-              <p className="text-sm text-gray-600 leading-relaxed">
-                {item.description}
-              </p>
             </motion.div>
           ))}
         </div>
