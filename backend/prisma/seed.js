@@ -103,7 +103,7 @@ async function main() {
       phone: '+212661000002',
       isActive: true, emailVerifiedAt: new Date(),
       city: 'Rabat'
-    }
+    },
     create: { id: 'standard', name: 'Standard', price: 0, durationDays: 0, maxListings: 3, maxPhotos: 3, canBoost: false, canSponsor: false, hasBadge: false, hasStatistics: false, hasChat: false }
   })
   await prisma.plan.upsert({
