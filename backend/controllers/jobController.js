@@ -132,5 +132,85 @@ const getJobById = async (req, res) => {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
+const getFiltersCount = async (req, res) => {
+  try {
+    const baseWhere = { status: 'PUBLISHED' };
+ 
+    // 1. Count par contractType
+    const contractCounts = await prisma.jobListing.groupBy({
+      by: ['contractType'],
+      where: baseWhere,
+      _count: { contractType: true },
+    });
+ 
+    // 2. Count par experienceLevel
+    const experienceCounts = await prisma.jobListing.groupBy({
+      by: ['experienceLevel'],
+      where: baseWhere,
+      _count: { experienceLevel: true },
+    });
+ 
+    // 3. Count par educationLevel
+    const educationCounts = await prisma.jobListing.groupBy({
+      by: ['educationLevel'],
+      where: baseWhere,
+      _count: { educationLevel: true },
+    });
+ 
+    // 4. Count par location (ville)
+    const locationCounts = await prisma.jobListing.groupBy({
+      by: ['location'],
+      where: baseWhere,
+      _count: { location: true },
+      orderBy: { _count: { location: 'desc' } },
+      take: 20, // top 20 villes
+    });
+ 
+    // 5. Count par catégorie (via Category)
+    const categoryCounts = await prisma.category.findMany({
+      where: {
+        isActive: true,
+        jobListings: { some: { status: 'PUBLISHED' } },
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        _count: {
+          select: {
+            jobListings: { where: { status: 'PUBLISHED' } },
+          },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+ 
+    // Transformer en objets { value: count }
+    const toMap = (arr, key, countKey) =>
+      arr.reduce((acc, item) => {
+        if (item[key]) acc[item[key]] = item._count[countKey];
+        return acc;
+      }, {});
+ 
+    res.json({
+      success: true,
+      data: {
+        contractType: toMap(contractCounts, 'contractType', 'contractType'),
+        experienceLevel: toMap(experienceCounts, 'experienceLevel', 'experienceLevel'),
+        educationLevel: toMap(educationCounts, 'educationLevel', 'educationLevel'),
+        location: toMap(locationCounts, 'location', 'location'),
+        categories: categoryCounts.map((c) => ({
+          id: c.id,
+          name: c.name,
+          slug: c.slug,
+          count: c._count.jobListings,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error('getFiltersCount error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
 
-module.exports = { getJobs, getJobById };
+module.exports = { getJobs, getJobById, getFiltersCount };
