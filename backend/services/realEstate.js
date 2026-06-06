@@ -201,7 +201,8 @@ async function createInquiry(data, userId) {
     select: { id: true, status: true, isActive: true },
   });
 
-  if (!listing)                              return { error: 'Listing not found.', status: 404 };
+  if (!listing)                              
+    return { error: 'Listing not found.', status: 404 };
   if (listing.status !== 'APPROVED' || !listing.isActive)
     return { error: 'Listing is not available.', status: 400 };
 

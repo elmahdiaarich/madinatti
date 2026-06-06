@@ -127,12 +127,17 @@ async function createInquiry(req, res) {
     return res.status(400).json({ success: false, message: 'listingId: required' });
 
   try {
-    const result = await service.createInquiry(req.body, req.user.id);
+    const userId = req.user?.userId;
+    console.log("USER:", req.user);
+    console.log("USER ID:", userId);
+
+    const result = await service.createInquiry(req.body, userId);
     if (result.error)
       return res.status(result.status).json({ success: false, message: result.error });
 
     return res.status(201).json({ success: true, data: result.inquiry });
   } catch (err) {
+    console.error("🔥 INQUIRY ERROR:", err);
     console.error('[createInquiry]', err);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }

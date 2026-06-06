@@ -11,7 +11,7 @@ async function main() {
   const roles      = await seedRoles(prisma);
   await seedPlans(prisma);
   const categories = await seedCategories(prisma);
-  await seedJobs(prisma, roles, categories);
+  // await seedJobs(prisma, roles, categories);
   await seedRealEstate(prisma, roles, categories);  // 👈 add this
 }
 
