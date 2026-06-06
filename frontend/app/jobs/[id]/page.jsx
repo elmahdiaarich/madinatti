@@ -51,7 +51,7 @@ const fmtNum = (v) => Number(v).toLocaleString('fr-MA');
 const fmtDate = (d) =>
   d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
 const formatSalary = (min, max) => {
-  if (!min && !max) return null;
+  if (!min && !max) return 'À discuter';  // ← vérifier que c'est bien là
   if (min && max) return `${fmtNum(min)} - ${fmtNum(max)} MAD/mois`;
   if (min) return `A partir de ${fmtNum(min)} MAD/mois`;
   return null;

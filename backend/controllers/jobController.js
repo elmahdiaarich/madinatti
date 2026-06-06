@@ -11,9 +11,10 @@ const getJobs = async (req, res) => {
   categoryId,
   contractType,
   location,
-  educationLevel,   // 👈
-  experienceLevel,  // 👈
-  categorySlug,   // 👈
+  educationLevel,   
+  experienceLevel,  
+  categorySlug,   
+  salarySpecified
 } = req.query;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -33,6 +34,14 @@ const getJobs = async (req, res) => {
   ...(experienceLevel && { experienceLevel }), 
    ...(categorySlug && { category: { slug: categorySlug }}),
   ...(location && { location: { contains: location, mode: 'insensitive' } }),
+    ...(salarySpecified === 'true' && {
+    NOT: {
+      AND: [
+        { salaryMin: null },
+        { salaryMax: null },
+      ]
+    },
+  }),
 };
 
     const [jobs, total] = await Promise.all([

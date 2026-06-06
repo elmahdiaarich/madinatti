@@ -71,13 +71,14 @@ function InfoRow({ label, value, valueClass = '' }) {
 }
 
 export default function JobCard({ job }) {
+    
   const formatSalary = (min, max) => {
-    if (!min && !max) return null;
-    const fmt = (v) => Number(v).toLocaleString('fr-MA');
-    if (min && max) return `${fmt(min)} – ${fmt(max)} MAD/mois`;
-    if (min) return `À partir de ${fmt(min)} MAD/mois`;
-    return null;
-  };
+  if (!min && !max) return 'À discuter';  // ← ici
+  const fmt = (v) => Number(v).toLocaleString('fr-MA');
+  if (min && max) return `${fmt(min)} – ${fmt(max)} MAD/mois`;
+  if (min) return `À partir de ${fmt(min)} MAD/mois`;
+  return null;
+};
 
   const formatDate = (date) => {
     if (!date) return '';

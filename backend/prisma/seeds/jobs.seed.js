@@ -7,7 +7,9 @@ async function seedJobs(prisma, { business }, {
   catBTP, catVente, catSante, catLogistique,
   catJuridique, catEnseignement
 }) {
-
+  // ── RESET JOBS ────────────────────────────────────────────
+  await prisma.jobListing.deleteMany({})
+  console.log('🗑️  Job listings supprimés')
   // ── USERS BUSINESS ────────────────────────────────────────
   const testPassword = await bcrypt.hash('password123', 10)
 
@@ -192,7 +194,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       contractType: 'CDD', remote: 'ON_SITE',
       educationLevel: 'BAC_PLUS_3', experienceLevel: 'MID_2_TO_5',
-      salaryMin: 7000, salaryMax: 9000, isFeatured: false,
+      salaryMin: null, salaryMax: null, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle'    },
         { language: 'français', level: 'bon niveau'    },
@@ -374,7 +376,7 @@ Profil :
       location: 'Rabat', region: 'Rabat-Salé-Kénitra',
       contractType: 'TEMPS_PARTIEL', remote: 'ON_SITE',
       educationLevel: 'BAC_PLUS_2', experienceLevel: 'JUNIOR_LESS_2',
-      salaryMin: 2500, salaryMax: 4000, isFeatured: false,
+      salaryMin: null, salaryMax: null, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle' },
         { language: 'français', level: 'bon niveau' },
@@ -451,7 +453,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       contractType: 'ANAPEC', remote: 'ON_SITE',
       educationLevel: 'BAC_PLUS_2', experienceLevel: 'STUDENT_FRESH_GRAD',
-      salaryMin: 2800, salaryMax: 3200, isFeatured: false,
+      salaryMin: null, salaryMax: null, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle' },
         { language: 'français', level: 'bon niveau' },
@@ -502,7 +504,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       contractType: 'CDI', remote: 'ON_SITE',
       educationLevel: 'BAC_PLUS_5_PLUS', experienceLevel: 'MID_2_TO_5',
-      salaryMin: 9000, salaryMax: 14000, isFeatured: false,
+      salaryMin: null, salaryMax: null, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle' },
         { language: 'français', level: 'courant'    },
@@ -554,7 +556,7 @@ Profil :
       location: 'Tanger', region: 'Tanger-Tétouan-Al Hoceïma',
       contractType: 'CDI', remote: 'ON_SITE',
       educationLevel: 'BAC', experienceLevel: 'MID_2_TO_5',
-      salaryMin: 5000, salaryMax: 7000, isFeatured: false,
+      salaryMin: null, salaryMax: null, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle'    },
         { language: 'français', level: 'intermédiaire' },
