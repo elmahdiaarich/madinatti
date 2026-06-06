@@ -141,6 +141,17 @@ admin
 
 Sinon Google login ne pourra pas créer l'utilisateur.
 
+### to apply new seeder
+
+node prisma/seed.js
+
+Seed complet. Comptes de test :
+   admin@yourtown.ma     / admin123
+   immo.atlas@yourtown.ma / password123  (business)
+   dar.invest@yourtown.ma / password123  (business)
+   youssef@yourtown.ma   / password123  (citizen)
+   salma@yourtown.ma     / password123  (citizen)
+
 ## cloudinary setup
 
 cd backend
