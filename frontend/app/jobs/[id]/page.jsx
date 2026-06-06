@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { jobsService } from '@/services/jobsService';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { cities } from 'morocco-cities';
+import InlineRegisterSection from '@/components/shared/jobs/InlineRegisterSection';
 
 
 const CONTRACT_LABELS = {
@@ -29,7 +33,6 @@ const REMOTE_LABELS = {
   HYBRID:  { label: 'Hybride',     icon: '🔀', color: 'bg-purple-50 text-purple-700' },
 };
 
-// badge remote dans le hero
 const REMOTE_HERO = {
   ON_SITE: { label: 'Présentiel',  bg: 'bg-white/15' },
   REMOTE:  { label: 'Full Remote', bg: 'bg-blue-400/80' },
@@ -53,6 +56,19 @@ const formatSalary = (min, max) => {
   if (min) return `A partir de ${fmtNum(min)} MAD/mois`;
   return null;
 };
+
+// ─── Scroll helper ────────────────────────────────────────────────────────────
+const scrollToInscription = () => {
+  const el = document.getElementById('inscription');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+// ─── Grouper les villes par région (moroccan-cities) ─────────────────────────
+const citiesByRegion = cities.reduce((acc, city) => {
+  if (!acc[city.region_name]) acc[city.region_name] = [];
+  acc[city.region_name].push(city.name);
+  return acc;
+}, {});
 
 function CompanyLogo({ logo, name, size = 'lg' }) {
   const [imgErr, setImgErr] = useState(false);
@@ -143,21 +159,41 @@ function RelatedJobCard({ job }) {
   );
 }
 
-function FloatingButtons() {
+// ─── FloatingButtons ──────────────────────────────────────────────────────────
+function FloatingButtons({ isVisitor, userRole }) {
+  const showPublish = isVisitor || userRole === 'citizen';
+
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
-      <Link
-        href="/jobs/publier"
-        className="flex items-center gap-3 px-5 py-3 rounded-full shadow-xl bg-[#2D5016] text-white font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-300 hover:scale-105 active:scale-100 group"
-      >
-        <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 bg-[#A7D129] group-hover:bg-[#2D5016] transition-colors duration-300">
-          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-white">
-            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-          </svg>
-        </span>
-        <span className="whitespace-nowrap">Publier une annonce</span>
-        <span className="text-[#A7D129] group-hover:text-[#2D5016] text-sm leading-none transition-colors">✦</span>
-      </Link>
+      {showPublish && (
+        isVisitor ? (
+          <button
+            onClick={scrollToInscription}
+            className="flex items-center gap-3 px-5 py-3 rounded-full shadow-xl bg-[#2D5016] text-white font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-300 hover:scale-105 active:scale-100 group"
+          >
+            <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 bg-[#A7D129] group-hover:bg-[#2D5016] transition-colors duration-300">
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-white">
+                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+              </svg>
+            </span>
+            <span className="whitespace-nowrap">Publier une annonce</span>
+            <span className="text-[#A7D129] group-hover:text-[#2D5016] text-sm leading-none transition-colors">✦</span>
+          </button>
+        ) : (
+          <Link
+            href="/jobs/publier"
+            className="flex items-center gap-3 px-5 py-3 rounded-full shadow-xl bg-[#2D5016] text-white font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-300 hover:scale-105 active:scale-100 group"
+          >
+            <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 bg-[#A7D129] group-hover:bg-[#2D5016] transition-colors duration-300">
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-white">
+                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+              </svg>
+            </span>
+            <span className="whitespace-nowrap">Publier une annonce</span>
+            <span className="text-[#A7D129] group-hover:text-[#2D5016] text-sm leading-none transition-colors">✦</span>
+          </Link>
+        )
+      )}
       <Link
         href="/contact"
         className="flex items-center gap-3 px-5 py-3 rounded-full shadow-xl bg-[#A7D129] text-[#2D5016] font-bold text-sm hover:bg-[#2D5016] hover:text-white transition-all duration-300 hover:scale-105 active:scale-100 group"
@@ -193,12 +229,9 @@ function Skeleton() {
   );
 }
 
-// ─── Composant Languages ──────────────────────────────────────────────────────
 function LanguagesSection({ languages }) {
   if (!languages || !Array.isArray(languages) || languages.length === 0) return null;
-
   const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-
   return (
     <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
@@ -233,6 +266,7 @@ function LanguagesSection({ languages }) {
 // ─── Page principale ──────────────────────────────────────────────────────────
 export default function JobDetailPage() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [job, setJob] = useState(null);
   const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -288,6 +322,17 @@ export default function JobDetailPage() {
   const encodedUrl = encodeURIComponent(pageUrl);
   const encodedTitle = encodeURIComponent(job.title);
 
+  const isVisitor = !user;
+  const userRole = user?.role;
+
+  const handlePostuler = () => {
+    if (isVisitor) {
+      scrollToInscription();
+    } else {
+      alert('Fonctionnalité à venir');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
 
@@ -323,7 +368,6 @@ export default function JobDetailPage() {
                     📍 {job.location}
                   </span>
                 )}
-                {/* ── NOUVEAU : badge remote ── */}
                 {remoteHero && (
                   <span className={`px-3 py-1 ${remoteHero.bg} rounded-full text-xs font-semibold`}>
                     {remote?.icon} {remoteHero.label}
@@ -378,7 +422,7 @@ export default function JobDetailPage() {
             {/* CTA desktop */}
             <div className="hidden md:block shrink-0 self-center">
               <button
-                onClick={() => alert('Fonctionnalité à venir')}
+                onClick={handlePostuler}
                 className="px-8 py-3 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-full text-sm shadow-lg hover:bg-white transition-all duration-200 hover:scale-[1.03] active:scale-100"
               >
                 Postuler
@@ -406,10 +450,8 @@ export default function JobDetailPage() {
               <div>
                 <CriteriaRow label="Métier"           value={job.category?.name} />
                 <CriteriaRow label="Type de contrat"  value={contract} />
-                {/* ── NOUVEAU : Télétravail ── */}
                 <CriteriaRow label="Télétravail"      value={remote ? `${remote.icon} ${remote.label}` : null} />
                 <CriteriaRow label="Ville"            value={job.location} />
-                {/* ── NOUVEAU : Région ── */}
                 <CriteriaRow label="Région"           value={job.region} />
               </div>
               <div>
@@ -458,8 +500,16 @@ export default function JobDetailPage() {
             </div>
           </section>
 
-          {/* ── NOUVEAU : Section langues ── */}
+          {/* Langues */}
           <LanguagesSection languages={languages} />
+
+          {/* CTA Postuler */}
+          <button
+            onClick={handlePostuler}
+            className="w-full py-4 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-2xl text-sm shadow hover:bg-[#2D5016] hover:text-white transition-all duration-200 hover:scale-[1.01] active:scale-100"
+          >
+            {isVisitor ? '✦ Créer un compte pour postuler' : '✦ Postuler à cette offre'}
+          </button>
 
           {/* Alerte fraude */}
           <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex gap-3 items-start">
@@ -473,7 +523,7 @@ export default function JobDetailPage() {
           {/* CTA mobile */}
           <div className="md:hidden">
             <button
-              onClick={() => alert('Fonctionnalité à venir')}
+              onClick={handlePostuler}
               className="w-full py-3.5 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-full text-sm shadow hover:bg-[#2D5016] hover:text-white transition-all duration-200"
             >
               Postuler à cette offre
@@ -507,11 +557,12 @@ export default function JobDetailPage() {
             <a href="#" className="text-[#A7D129] text-xs font-semibold mt-3 inline-block hover:underline">
               Voir toutes nos annonces
             </a>
+
             <button
-              onClick={() => alert('Fonctionnalité à venir')}
+              onClick={handlePostuler}
               className="mt-5 w-full py-3 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-full text-sm hover:bg-white transition-all duration-200 hover:scale-[1.02] active:scale-100"
             >
-              Postuler
+              {isVisitor ? 'Créer un compte pour postuler' : 'Postuler'}
             </button>
           </div>
 
@@ -531,7 +582,6 @@ export default function JobDetailPage() {
                   <span className="font-bold text-[#2D5016]">{appCount}</span>
                 </div>
               )}
-              {/* ── NOUVEAU : remote dans infos rapides ── */}
               {remote && (
                 <div className="flex justify-between">
                   <span className="text-gray-500">Télétravail</span>
@@ -586,7 +636,17 @@ export default function JobDetailPage() {
         </div>
       </div>
 
-      <FloatingButtons />
+      {/* Section inscription — en dehors du grid, pleine largeur, centrée et max-w-[1000px] */}
+      {isVisitor && (
+        <div id="inscription" className="max-w-[1200px] mx-auto px-4 pb-12">
+          <div className="max-w-[1000px] mx-auto">
+            <InlineRegisterSection jobTitle={job.title} />
+          </div>
+        </div>
+      )}
+
+      {/* FloatingButtons */}
+      <FloatingButtons isVisitor={isVisitor} userRole={userRole} />
     </div>
   );
 }

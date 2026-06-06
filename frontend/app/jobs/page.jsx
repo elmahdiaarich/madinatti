@@ -1,10 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { jobsService } from '@/services/jobsService';
+import { useAuth } from '@/context/AuthContext';
 import JobCard from '@/components/jobs/JobCard';
 import JobFilter from '@/components/jobs/JobFilter';
+import { cities } from 'morocco-cities';
+import InlineRegisterSection from '@/components/shared/jobs/InlineRegisterSection';
 
+// ─── Données ──────────────────────────────────────────────────────────────────
 const CATEGORIES = [
   { label: 'Tous', categoryId: null },
   { label: 'Informatique', categoryId: 'informatique' },
@@ -17,13 +23,45 @@ const CATEGORIES = [
   { label: 'Logistique', categoryId: 'logistique' },
 ];
 
+// ─── Villes par région ────────────────────────────────────────────────────────
+const citiesByRegion = cities.reduce((acc, city) => {
+  if (!acc[city.region_name]) acc[city.region_name] = [];
+  acc[city.region_name].push(city.name);
+  return acc;
+}, {});
+
+// ─── Scroll helper ────────────────────────────────────────────────────────────
+const scrollToInscription = () => {
+  const el = document.getElementById('inscription');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+// ─── Page principale ──────────────────────────────────────────────────────────
 export default function JobsPage() {
+  const { user } = useAuth();
+  const router = useRouter();
+
   const [jobs, setJobs] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ page: 1, limit: 9 });
   const [activeCategory, setActiveCategory] = useState(null);
   const [searchInput, setSearchInput] = useState('');
+
+  const isVisitor = !user;
+  const userRole = user?.role; // 'citizen' | 'business' | 'admin'
+
+  // Bouton "Publier une annonce" : visible si visiteur ou citoyen
+  const showPublishBtn = isVisitor || userRole === 'citizen';
+
+  const handlePublishClick = () => {
+    if (userRole === 'business') {
+      router.push('/jobs/publier');
+    } else {
+      // visiteur ou citoyen → scroll vers le formulaire d'inscription
+      scrollToInscription();
+    }
+  };
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -41,31 +79,32 @@ export default function JobsPage() {
     fetchJobs();
   }, [filters]);
 
-const handleFilter = (newFilters) => {
-  if (Object.keys(newFilters).length === 0) {
-    setFilters({ page: 1, limit: 9 }); // 👈 reset total
-    return;
-  }
-  setFilters((prev) => {
-    const merged = { ...prev, ...newFilters, page: 1 };
-    Object.keys(merged).forEach((k) => {
-      if (merged[k] === undefined) delete merged[k];
+  const handleFilter = (newFilters) => {
+    if (Object.keys(newFilters).length === 0) {
+      setFilters({ page: 1, limit: 9 });
+      return;
+    }
+    setFilters((prev) => {
+      const merged = { ...prev, ...newFilters, page: 1 };
+      Object.keys(merged).forEach((k) => {
+        if (merged[k] === undefined) delete merged[k];
+      });
+      return merged;
     });
-    return merged;
-  });
-};
+  };
+
   const handleSearch = () => {
     setFilters((prev) => ({ ...prev, search: searchInput, page: 1 }));
   };
 
-const handleCategoryTab = (cat) => {
-  setActiveCategory(cat.categoryId);
-  setFilters({
-    page: 1,
-    limit: 9,
-    ...(cat.categoryId && { categorySlug: cat.categoryId }), // 👈 slug propre
-  });
-};
+  const handleCategoryTab = (cat) => {
+    setActiveCategory(cat.categoryId);
+    setFilters({
+      page: 1,
+      limit: 9,
+      ...(cat.categoryId && { categorySlug: cat.categoryId }),
+    });
+  };
 
   const handlePageChange = (newPage) => {
     setFilters((prev) => ({ ...prev, page: newPage }));
@@ -105,12 +144,14 @@ const handleCategoryTab = (cat) => {
               Rechercher
             </button>
           </div>
+
+
         </div>
       </div>
 
       {/* CATEGORY TABS */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-[1200px] mx-auto px-4 py-2.5 flex gap-1.5 flex-wrap">
+        <div className="max-w-[1200px] mx-auto px-4 py-2.5 flex items-center gap-1.5 flex-wrap">
           {CATEGORIES.map((cat) => (
             <button
               key={cat.label}
@@ -124,6 +165,18 @@ const handleCategoryTab = (cat) => {
               {cat.label}
             </button>
           ))}
+          {/* Bouton publier — poussé à droite */}
+          {showPublishBtn && (
+            <button
+              onClick={handlePublishClick}
+              className="ml-auto inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-[#2D5016] text-white font-bold text-sm shadow-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-150 hover:scale-105 active:scale-100 group shrink-0 cursor-pointer"
+            >
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current shrink-0">
+                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+              </svg>
+              Publier une annonce
+            </button>
+          )}
         </div>
       </div>
 
@@ -131,12 +184,11 @@ const handleCategoryTab = (cat) => {
       <div className="max-w-[1200px] mx-auto px-4 py-6 flex gap-6">
 
         {/* SIDEBAR */}
-   
-<aside className="w-[260px] shrink-0">
-  <div className="sticky top-[52px] overflow-y-auto max-h-[calc(100vh-52px)]">
-    <JobFilter onFilter={handleFilter} />
-  </div>
-</aside>
+        <aside className="w-[260px] shrink-0">
+          <div className="sticky top-[52px] overflow-y-auto max-h-[calc(100vh-52px)]">
+            <JobFilter onFilter={handleFilter} />
+          </div>
+        </aside>
 
         {/* JOBS LIST */}
         <main className="flex-1 min-w-0">
@@ -217,6 +269,28 @@ const handleCategoryTab = (cat) => {
           )}
         </main>
       </div>
+
+      {/* FORMULAIRE D'INSCRIPTION — visiteurs et citoyens uniquement */}
+      {(isVisitor || userRole === 'citizen') && (
+        <div
+          id="inscription"
+          className="max-w-[1000px] mx-auto px-4 py-12"
+        >
+          {/* Séparateur décoratif */}
+          <div className="flex items-center gap-4 mb-8">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#A7D129]/40 to-[#A7D129]/40" />
+            <span className="text-xs font-bold uppercase tracking-widest text-[#7BA428]">
+              {userRole === 'citizen'
+                ? 'Vous êtes une entreprise ? Publiez votre annonce'
+                : 'Rejoignez Madinatti'}
+            </span>
+            <div className="flex-1 h-px bg-gradient-to-l from-transparent via-[#A7D129]/40 to-[#A7D129]/40" />
+          </div>
+
+          <InlineRegisterSection />
+        </div>
+      )}
+
     </div>
   );
 }
