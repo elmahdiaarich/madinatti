@@ -4,34 +4,34 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { jobsService } from '@/services/jobsService';
-import ProtectedRoute from '@/components/shared/ProtectedRoutes';
+import ProtectedRoute from '@/components/shared/ProtectedRoute';
 import { cities } from 'morocco-cities';
 
 // ─── Données statiques ────────────────────────────────────────────────────────
 
 const CATEGORIES = [
-  { label: 'Informatique & Tech',  slug: 'informatique' },
-  { label: 'Marketing & Comm.',    slug: 'marketing' },
-  { label: 'Finance & Compta.',    slug: 'finance' },
-  { label: 'Ressources Humaines',  slug: 'rh' },
-  { label: 'BTP & Construction',   slug: 'btp' },
-  { label: 'Vente & Commerce',     slug: 'vente' },
-  { label: 'Santé & Médical',      slug: 'sante' },
-  { label: 'Logistique & Transport', slug: 'logistique' },
-  { label: 'Juridique',            slug: 'juridique' },
+  { label: 'Informatique & Tech',      slug: 'informatique' },
+  { label: 'Marketing & Comm.',        slug: 'marketing' },
+  { label: 'Finance & Compta.',        slug: 'finance' },
+  { label: 'Ressources Humaines',      slug: 'rh' },
+  { label: 'BTP & Construction',       slug: 'btp' },
+  { label: 'Vente & Commerce',         slug: 'vente' },
+  { label: 'Santé & Médical',          slug: 'sante' },
+  { label: 'Logistique & Transport',   slug: 'logistique' },
+  { label: 'Juridique',                slug: 'juridique' },
   { label: 'Enseignement & Formation', slug: 'enseignement' },
 ];
 
 const CONTRACT_TYPES = [
-  { value: 'CDI',          label: 'CDI',           desc: 'Contrat à durée indéterminée' },
-  { value: 'CDD',          label: 'CDD',           desc: 'Contrat à durée déterminée' },
-  { value: 'STAGE',        label: 'Stage',         desc: 'Stage de fin d\'études ou professionnel' },
-  { value: 'FREELANCE',    label: 'Freelance',     desc: 'Mission en indépendant' },
-  { value: 'INTERIM',      label: 'Intérim',       desc: 'Mission temporaire' },
-  { value: 'ALTERNANCE',   label: 'Alternance',    desc: 'Contrat en alternance' },
-  { value: 'ANAPEC',       label: 'Anapec',        desc: 'Contrat Idmaj ANAPEC' },
-  { value: 'TEMPS_PARTIEL',label: 'Temps partiel', desc: 'Moins de 40h/semaine' },
-  { value: 'STATUTAIRE',   label: 'Statutaire',    desc: 'Fonction publique' },
+  { value: 'CDI',           label: 'CDI',           desc: 'Contrat à durée indéterminée' },
+  { value: 'CDD',           label: 'CDD',           desc: 'Contrat à durée déterminée' },
+  { value: 'STAGE',         label: 'Stage',         desc: "Stage de fin d'études ou professionnel" },
+  { value: 'FREELANCE',     label: 'Freelance',     desc: 'Mission en indépendant' },
+  { value: 'INTERIM',       label: 'Intérim',       desc: 'Mission temporaire' },
+  { value: 'ALTERNANCE',    label: 'Alternance',    desc: 'Contrat en alternance' },
+  { value: 'ANAPEC',        label: 'Anapec',        desc: 'Contrat Idmaj ANAPEC' },
+  { value: 'TEMPS_PARTIEL', label: 'Temps partiel', desc: 'Moins de 40h/semaine' },
+  { value: 'STATUTAIRE',    label: 'Statutaire',    desc: 'Fonction publique' },
 ];
 
 const REMOTE_TYPES = [
@@ -41,19 +41,19 @@ const REMOTE_TYPES = [
 ];
 
 const EDUCATION_LEVELS = [
-  { value: 'BEFORE_BAC',    label: 'Avant Bac' },
-  { value: 'BAC',           label: 'Bac' },
-  { value: 'BAC_PLUS_1',    label: 'Bac+1' },
-  { value: 'BAC_PLUS_2',    label: 'Bac+2' },
-  { value: 'BAC_PLUS_3',    label: 'Bac+3' },
-  { value: 'BAC_PLUS_4',    label: 'Bac+4' },
+  { value: 'BEFORE_BAC',      label: 'Avant Bac' },
+  { value: 'BAC',             label: 'Bac' },
+  { value: 'BAC_PLUS_1',      label: 'Bac+1' },
+  { value: 'BAC_PLUS_2',      label: 'Bac+2' },
+  { value: 'BAC_PLUS_3',      label: 'Bac+3' },
+  { value: 'BAC_PLUS_4',      label: 'Bac+4' },
   { value: 'BAC_PLUS_5_PLUS', label: 'Bac+5 et plus' },
 ];
 
 const EXPERIENCE_LEVELS = [
   { value: 'STUDENT_FRESH_GRAD', label: 'Étudiant / Jeune diplômé' },
   { value: 'JUNIOR_LESS_2',      label: 'Débutant (< 2 ans)' },
-  { value: 'MID_2_TO_5',         label: '2 à 5 ans d\'expérience' },
+  { value: 'MID_2_TO_5',         label: "2 à 5 ans d'expérience" },
   { value: 'SENIOR_5_TO_10',     label: '5 à 10 ans d\'expérience' },
   { value: 'EXPERT_PLUS_10',     label: 'Expert (+ 10 ans)' },
 ];
@@ -171,7 +171,9 @@ function PublierJobContent() {
     skillInput: '',
     languages: [],
     // Étape 4 — Description
-    description: '',
+    missions: [''],
+    profil: [''],
+    avantages: [''],
   });
 
   const set = (key, value) => {
@@ -183,16 +185,18 @@ function PublierJobContent() {
   const validate = () => {
     const e = {};
     if (step === 1) {
-      if (!form.title.trim())       e.title = 'Le titre est requis';
-      if (!form.categorySlug)       e.categorySlug = 'Choisissez une catégorie';
-      if (!form.location)           e.location = 'Choisissez une ville';
+      if (!form.title.trim()) e.title = 'Le titre est requis';
+      if (!form.categorySlug) e.categorySlug = 'Choisissez une catégorie';
+      if (!form.location)     e.location = 'Choisissez une ville';
     }
     if (step === 2) {
-      if (!form.contractType)       e.contractType = 'Choisissez un type de contrat';
+      if (!form.contractType) e.contractType = 'Choisissez un type de contrat';
     }
     if (step === 4) {
-      if (!form.description.trim() || form.description.trim().length < 50)
-        e.description = 'La description doit faire au moins 50 caractères';
+      if (form.missions.filter(m => m.trim()).length === 0)
+        e.missions = 'Ajoutez au moins une mission';
+      if (form.profil.filter(p => p.trim()).length === 0)
+        e.profil = 'Ajoutez au moins un critère de profil';
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -229,6 +233,22 @@ function PublierJobContent() {
     if (found) set('region', found.region_name);
   };
 
+  // ── Build description ─────────────────────────────────────
+  const buildDescription = () => {
+    const missionsText = form.missions.filter(m => m.trim())
+      .map(m => `- ${m.trim()}`).join('\n');
+    const profilText = form.profil.filter(p => p.trim())
+      .map(p => `- ${p.trim()}`).join('\n');
+    const avantagesText = form.avantages.filter(a => a.trim())
+      .map(a => `- ${a.trim()}`).join('\n');
+
+    return [
+      `Missions :\n${missionsText}`,
+      `Profil recherché :\n${profilText}`,
+      avantagesText ? `Nous offrons :\n${avantagesText}` : '',
+    ].filter(Boolean).join('\n\n');
+  };
+
   // ── Soumission ────────────────────────────────────────────
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -248,9 +268,9 @@ function PublierJobContent() {
         experienceLevel:     form.experienceLevel || null,
         skills:              form.skills,
         languages:           form.languages,
-        description:         form.description,
+        description:         buildDescription(), // ✅ fixed: single key, uses builder
       }, token);
-      setStep(6); // succès
+      setStep(6);
     } catch (err) {
       setSubmitError(err.message || 'Une erreur est survenue');
     } finally {
@@ -284,13 +304,12 @@ function PublierJobContent() {
           {/* Progress bar */}
           {step <= 5 && (
             <div className="mt-6">
-              {/* Steps indicators */}
               <div className="flex items-center gap-0 mb-3">
                 {STEPS.map((s, i) => (
                   <div key={s.id} className="flex items-center flex-1 last:flex-none">
-                    <div className={`flex flex-col items-center gap-1`}>
+                    <div className="flex flex-col items-center gap-1">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all
-                        ${step > s.id ? 'bg-[#A7D129] text-[#2D5016]' :
+                        ${step > s.id  ? 'bg-[#A7D129] text-[#2D5016]' :
                           step === s.id ? 'bg-white text-[#2D5016] shadow-lg scale-110' :
                           'bg-white/20 text-white/60'}`}>
                         {step > s.id ? '✓' : s.id}
@@ -623,34 +642,146 @@ function PublierJobContent() {
         {step === 4 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
             <StepHeader step={4} title="Description du poste"
-              subtitle="Décrivez le rôle, les missions et le profil recherché" />
+              subtitle="Renseignez les missions, le profil et les avantages" />
 
-            <div className="space-y-4">
+            <div className="space-y-8">
+
+              {/* MISSIONS */}
               <div>
-                <FieldLabel required>Description complète</FieldLabel>
-                <Textarea
-                  value={form.description}
-                  onChange={(e) => set('description', e.target.value)}
-                  rows={16}
-                  placeholder={`Décrivez le poste en détail...\n\nMissions :\n- Mission 1\n- Mission 2\n\nProfil recherché :\n- Critère 1\n- Critère 2\n\nNous offrons :\n- Avantage 1`}
-                />
-                <div className="flex justify-between items-center mt-1">
-                  <ErrorMsg msg={errors.description} />
-                  <span className={`text-xs ml-auto ${form.description.length < 50 ? 'text-red-400' : 'text-gray-400'}`}>
-                    {form.description.length} / 50 min
-                  </span>
+                <FieldLabel required>Missions principales</FieldLabel>
+                <p className="text-xs text-gray-400 mb-3">Décrivez ce que le candidat va faire au quotidien</p>
+                <div className="space-y-2">
+                  {form.missions.map((mission, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-[#E8F5D0] text-[#2D5016] text-xs font-bold flex items-center justify-center shrink-0">
+                        {i + 1}
+                      </span>
+                      <Input
+                        value={mission}
+                        onChange={(e) => {
+                          const updated = [...form.missions];
+                          updated[i] = e.target.value;
+                          set('missions', updated);
+                        }}
+                        placeholder={`Ex: ${i === 0 ? 'Développer les fonctionnalités front-end' : i === 1 ? 'Participer aux réunions Agile / Scrum' : 'Mission ' + (i + 1)}`}
+                        className="flex-1"
+                      />
+                      {form.missions.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => set('missions', form.missions.filter((_, j) => j !== i))}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 transition"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
+                {form.missions.length < 8 && (
+                  <button
+                    type="button"
+                    onClick={() => set('missions', [...form.missions, ''])}
+                    className="mt-3 flex items-center gap-2 text-xs font-semibold text-[#2D5016] hover:text-[#A7D129] transition"
+                  >
+                    <span className="w-5 h-5 rounded-full border-2 border-[#2D5016] flex items-center justify-center text-sm leading-none">+</span>
+                    Ajouter une mission
+                  </button>
+                )}
+                <ErrorMsg msg={errors.missions} />
               </div>
 
-              {/* Tips */}
-              <div className="bg-[#E8F5D0] rounded-xl p-4 text-xs text-[#2D5016] space-y-1.5">
-                <p className="font-bold text-sm mb-2">💡 Conseils pour une bonne annonce</p>
-                <p>✓ Commencez par présenter votre entreprise en 2-3 lignes</p>
-                <p>✓ Listez les missions principales avec des tirets (-)</p>
-                <p>✓ Précisez le profil recherché (études, expérience, qualités)</p>
-                <p>✓ Mentionnez les avantages offerts (télétravail, mutuelle, etc.)</p>
-                <p>✓ Terminez par la procédure de candidature</p>
+              <div className="h-px bg-gray-100" />
+
+              {/* PROFIL */}
+              <div>
+                <FieldLabel required>Profil recherché</FieldLabel>
+                <p className="text-xs text-gray-400 mb-3">Listez les critères que doit avoir le candidat idéal</p>
+                <div className="space-y-2">
+                  {form.profil.map((critere, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-[#A7D129]/20 text-[#7BA428] text-xs font-bold flex items-center justify-center shrink-0">
+                        {i + 1}
+                      </span>
+                      <Input
+                        value={critere}
+                        onChange={(e) => {
+                          const updated = [...form.profil];
+                          updated[i] = e.target.value;
+                          set('profil', updated);
+                        }}
+                        placeholder={`Ex: ${i === 0 ? 'Bac+3 minimum en informatique' : i === 1 ? "2 ans d'expérience en React" : 'Critère ' + (i + 1)}`}
+                        className="flex-1"
+                      />
+                      {form.profil.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => set('profil', form.profil.filter((_, j) => j !== i))}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 transition"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {form.profil.length < 8 && (
+                  <button
+                    type="button"
+                    onClick={() => set('profil', [...form.profil, ''])}
+                    className="mt-3 flex items-center gap-2 text-xs font-semibold text-[#2D5016] hover:text-[#A7D129] transition"
+                  >
+                    <span className="w-5 h-5 rounded-full border-2 border-[#2D5016] flex items-center justify-center text-sm leading-none">+</span>
+                    Ajouter un critère
+                  </button>
+                )}
+                <ErrorMsg msg={errors.profil} />
               </div>
+
+              <div className="h-px bg-gray-100" />
+
+              {/* AVANTAGES */}
+              <div>
+                <FieldLabel>Ce que vous offrez <span className="text-gray-400 font-normal">(optionnel)</span></FieldLabel>
+                <p className="text-xs text-gray-400 mb-3">Mutuelle, télétravail, tickets restaurant, formation...</p>
+                <div className="space-y-2">
+                  {form.avantages.map((avantage, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="text-[#A7D129] text-sm shrink-0">✦</span>
+                      <Input
+                        value={avantage}
+                        onChange={(e) => {
+                          const updated = [...form.avantages];
+                          updated[i] = e.target.value;
+                          set('avantages', updated);
+                        }}
+                        placeholder={`Ex: ${i === 0 ? "Mutuelle d'entreprise prise en charge à 100%" : i === 1 ? '2 jours de télétravail par semaine' : 'Avantage ' + (i + 1)}`}
+                        className="flex-1"
+                      />
+                      {form.avantages.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => set('avantages', form.avantages.filter((_, j) => j !== i))}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 transition"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {form.avantages.length < 6 && (
+                  <button
+                    type="button"
+                    onClick={() => set('avantages', [...form.avantages, ''])}
+                    className="mt-3 flex items-center gap-2 text-xs font-semibold text-[#2D5016] hover:text-[#A7D129] transition"
+                  >
+                    <span className="w-5 h-5 rounded-full border-2 border-[#2D5016] flex items-center justify-center text-sm leading-none">+</span>
+                    Ajouter un avantage
+                  </button>
+                )}
+              </div>
+
             </div>
 
             <NavButtons onBack={back} onNext={next} nextLabel="Aperçu & Confirmer →" />
@@ -666,6 +797,7 @@ function PublierJobContent() {
 
               {/* Preview card */}
               <div className="border-2 border-[#A7D129]/40 rounded-2xl overflow-hidden mb-6">
+
                 {/* Header preview */}
                 <div className="bg-gradient-to-r from-[#2D5016] to-[#3d6b1e] p-6 text-white">
                   <div className="flex items-start gap-4">
@@ -686,7 +818,8 @@ function PublierJobContent() {
                         )}
                         {form.remote && (
                           <span className="px-2 py-0.5 bg-white/20 rounded-full text-xs">
-                            {REMOTE_TYPES.find(r => r.value === form.remote)?.icon} {REMOTE_TYPES.find(r => r.value === form.remote)?.label}
+                            {REMOTE_TYPES.find(r => r.value === form.remote)?.icon}{' '}
+                            {REMOTE_TYPES.find(r => r.value === form.remote)?.label}
                           </span>
                         )}
                       </div>
@@ -694,26 +827,38 @@ function PublierJobContent() {
                   </div>
                 </div>
 
-                {/* Summary body */}
-                <div className="p-6 grid grid-cols-2 gap-4 text-sm">
-                  <SummaryRow label="Catégorie"      value={CATEGORIES.find(c => c.slug === form.categorySlug)?.label} />
-                  <SummaryRow label="Expérience"     value={EXPERIENCE_LEVELS.find(e => e.value === form.experienceLevel)?.label} />
-                  <SummaryRow label="Études"         value={EDUCATION_LEVELS.find(e => e.value === form.educationLevel)?.label} />
-                  <SummaryRow label="Salaire"
-                    value={form.salaryMin || form.salaryMax
-                      ? `${form.salaryMin || '?'} – ${form.salaryMax || '?'} MAD/mois`
-                      : 'À discuter'} />
-                  {form.skills.length > 0 && (
-                    <div className="col-span-2">
-                      <p className="text-gray-400 text-xs mb-1">Compétences</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {form.skills.map(s => (
-                          <span key={s} className="px-2 py-0.5 bg-[#E8F5D0] text-[#2D5016] rounded-full text-xs font-semibold">{s}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                {/* ✅ Updated Summary body */}
+                <div className="p-6 text-sm">
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                    <SummaryRow label="Catégorie"
+                      value={CATEGORIES.find(c => c.slug === form.categorySlug)?.label} />
+                    <SummaryRow label="Contrat"
+                      value={CONTRACT_TYPES.find(c => c.value === form.contractType)?.label} />
+                    <SummaryRow label="Expérience"
+                      value={EXPERIENCE_LEVELS.find(e => e.value === form.experienceLevel)?.label} />
+                    <SummaryRow label="Mode de travail"
+                      value={REMOTE_TYPES.find(r => r.value === form.remote)?.label} />
+                    <SummaryRow label="Salaire"
+                      value={
+                        form.salaryMin && form.salaryMax
+                          ? `${Number(form.salaryMin).toLocaleString('fr-MA')} – ${Number(form.salaryMax).toLocaleString('fr-MA')} MAD/mois`
+                          : form.salaryMin
+                          ? `À partir de ${Number(form.salaryMin).toLocaleString('fr-MA')} MAD/mois`
+                          : form.salaryMax
+                          ? `Jusqu'à ${Number(form.salaryMax).toLocaleString('fr-MA')} MAD/mois`
+                          : 'À discuter'
+                      }
+                    />
+                    {form.applicationDeadline && (
+                      <SummaryRow label="Date limite"
+                        value={new Date(form.applicationDeadline).toLocaleDateString('fr-FR', {
+                          day: '2-digit', month: 'long', year: 'numeric',
+                        })}
+                      />
+                    )}
+                  </div>
                 </div>
+
               </div>
 
               {/* Notice validation */}
@@ -755,7 +900,7 @@ function PublierJobContent() {
                       </svg>
                       Envoi en cours...
                     </>
-                  ) : '✦ Soumettre l\'annonce'}
+                  ) : "✦ Soumettre l'annonce"}
                 </button>
               </div>
             </div>
@@ -783,7 +928,16 @@ function PublierJobContent() {
                 Voir les offres
               </button>
               <button
-                onClick={() => { setStep(1); setForm({ title: '', categorySlug: '', location: '', region: '', remote: 'ON_SITE', contractType: '', salaryMin: '', salaryMax: '', applicationDeadline: '', educationLevel: '', experienceLevel: '', skills: [], skillInput: '', languages: [], description: '' }); }}
+                onClick={() => {
+                  setStep(1);
+                  setForm({
+                    title: '', categorySlug: '', location: '', region: '',
+                    remote: 'ON_SITE', contractType: '', salaryMin: '', salaryMax: '',
+                    applicationDeadline: '', educationLevel: '', experienceLevel: '',
+                    skills: [], skillInput: '', languages: [],
+                    missions: [''], profil: [''], avantages: [''],
+                  });
+                }}
                 className="px-6 py-3 rounded-xl bg-[#2D5016] text-white font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition"
               >
                 + Nouvelle annonce

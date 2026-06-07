@@ -52,7 +52,7 @@ export default function JobsPage() {
   const userRole = user?.role; // 'citizen' | 'business' | 'admin'
 
   // Bouton "Publier une annonce" : visible si visiteur ou citoyen
-  const showPublishBtn = isVisitor || userRole === 'citizen';
+  const showPublishBtn = true;
 
   const handlePublishClick = () => {
     if (userRole === 'business') {

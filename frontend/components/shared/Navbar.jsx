@@ -99,6 +99,15 @@ const NAV_SERVICES = [
   },
 ];
 
+// ── Admin shield icon ──────────────────────────────────────────────────────────
+const IconShield = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1 -8.5 15a12 12 0 0 1 -8.5 -15a12 12 0 0 0 8.5 -3" />
+    <path d="M9 12l2 2l4 -4" />
+  </svg>
+)
+
 export default function Navbar() {
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -266,9 +275,30 @@ export default function Navbar() {
           Blog
         </a>
 
+        {/* ── ESPACE ADMIN — visible uniquement pour les admins ─────────── */}
         {role === "admin" && (
-          <a href="/admin" className="text-sm text-red-600 font-medium">
-            Admin
+          <a
+            href="/admin"
+            className={`
+              relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold
+              tracking-wide transition-all duration-200 overflow-hidden group
+              ${isActive("/admin") || pathname?.startsWith("/admin")
+                ? "bg-[#2D5016] text-white shadow-lg shadow-[#2D5016]/30"
+                : "bg-[#2D5016] text-white hover:bg-[#3a6b1e] shadow-md shadow-[#2D5016]/20 hover:shadow-lg hover:shadow-[#2D5016]/30"
+              }
+            `}
+          >
+            {/* Shimmer effect on hover */}
+            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent
+              -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+
+            <IconShield />
+            <span>Espace Admin</span>
+
+            {/* Active indicator dot */}
+            {pathname?.startsWith("/admin") && (
+              <span className="w-1.5 h-1.5 rounded-full bg-[#A7D129] animate-pulse ml-0.5" />
+            )}
           </a>
         )}
       </div>
@@ -324,27 +354,29 @@ export default function Navbar() {
             exit={{ height: 0, opacity: 0 }}
             className="absolute top-full left-0 w-full bg-white border-t border-gray-200 md:hidden px-6 py-4 flex flex-col gap-3 z-40"
           >
-            <a href="/" className="text-sm text-gray-700">
-              Accueil
-            </a>
-            <a href="/explorer" className="text-sm text-gray-700">
-              Explorer
-            </a>
+            <a href="/" className="text-sm text-gray-700">Accueil</a>
+            <a href="/explorer" className="text-sm text-gray-700">Explorer</a>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-2">
               Services
             </p>
             {NAV_SERVICES.map((s) => (
-              <a
-                key={s.label}
-                href={s.href}
-                className="text-sm text-gray-700 pl-2"
-              >
+              <a key={s.label} href={s.href} className="text-sm text-gray-700 pl-2">
                 {s.label}
               </a>
             ))}
-            <a href="/blog" className="text-sm text-gray-700 mt-2">
-              Blog
-            </a>
+            <a href="/blog" className="text-sm text-gray-700 mt-2">Blog</a>
+
+            {/* Admin link mobile */}
+            {role === "admin" && (
+              <a
+                href="/admin"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold
+                  bg-[#2D5016] text-white mt-1 w-fit"
+              >
+                <IconShield />
+                Espace Admin
+              </a>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
