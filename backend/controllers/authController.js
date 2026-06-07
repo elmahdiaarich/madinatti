@@ -349,7 +349,7 @@ const completeProfile = async (req, res) => {
 const getMe = async (req, res) => {
   try {
     const userId = req.user.userId;
-
+ 
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -359,23 +359,34 @@ const getMe = async (req, res) => {
         phone: true,
         city: true,
         avatar: true,
-        roleId: true,
         profileCompleted: true,
         isActive: true,
         companyName: true,
         companyLogo: true,
         companyWebsite: true,
+        role: {
+          select: { name: true }, // ← on récupère le nom du rôle
+        },
       },
     });
-
+ 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
-
-    res.json({ user });
+ 
+    if (!user.isActive) {
+      return res.status(403).json({ message: 'Compte désactivé' });
+    }
+ 
+    res.json({
+      user: {
+        ...user,
+        role: user.role.name, // ← "business" | "citizen" | "admin"
+      },
+    });
   } catch (error) {
     console.log(error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: 'Server error' });
   }
 };
 

@@ -8,7 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import JobCard from '@/components/jobs/JobCard';
 import JobFilter from '@/components/jobs/JobFilter';
 import { cities } from 'morocco-cities';
-import InlineRegisterSection from '@/components/shared/jobs/InlineRegisterSection';
+import InlineRegisterSection from '@/components/jobs/InlineRegisterSection';
 
 // ─── Données ──────────────────────────────────────────────────────────────────
 const CATEGORIES = [

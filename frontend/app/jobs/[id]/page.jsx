@@ -7,7 +7,9 @@ import { jobsService } from '@/services/jobsService';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { cities } from 'morocco-cities';
-import InlineRegisterSection from '@/components/shared/jobs/InlineRegisterSection';
+import InlineRegisterSection from '@/components/jobs/InlineRegisterSection';
+import MapFrame from '@/components/shared/MapFrame';
+
 
 
 const CONTRACT_LABELS = {
@@ -502,6 +504,13 @@ export default function JobDetailPage() {
 
           {/* Langues */}
           <LanguagesSection languages={languages} />
+           {/* maaap*/}
+          <MapFrame
+              latitude={job.latitude}
+              longitude={job.longitude}
+              location={job.location}
+              city={job.location}
+            />
 
           {/* CTA Postuler */}
           <button
