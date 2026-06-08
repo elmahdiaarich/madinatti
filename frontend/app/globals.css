@@ -30,3 +30,20 @@ body {
     border-color: var(--color-primary-dark);
   }
 }
+
+/*for realestate create route*/
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 10 !important;
+}
+
+
+/*for realestate buissness listing*/
+@keyframes slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.animate-slide-in {
+  animation: slide-in 0.25s ease-out;
+}

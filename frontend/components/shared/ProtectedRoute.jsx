@@ -10,6 +10,7 @@ export default function ProtectedRoute({ children, roles }) {
 
   useEffect(() => {
     if (!loading && !user) {
+      console.log("aji hna");
       router.push('/auth/login')
     }
 
