@@ -17,6 +17,10 @@ app.use("/api/auth", googleAuthRoutes)
 
 app.use('/api/real-estate', realEstateRoutes);
 
+//to uploas imgs on cloudnary
+app.use('/api/upload', require('./routes/upload'));
+//to get all catigories
+app.use('/api/categories', require('./routes/categories'));
 
 app.get('/', (req, res) => {
   res.json({ message: 'Madinatti API is running' })

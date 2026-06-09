@@ -8,6 +8,7 @@ const {
   resetPassword,
   completeProfile,
   getMe,
+  updateMe 
 } = require('../controllers/authController')
 const authMiddleware = require('../middlewares/authMiddleware')
 const googleAuth = require('./googleAuth')
@@ -25,5 +26,6 @@ router.post('/complete-profile', authMiddleware, upload.single('companyLogo'), c
 
 // ── /me — utilise le controller qui retourne le role correctement ──
 router.get('/me', authMiddleware, getMe)
+router.patch('/me', authMiddleware, upload.single('avatar'), updateMe)
 
 module.exports = router
