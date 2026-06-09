@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { jobsService } from '@/services/jobsService';
 import ProtectedRoute from '@/components/shared/ProtectedRoute';
 import { cities } from 'morocco-cities';
+import PricingModal from '@/components/shared/PricingModal';
 
 // ─── Données statiques ────────────────────────────────────────────────────────
 
@@ -148,6 +149,7 @@ function PublierJobContent() {
   const router = useRouter();
 
   const [step, setStep] = useState(1);
+  const [selectedPlan, setSelectedPlan] = useState(null)
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [errors, setErrors] = useState({});
@@ -283,7 +285,10 @@ function PublierJobContent() {
 
   // ─── Render ───────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50">
+   <div className="min-h-screen bg-gray-50">
+      {!selectedPlan && (
+        <PricingModal module="jobs" onSelect={(planId) => setSelectedPlan(planId)} />
+      )}
 
       {/* Header */}
       <div className="bg-gradient-to-r from-[#2D5016] to-[#3d6b1e] text-white py-8 px-4">
@@ -300,6 +305,23 @@ function PublierJobContent() {
           <p className="text-white/70 text-sm mt-1">
             Votre offre sera examinée par notre équipe avant publication
           </p>
+          {selectedPlan && (
+            <div className="mt-3 flex items-center gap-2">
+              <span className="text-xs text-white/60">Plan :</span>
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full
+                ${selectedPlan === 'vip' ? 'bg-[#2D5016] text-[#E8F5D0]'
+                : selectedPlan === 'pro' ? 'bg-[#A7D129] text-[#1a3a00]'
+                : 'bg-white/20 text-white'}`}>
+                {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}
+              </span>
+              <button
+                onClick={() => setSelectedPlan(null)}
+                className="text-xs text-white/50 hover:text-white underline transition"
+              >
+                Changer
+              </button>
+            </div>
+          )}
 
           {/* Progress bar */}
           {step <= 5 && (
