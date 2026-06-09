@@ -272,7 +272,7 @@ model RealEstateListing {
   rooms         Int?
   bathrooms     Int?
   floor         Int?
-  city          String?        // SIMPLE + SAFE (no City table yet)
+  city          String     // SIMPLE + SAFE (no City table yet)
   location      String
   latitude      Decimal?
   longitude     Decimal?

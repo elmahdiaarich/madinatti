@@ -212,7 +212,7 @@ function MapPicker({ latitude, longitude, onChange }) {
 
 // ─── Image uploader ───────────────────────────────────────────────────────────
 
-function ImageUploader({ images, onChange, token }) {
+function ImageUploader({ images, onChange, token, error }) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const inputRef = useRef(null);
@@ -274,6 +274,8 @@ function ImageUploader({ images, onChange, token }) {
         className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition ${
           uploading
             ? "border-primary bg-primary/5 cursor-wait"
+            : error
+            ? "border-red-300 bg-red-50 hover:border-red-400"
             : "border-gray-200 hover:border-primary hover:bg-primary/5"
         }`}
       >
@@ -305,6 +307,15 @@ function ImageUploader({ images, onChange, token }) {
         )}
       </div>
 
+      {/* Show validation error from parent */}
+      {error && (
+        <p className="text-xs text-red-500 flex items-center gap-1">
+          <span>⚠</span>
+          {error}
+        </p>
+      )}
+
+      {/* Show upload error */}
       {uploadError && (
         <p className="text-xs text-red-500 flex items-center gap-1">
           <span>⚠</span>
@@ -442,7 +453,23 @@ function CreateListingForm() {
   const [serverError, setServerError] = useState(null);
   const [subcategories, setSubcategories] = useState([]);
 
-  const cities = moroccoCities.cities.map(c => c.label || c.name || c.city).filter(Boolean).sort();
+  // ── Refs for scroll-to-error ──────────────────────────────────────────────
+  const sectionRefs = {
+    title:       useRef(null),
+    description: useRef(null),
+    price:       useRef(null),
+    city:        useRef(null),
+    location:    useRef(null),
+    images:      useRef(null),
+  };
+
+  // Ordered list — first errored field wins the scroll
+  const ERROR_ORDER = ["title", "description", "price", "city", "location", "images"];
+
+  const cities = moroccoCities.cities
+    .map((c) => c.label || c.name || c.city)
+    .filter(Boolean)
+    .sort();
 
   useEffect(() => {
     axios.get(`${API}/api/categories`).then((r) => {
@@ -475,8 +502,14 @@ function CreateListingForm() {
       e.title = "Min 5 caractères";
     if (!form.description.trim() || form.description.trim().length < 10)
       e.description = "Min 10 caractères";
-    if (!form.price || Number(form.price) <= 0) e.price = "Prix invalide";
-    if (!form.location.trim()) e.location = "Requis";
+    if (!form.price || Number(form.price) <= 0)
+      e.price = "Prix invalide";
+    if (!form.city)
+      e.city = "Veuillez sélectionner une ville";
+    if (!form.location.trim())
+      e.location = "Requis";
+    if (form.images.length === 0)
+      e.images = "Ajoutez au moins une photo";
     return e;
   };
 
@@ -484,6 +517,15 @@ function CreateListingForm() {
     const e = validate();
     if (Object.keys(e).length) {
       setErrors(e);
+
+      // Scroll to the first error in logical form order
+      const firstKey = ERROR_ORDER.find((k) => e[k]);
+      if (firstKey && sectionRefs[firstKey]?.current) {
+        sectionRefs[firstKey].current.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
       return;
     }
 
@@ -501,7 +543,7 @@ function CreateListingForm() {
         longitude: form.longitude ? parseFloat(form.longitude) : undefined,
       };
       await realEstateService.createListing(payload, token);
-      router.push("/real-estate/dashboard?created=1");
+      router.push("my-space/services/real-estate?created=1");
     } catch (err) {
       setServerError(err.message || "Erreur serveur");
     } finally {
@@ -528,14 +570,16 @@ function CreateListingForm() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
           <SectionTitle>Informations générales</SectionTitle>
 
-          <Field label="Titre de l'annonce *" error={errors.title}>
-            <Input
-              value={form.title}
-              onChange={(e) => set("title", e.target.value)}
-              placeholder="Ex: Appartement F3 vue mer à Tanger"
-              error={errors.title}
-            />
-          </Field>
+          <div ref={sectionRefs.title}>
+            <Field label="Titre de l'annonce *" error={errors.title}>
+              <Input
+                value={form.title}
+                onChange={(e) => set("title", e.target.value)}
+                placeholder="Ex: Appartement F3 vue mer à Tanger"
+                error={errors.title}
+              />
+            </Field>
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <Field label="Type de transaction *">
@@ -564,26 +608,28 @@ function CreateListingForm() {
             </Field>
           </div>
 
-          <Field label="Description *" error={errors.description}>
-            <textarea
-              rows={5}
-              value={form.description}
-              onChange={(e) => set("description", e.target.value)}
-              placeholder="Décrivez le bien en détail (état, orientation, quartier, proximités...)"
-              className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition resize-none ${
-                errors.description
-                  ? "border-red-300 focus:ring-red-200 bg-red-50"
-                  : "border-gray-200 focus:ring-primary"
-              }`}
-            />
-          </Field>
+          <div ref={sectionRefs.description}>
+            <Field label="Description *" error={errors.description}>
+              <textarea
+                rows={5}
+                value={form.description}
+                onChange={(e) => set("description", e.target.value)}
+                placeholder="Décrivez le bien en détail (état, orientation, quartier, proximités...)"
+                className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition resize-none ${
+                  errors.description
+                    ? "border-red-300 focus:ring-red-200 bg-red-50"
+                    : "border-gray-200 focus:ring-primary"
+                }`}
+              />
+            </Field>
+          </div>
         </div>
 
         {/* ── PRIX & SURFACE ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
           <SectionTitle>Prix & Surface</SectionTitle>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div ref={sectionRefs.price} className="grid grid-cols-2 gap-4">
             <Field label="Prix (MAD) *" error={errors.price}>
               <Input
                 type="number"
@@ -641,27 +687,32 @@ function CreateListingForm() {
           <SectionTitle>Localisation</SectionTitle>
 
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Ville">
-              <Select
-                value={form.city}
-                onChange={(e) => set("city", e.target.value)}
-              >
-                <option value="">Sélectionner une ville</option>
-                {cities.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Adresse / Quartier *" error={errors.location}>
-              <Input
-                value={form.location}
-                onChange={(e) => set("location", e.target.value)}
-                placeholder="Ex: Quartier Maarif, Bd Zerktouni"
-                error={errors.location}
-              />
-            </Field>
+            <div ref={sectionRefs.city}>
+              <Field label="Ville *" error={errors.city}>
+                <Select
+                  value={form.city}
+                  onChange={(e) => set("city", e.target.value)}
+                  error={errors.city}
+                >
+                  <option value="">Sélectionner une ville</option>
+                  {cities.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+            <div ref={sectionRefs.location}>
+              <Field label="Adresse / Quartier *" error={errors.location}>
+                <Input
+                  value={form.location}
+                  onChange={(e) => set("location", e.target.value)}
+                  placeholder="Ex: Quartier Maarif, Bd Zerktouni"
+                  error={errors.location}
+                />
+              </Field>
+            </div>
           </div>
 
           <Field
@@ -716,12 +767,18 @@ function CreateListingForm() {
         </div>
 
         {/* ── PHOTOS ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
-          <SectionTitle>Photos</SectionTitle>
+        <div
+          ref={sectionRefs.images}
+          className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4"
+        >
+          <SectionTitle>Photos *</SectionTitle>
           <ImageUploader
             images={form.images}
-            onChange={(v) => set("images", v)}
+            onChange={(v) => {
+              set("images", v);
+            }}
             token={token}
+            error={errors.images}
           />
         </div>
 
@@ -737,7 +794,7 @@ function CreateListingForm() {
           />
         </div>
 
-        {/* ── ERROR ── */}
+        {/* ── SERVER ERROR ── */}
         {serverError && (
           <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 text-sm text-red-700">
             ❌ {serverError}

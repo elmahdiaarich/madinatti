@@ -102,7 +102,7 @@ function EditForm() {
         longitude: form.longitude ? parseFloat(form.longitude) : undefined,
       };
       await realEstateService.updateMyListing(id, payload, token);
-      router.push('/real-estate/dashboard');
+      router.push('/my-space/services/real-estate');
     } catch (e) {
       setError(e.message || 'Erreur serveur');
     } finally {

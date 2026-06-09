@@ -258,7 +258,7 @@ function ListingCard({ listing, onDelete, onViewInquiries, onViewDetails }) {
           </Link>
         )}
         <Link
-          href={`/real-estate/edit/${listing.id}`}
+          href={`/my-space/services/real-estate/edit/${listing.id}`}
           className="text-xs px-3 py-1.5 rounded-xl border border-primary text-primary-dark hover:bg-primary-mint transition font-semibold text-center"
         >
           Modifier
@@ -360,7 +360,7 @@ function DashboardContent() {
             Mes annonces
           </h1>
           <Link
-            href="/real-estate/create"
+            href="/my-space/services/real-estate/create"
             className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-sage transition"
           >
             + Nouvelle annonce
@@ -408,7 +408,7 @@ function DashboardContent() {
               Publiez votre première annonce immobilière.
             </p>
             <Link
-              href="/real-estate/create"
+              href="/my-space/services/real-estate/create"
               className="mt-2 px-6 py-2.5 bg-primary text-white rounded-full text-sm font-bold hover:bg-primary-sage transition"
             >
               Publier une annonce
@@ -453,7 +453,7 @@ function DashboardContent() {
         <ListingDrawer
           listing={selectedListing}
           onClose={() => setSelectedListing(null)}
-          onEdit={(id) => (window.location.href = `/real-estate/edit/${id}`)}
+          onEdit={(id) => (window.location.href = `/my-space/services/real-estate/edit/[id]${id}`)}
           onDelete={(id) => {
             handleDelete(id);
             setSelectedListing(null);
