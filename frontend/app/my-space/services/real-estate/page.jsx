@@ -194,97 +194,243 @@ function InquiriesDrawer({ listingId, onClose, token }) {
 // ─── Listing card ─────────────────────────────────────────────────────────────
 function ListingCard({ listing, onDelete, onViewInquiries, onViewDetails }) {
   const cover = listing.images?.find((i) => i.isCover) || listing.images?.[0];
+  const inquiryCount = listing._count?.inquiries || 0;
+
+  const statusStyles = {
+    APPROVED: {
+      label: "Approuvée",
+      className: "bg-green-50 text-green-700 border border-green-200",
+    },
+    PENDING: {
+      label: "En attente",
+      className: "bg-yellow-50 text-yellow-700 border border-yellow-200",
+    },
+    REJECTED: {
+      label: "Rejetée",
+      className: "bg-red-50 text-red-700 border border-red-200",
+    },
+  };
+  const statusStyle = statusStyles[listing.status] ?? statusStyles.PENDING;
 
   return (
     <div
-      className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col sm:flex-row cursor-pointer hover:border-primary/30 hover:shadow-md transition"
+      className="group bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col sm:flex-row cursor-pointer hover:border-gray-200 hover:shadow-sm transition-all sm:h-32"
       onClick={() => onViewDetails(listing)}
     >
       {/* Thumbnail */}
-      <div className="w-full sm:w-32 h-32 bg-gray-100 shrink-0">
+      <div className="relative h-40 sm:h-auto sm:w-44 shrink-0 sm:self-stretch bg-gray-50">
         {cover?.url ? (
           <img src={cover.url} alt="" className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-300 text-3xl">
-            🏠
+          <div className="w-full h-full flex items-center justify-center text-gray-300">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="32"
+              height="32"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="1.2"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3 9.75L12 3l9 6.75V21H3V9.75z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 21V12h6v9"
+              />
+            </svg>
           </div>
         )}
+        <span
+          className={`absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusStyle.className}`}
+        >
+          {statusStyle.label}
+        </span>
       </div>
 
-      {/* Info */}
-      <div className="flex-1 p-4 flex flex-col gap-1 min-w-0">
-        <div className="flex items-start justify-between gap-2">
-          <p className="font-bold text-gray-800 text-sm line-clamp-1">
-            {listing.title}
+      {/* Body */}
+      <div className="flex flex-1 min-w-0 flex-col justify-between p-4 gap-3">
+        {/* Top row: title + price */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col gap-1 min-w-0">
+            <p className="font-semibold text-gray-900 text-sm leading-snug line-clamp-1">
+              {listing.title}
+            </p>
+            <p className="text-xs text-gray-400 flex items-center gap-1">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+                <circle cx="12" cy="9" r="2.5" />
+              </svg>
+              {listing.city || "—"}
+              <span className="opacity-30">·</span>
+              {listing.category?.name || "—"}
+            </p>
+          </div>
+          <p className="text-base font-semibold text-gray-900 leading-none shrink-0">
+            {fmtPrice(listing.price)}{" "}
+            <span className="text-xs font-normal text-gray-400">MAD</span>
           </p>
-          <StatusBadge status={listing.status} map={STATUS_STYLES} />
         </div>
-        <p className="text-primary-dark font-extrabold text-base">
-          {fmtPrice(listing.price)} MAD
-        </p>
-        <p className="text-xs text-gray-400">
-          {listing.city || "—"} · {listing.category?.name || "—"}
-        </p>
+
+        {/* Admin rejection note */}
         {listing.status === "REJECTED" && listing.adminNotes && (
-          <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-2 py-1 mt-1">
-            ⛔ Note admin: {listing.adminNotes}
-          </p>
+          <div className="flex items-start gap-2 text-xs text-red-700 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+            <span className="mt-px shrink-0">⛔</span>
+            <span className="line-clamp-2">{listing.adminNotes}</span>
+          </div>
         )}
-        <div className="flex items-center gap-3 mt-2 flex-wrap">
-          <span className="text-xs text-gray-400">
-            {listing.viewsCount || 0} vue{listing.viewsCount !== 1 ? "s" : ""}
-          </span>
-          <span className="text-xs text-gray-400">
-            {listing._count?.inquiries || 0} message
-            {listing._count?.inquiries !== 1 ? "s" : ""}
-          </span>
-          <span className="text-xs text-gray-400">
-            {fmtDate(listing.createdAt)}
-          </span>
-        </div>
-      </div>
 
-      {/* Actions — stop propagation so clicks don't open drawer */}
-      <div
-        className="flex sm:flex-col gap-2 p-4 shrink-0 justify-end"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {listing.status === "APPROVED" && (
-          <Link
-            href={`/real-estate/${listing.id}`}
-            className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition font-semibold text-center"
-          >
-            Voir
-          </Link>
-        )}
-        <Link
-          href={`/my-space/services/real-estate/edit/${listing.id}`}
-          className="text-xs px-3 py-1.5 rounded-xl border border-primary text-primary-dark hover:bg-primary-mint transition font-semibold text-center"
-        >
-          Modifier
-        </Link>
-        <button
-          onClick={() => onViewInquiries(listing.id)}
-          className="text-xs px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 transition font-semibold relative"
-        >
-          Messages
-          {listing._count?.inquiries > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-blue-600 text-white text-[9px] rounded-full flex items-center justify-center font-bold">
-              {listing._count.inquiries}
+        {/* Bottom row: stats + actions */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          {/* Stats */}
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1 text-xs text-gray-400">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="13"
+                height="13"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              {listing.viewsCount || 0}
             </span>
-          )}
-        </button>
-        <button
-          onClick={() => onDelete(listing.id)}
-          className="text-xs px-3 py-1.5 rounded-xl bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 transition font-semibold"
-        >
-          Supprimer
-        </button>
+            <span className="flex items-center gap-1 text-xs text-gray-400">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="13"
+                height="13"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              {inquiryCount}
+            </span>
+            <span className="text-xs text-gray-300">
+              {fmtDate(listing.createdAt)}
+            </span>
+          </div>
+
+          {/* Actions */}
+          <div
+            className="flex items-center gap-1.5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {listing.status === "APPROVED" && (
+              <Link
+                href={`/real-estate/${listing.id}`}
+                className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
+              >
+                <span className="hidden sm:inline">Voir</span>
+                <svg
+                  className="sm:hidden"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </Link>
+            )}
+            <Link
+              href={`/my-space/services/real-estate/edit/${listing.id}`}
+              className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition"
+            >
+              <span className="hidden sm:inline">Modifier</span>
+              <svg
+                className="sm:hidden"
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </Link>
+            <button
+              onClick={() => onViewInquiries(listing.id)}
+              className="relative inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition"
+            >
+              <span className="hidden sm:inline">Messages</span>
+              <svg
+                className="sm:hidden"
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              {inquiryCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-blue-600 text-white text-[9px] rounded-full flex items-center justify-center font-bold">
+                  {inquiryCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => onDelete(listing.id)}
+              className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-xl border border-red-100 bg-red-50 text-red-600 hover:bg-red-100 transition"
+            >
+              <span className="hidden sm:inline">Supprimer</span>
+              <svg
+                className="sm:hidden"
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                <path d="M10 11v6M14 11v6" />
+                <path d="M9 6V4h6v2" />
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function BusinessDashboard() {
   return (
@@ -453,7 +599,9 @@ function DashboardContent() {
         <ListingDrawer
           listing={selectedListing}
           onClose={() => setSelectedListing(null)}
-          onEdit={(id) => (window.location.href = `/my-space/services/real-estate/edit/[id]${id}`)}
+          onEdit={(id) =>
+            (window.location.href = `/my-space/services/real-estate/edit/[id]${id}`)
+          }
           onDelete={(id) => {
             handleDelete(id);
             setSelectedListing(null);
