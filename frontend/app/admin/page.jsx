@@ -19,6 +19,7 @@ import {
   approveListing,
   rejectListing,
 } from '../../lib/adminApi'
+import { useAuth } from '../../context/AuthContext'
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 const IconClock = () => (
@@ -86,6 +87,7 @@ const STATUS_FILTERS = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function AdminOverviewPage() {
+  const { token } = useAuth()
   // ── Stats ─────────────────────────────────────────────────────────────────
   const [overview, setOverview]           = useState(null)
   const [overviewLoading, setOverviewLoading] = useState(true)
@@ -104,10 +106,11 @@ export default function AdminOverviewPage() {
   const [page, setPage]       = useState(1)
 
   // ── Load overview stats ───────────────────────────────────────────────────
-  const loadOverview = async () => {
+const loadOverview = async () => {
+    if (!token) return
     setOverviewLoading(true)
     try {
-      const data = await getOverview()
+      const data = await getOverview(token)
       setOverview(data)
     } finally {
       setOverviewLoading(false)
@@ -118,15 +121,15 @@ export default function AdminOverviewPage() {
   const loadListings = useCallback(async () => {
     setTableLoading(true)
     try {
-      const result = await getListings({ module, status, search, page })
+      const result = await getListings({ module, status, search, page, token })
       setListings(result.data)
       setPagination(result.pagination)
     } finally {
       setTableLoading(false)
     }
-  }, [module, status, search, page])
+ }, [module, status, search, page, token])
 
-  useEffect(() => { loadOverview() }, [])
+  useEffect(() => { loadOverview() }, [token])
   useEffect(() => { loadListings() }, [loadListings])
 
   // Reset page when filters change
@@ -142,7 +145,7 @@ export default function AdminOverviewPage() {
   const handleApprove = async (id) => {
     setActionLoading(id)
     try {
-      await approveListing(id)
+      await approveListing(id, token)
       await Promise.all([loadListings(), loadOverview()])
     } finally {
       setActionLoading(null)
@@ -153,7 +156,7 @@ export default function AdminOverviewPage() {
   const handleReject = async (id, note) => {
     setActionLoading(id)
     try {
-      await rejectListing(id, note)
+      await rejectListing(id, note, token)
       await Promise.all([loadListings(), loadOverview()])
     } finally {
       setActionLoading(null)

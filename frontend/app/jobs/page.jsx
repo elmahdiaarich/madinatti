@@ -38,7 +38,7 @@ const scrollToInscription = () => {
 
 // ─── Page principale ──────────────────────────────────────────────────────────
 export default function JobsPage() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const router = useRouter();
 
   const [jobs, setJobs] = useState([]);
@@ -47,6 +47,7 @@ export default function JobsPage() {
   const [filters, setFilters] = useState({ page: 1, limit: 9 });
   const [activeCategory, setActiveCategory] = useState(null);
   const [searchInput, setSearchInput] = useState('');
+  const [favoritedIds, setFavoritedIds] = useState(new Set());
 
   const isVisitor = !user;
   const userRole = user?.role; // 'citizen' | 'business' | 'admin'
@@ -63,21 +64,25 @@ export default function JobsPage() {
     }
   };
 
-  useEffect(() => {
-    const fetchJobs = async () => {
-      setLoading(true);
-      try {
-        const res = await jobsService.getJobs(filters);
-        setJobs(res.data);
-        setPagination(res.pagination);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchJobs();
-  }, [filters]);
+useEffect(() => {
+  const fetchJobs = async () => {
+    setLoading(true);
+    try {
+      const [res, favRes] = await Promise.all([
+        jobsService.getJobs(filters),
+        token ? jobsService.getMyFavorites(token).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+      ]);
+      setJobs(res.data);
+      setPagination(res.pagination);
+      setFavoritedIds(new Set((favRes.data ?? []).map((j) => j.id)));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchJobs();
+}, [filters, token]);
 
   const handleFilter = (newFilters) => {
     if (Object.keys(newFilters).length === 0) {
@@ -229,9 +234,9 @@ export default function JobsPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {jobs.map((job) => (
-                <JobCard key={job.id} job={job} />
-              ))}
+             {jobs.map((job) => (
+              <JobCard key={job.id} job={job} initialFavorited={favoritedIds.has(job.id)} />
+            ))}
             </div>
           )}
 

@@ -209,7 +209,7 @@ const getFiltersCount = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 const createJob = async (req, res) => {
   try {
-    const userId = req.user.id; // injecté par authMiddleware
+    const userId = req.user.userId; // injecté par authMiddleware
 
     const {
       title,
@@ -278,5 +278,77 @@ const createJob = async (req, res) => {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/jobs/:id/favorite  — toggle favori (citoyen ou business)
+// ─────────────────────────────────────────────────────────────────────────────
+const toggleFavorite = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
 
-module.exports = { getJobs, getJobById, getFiltersCount, createJob };
+    // Vérifier que le job existe
+    const job = await prisma.jobListing.findUnique({ where: { id } });
+    if (!job) return res.status(404).json({ success: false, message: 'Offre introuvable' });
+
+    const existing = await prisma.favorite.findUnique({
+      where: { userId_itemId_itemType: { userId, itemId: id, itemType: 'JOB' } },
+    });
+
+    if (existing) {
+      await prisma.favorite.delete({ where: { id: existing.id } });
+      return res.json({ success: true, favorited: false });
+    }
+
+    await prisma.favorite.create({
+      data: { userId, itemId: id, itemType: 'JOB' },
+    });
+
+    res.json({ success: true, favorited: true });
+  } catch (error) {
+    console.error('toggleFavorite error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/jobs/favorites/me  — mes jobs favoris
+// ─────────────────────────────────────────────────────────────────────────────
+const getMyFavorites = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const favorites = await prisma.favorite.findMany({
+      where: { userId, itemType: 'JOB' },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const jobIds = favorites.map((f) => f.itemId);
+
+    const jobs = await prisma.jobListing.findMany({
+      where: { id: { in: jobIds }, status: 'PUBLISHED' },
+      select: {
+        id: true,
+        title: true,
+        companyName: true,
+        location: true,
+        contractType: true,
+        educationLevel: true,
+        experienceLevel: true,
+        salaryMin: true,
+        salaryMax: true,
+        isFeatured: true,
+        publishedAt: true,
+        applicationDeadline: true,
+        category: { select: { id: true, name: true } },
+        user: { select: { companyLogo: true } },
+      },
+    });
+
+    res.json({ success: true, data: jobs });
+  } catch (error) {
+    console.error('getMyFavorites error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+module.exports = { getJobs, getJobById, getFiltersCount, createJob,toggleFavorite, getMyFavorites };

@@ -9,8 +9,7 @@ import { useRouter } from 'next/navigation';
 import { cities } from 'morocco-cities';
 import InlineRegisterSection from '@/components/jobs/InlineRegisterSection';
 import MapFrame from '@/components/shared/MapFrame';
-
-
+import ApplyModal from '@/components/jobs/ApplyModal';
 
 const CONTRACT_LABELS = {
   CDI: 'CDI', CDD: 'CDD', STAGE: 'Stage', FREELANCE: 'Freelance',
@@ -34,13 +33,11 @@ const REMOTE_LABELS = {
   REMOTE:  { label: 'Full Remote', icon: '🌍', color: 'bg-blue-50 text-blue-700'  },
   HYBRID:  { label: 'Hybride',     icon: '🔀', color: 'bg-purple-50 text-purple-700' },
 };
-
 const REMOTE_HERO = {
   ON_SITE: { label: 'Présentiel',  bg: 'bg-white/15' },
   REMOTE:  { label: 'Full Remote', bg: 'bg-blue-400/80' },
   HYBRID:  { label: 'Hybride',     bg: 'bg-purple-400/80' },
 };
-
 const LANGUAGE_LEVEL_COLORS = {
   'maternelle':    'bg-[#2D5016] text-white',
   'courant':       'bg-[#A7D129] text-[#2D5016]',
@@ -53,24 +50,78 @@ const fmtNum = (v) => Number(v).toLocaleString('fr-MA');
 const fmtDate = (d) =>
   d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
 const formatSalary = (min, max) => {
-  if (!min && !max) return 'À discuter';  // ← vérifier que c'est bien là
+  if (!min && !max) return 'À discuter';
   if (min && max) return `${fmtNum(min)} - ${fmtNum(max)} MAD/mois`;
   if (min) return `A partir de ${fmtNum(min)} MAD/mois`;
   return null;
 };
 
-// ─── Scroll helper ────────────────────────────────────────────────────────────
 const scrollToInscription = () => {
   const el = document.getElementById('inscription');
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
-// ─── Grouper les villes par région (moroccan-cities) ─────────────────────────
 const citiesByRegion = cities.reduce((acc, city) => {
   if (!acc[city.region_name]) acc[city.region_name] = [];
   acc[city.region_name].push(city.name);
   return acc;
 }, {});
+
+// ─── Bouton cœur ──────────────────────────────────────────────────────────────
+function HeartButton({ isFavorited, loading, onClick, variant = 'hero' }) {
+  if (variant === 'hero') {
+    return (
+      <button
+        onClick={onClick}
+        title={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+        className={`
+          w-11 h-11 rounded-full flex items-center justify-center border-2
+          transition-all duration-200 hover:scale-110 active:scale-95
+          ${isFavorited
+  ? 'bg-[#A7D129]/20 border-[#A7D129]/60 text-[#A7D129]'
+  : 'bg-white/10 border-white/40 text-white hover:bg-[#A7D129]/20 hover:border-[#A7D129]/60 hover:text-[#A7D129]'
+}
+          ${loading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
+        `}
+      >
+        <svg viewBox="0 0 24 24" className="w-5 h-5"
+          fill={isFavorited ? 'currentColor' : 'none'}
+          stroke="currentColor" strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round"
+            d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
+          />
+        </svg>
+      </button>
+    );
+  }
+
+  // variant === 'inline' (bouton dans la page, fond clair)
+  return (
+    <button
+      onClick={onClick}
+      title={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+      className={`
+        w-10 h-10 rounded-full flex items-center justify-center border-2
+        transition-all duration-200 hover:scale-110 active:scale-95
+        ${isFavorited
+          ? 'bg-red-50 border-red-300 text-red-500'
+          : 'bg-white border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-400'
+        }
+        ${loading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
+      `}
+    >
+      <svg viewBox="0 0 24 24" className="w-4 h-4"
+        fill={isFavorited ? 'currentColor' : 'none'}
+        stroke="currentColor" strokeWidth={2}
+      >
+        <path strokeLinecap="round" strokeLinejoin="round"
+          d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
+        />
+      </svg>
+    </button>
+  );
+}
 
 function CompanyLogo({ logo, name, size = 'lg' }) {
   const [imgErr, setImgErr] = useState(false);
@@ -130,9 +181,7 @@ function FormattedDescription({ text }) {
       flushList();
       const isHeading = line.endsWith(':') && line.length < 60;
       if (isHeading) {
-        elements.push(
-          <p key={i} className="font-bold text-[#2D5016] mt-4 mb-1 first:mt-0">{line}</p>
-        );
+        elements.push(<p key={i} className="font-bold text-[#2D5016] mt-4 mb-1 first:mt-0">{line}</p>);
       } else {
         elements.push(<p key={i} className="mb-2 text-gray-700">{line}</p>);
       }
@@ -161,10 +210,8 @@ function RelatedJobCard({ job }) {
   );
 }
 
-// ─── FloatingButtons ──────────────────────────────────────────────────────────
 function FloatingButtons({ isVisitor, userRole }) {
   const showPublish = isVisitor || userRole === 'citizen';
-
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
       {showPublish && (
@@ -268,11 +315,16 @@ function LanguagesSection({ languages }) {
 // ─── Page principale ──────────────────────────────────────────────────────────
 export default function JobDetailPage() {
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [job, setJob] = useState(null);
   const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+
+  // ── Favori state ────────────────────────────────────────────────────────────
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -282,10 +334,21 @@ export default function JobDetailPage() {
         const res = await jobsService.getJobById(id);
         const jobData = res.data ?? res;
         setJob(jobData);
+
+        // Charger les offres similaires
         if (jobData.category?.slug) {
           try {
             const rel = await jobsService.getJobs({ categorySlug: jobData.category.slug, limit: 4, page: 1 });
             setRelated((rel.data ?? []).filter((j) => j.id !== id));
+          } catch (_) {}
+        }
+
+        // Vérifier si déjà en favori (uniquement si connecté)
+        if (user && token) {
+          try {
+            const favRes = await jobsService.getMyFavorites(token);
+            const favIds = (favRes.data ?? []).map((j) => j.id);
+            setIsFavorited(favIds.includes(id));
           } catch (_) {}
         }
       } catch (e) {
@@ -295,7 +358,32 @@ export default function JobDetailPage() {
       }
     };
     load();
-  }, [id]);
+  }, [id, user, token]);
+
+  // ── Handler toggle favori ───────────────────────────────────────────────────
+  const handleToggleFavorite = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!user) {
+      scrollToInscription();
+      return;
+    }
+
+    if (favLoading) return;
+
+    const prev = isFavorited;
+    setIsFavorited(!prev);
+    setFavLoading(true);
+
+    try {
+      await jobsService.toggleFavorite(id, token);
+    } catch {
+      setIsFavorited(prev); // rollback
+    } finally {
+      setFavLoading(false);
+    }
+  };
 
   if (loading) return <Skeleton />;
 
@@ -330,13 +418,37 @@ export default function JobDetailPage() {
   const handlePostuler = () => {
     if (isVisitor) {
       scrollToInscription();
-    } else {
-      alert('Fonctionnalité à venir');
+    } else if (userRole === 'citizen') {
+      setShowApplyModal(true);
     }
+  };
+
+  const handleApplySubmit = async ({ cvFile, coverLetter }) => {
+    const formData = new FormData();
+    formData.append('cv', cvFile);
+    formData.append('coverLetter', coverLetter);
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/jobs/${id}/apply`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      }
+    );
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.message || 'Erreur lors de la candidature');
+    return json;
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {showApplyModal && (
+        <ApplyModal
+          job={job}
+          onClose={() => setShowApplyModal(false)}
+          onSubmit={handleApplySubmit}
+        />
+      )}
 
       {/* Breadcrumb */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-20 shadow-sm">
@@ -421,8 +533,14 @@ export default function JobDetailPage() {
               </div>
             </div>
 
-            {/* CTA desktop */}
-            <div className="hidden md:block shrink-0 self-center">
+            {/* CTA desktop — cœur + postuler */}
+            <div className="hidden md:flex shrink-0 self-center items-center gap-3">
+              <HeartButton
+                isFavorited={isFavorited}
+                loading={favLoading}
+                onClick={handleToggleFavorite}
+                variant="hero"
+              />
               <button
                 onClick={handlePostuler}
                 className="px-8 py-3 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-full text-sm shadow-lg hover:bg-white transition-all duration-200 hover:scale-[1.03] active:scale-100"
@@ -450,21 +568,20 @@ export default function JobDetailPage() {
             </div>
             <div className="px-6 py-3 grid grid-cols-1 sm:grid-cols-2 gap-x-8">
               <div>
-                <CriteriaRow label="Métier"           value={job.category?.name} />
-                <CriteriaRow label="Type de contrat"  value={contract} />
-                <CriteriaRow label="Télétravail"      value={remote ? `${remote.icon} ${remote.label}` : null} />
-                <CriteriaRow label="Ville"            value={job.location} />
-                <CriteriaRow label="Région"           value={job.region} />
+                <CriteriaRow label="Métier"          value={job.category?.name} />
+                <CriteriaRow label="Type de contrat" value={contract} />
+                <CriteriaRow label="Télétravail"     value={remote ? `${remote.icon} ${remote.label}` : null} />
+                <CriteriaRow label="Ville"           value={job.location} />
+                <CriteriaRow label="Région"          value={job.region} />
               </div>
               <div>
                 <CriteriaRow label="Niveau d'expérience" value={EXPERIENCE_LABELS[job.experienceLevel]} />
                 <CriteriaRow label="Niveau d'études"     value={EDUCATION_LABELS[job.educationLevel]} />
-                <CriteriaRow label="Salaire"              value={salary} />
-                <CriteriaRow label="Candidatures"         value={appCount > 0 ? `${appCount} reçue(s)` : null} />
+                <CriteriaRow label="Salaire"             value={salary} />
+                <CriteriaRow label="Candidatures"        value={appCount > 0 ? `${appCount} reçue(s)` : null} />
               </div>
             </div>
 
-            {/* Skills */}
             {skills.length > 0 && (
               <div className="px-6 pb-5 pt-3 border-t border-gray-50">
                 <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-2">Compétences clés</p>
@@ -493,32 +610,37 @@ export default function JobDetailPage() {
           <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
               <span className="w-1 h-5 rounded-full bg-[#A7D129] inline-block" />
-              <h2 className="font-bold text-gray-900 text-base">
-                Poste proposé : {job.title}
-              </h2>
+              <h2 className="font-bold text-gray-900 text-base">Poste proposé : {job.title}</h2>
             </div>
             <div className="px-6 py-5 text-sm text-gray-700 leading-relaxed">
               <FormattedDescription text={job.description} />
             </div>
           </section>
 
-          {/* Langues */}
           <LanguagesSection languages={languages} />
-           {/* maaap*/}
-          <MapFrame
-              latitude={job.latitude}
-              longitude={job.longitude}
-              location={job.location}
-              city={job.location}
-            />
 
-          {/* CTA Postuler */}
-          <button
-            onClick={handlePostuler}
-            className="w-full py-4 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-2xl text-sm shadow hover:bg-[#2D5016] hover:text-white transition-all duration-200 hover:scale-[1.01] active:scale-100"
-          >
-            {isVisitor ? '✦ Créer un compte pour postuler' : '✦ Postuler à cette offre'}
-          </button>
+          <MapFrame
+            latitude={job.latitude}
+            longitude={job.longitude}
+            location={job.location}
+            city={job.location}
+          />
+
+          {/* CTA Postuler + cœur mobile */}
+          <div className="flex gap-3">
+            <HeartButton
+              isFavorited={isFavorited}
+              loading={favLoading}
+              onClick={handleToggleFavorite}
+              variant="inline"
+            />
+            <button
+              onClick={handlePostuler}
+              className="flex-1 py-4 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-2xl text-sm shadow hover:bg-[#2D5016] hover:text-white transition-all duration-200 hover:scale-[1.01] active:scale-100"
+            >
+              {isVisitor ? '✦ Créer un compte pour postuler' : '✦ Postuler à cette offre'}
+            </button>
+          </div>
 
           {/* Alerte fraude */}
           <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex gap-3 items-start">
@@ -566,7 +688,6 @@ export default function JobDetailPage() {
             <a href="#" className="text-[#A7D129] text-xs font-semibold mt-3 inline-block hover:underline">
               Voir toutes nos annonces
             </a>
-
             <button
               onClick={handlePostuler}
               className="mt-5 w-full py-3 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-full text-sm hover:bg-white transition-all duration-200 hover:scale-[1.02] active:scale-100"
@@ -645,7 +766,6 @@ export default function JobDetailPage() {
         </div>
       </div>
 
-      {/* Section inscription — en dehors du grid, pleine largeur, centrée et max-w-[1000px] */}
       {isVisitor && (
         <div id="inscription" className="max-w-[1200px] mx-auto px-4 pb-12">
           <div className="max-w-[1000px] mx-auto">
@@ -654,7 +774,6 @@ export default function JobDetailPage() {
         </div>
       )}
 
-      {/* FloatingButtons */}
       <FloatingButtons isVisitor={isVisitor} userRole={userRole} />
     </div>
   );

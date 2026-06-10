@@ -12,11 +12,12 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState,useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '../../context/AuthContext'
 import { getSidebarCounts } from '../../lib/adminApi'
+
 
 // ── Tabler icons (inline SVG — no extra package needed) ──────────────────────
 
@@ -122,16 +123,24 @@ const NAV_ITEMS = [
 
 export default function AdminSidebar() {
   const pathname = usePathname()
-  const { user, logout } = useAuth()
+ const { user, logout, token } = useAuth()
   const [counts, setCounts] = useState({})
   const [loadingCounts, setLoadingCounts] = useState(true)
 
-  useEffect(() => {
-    getSidebarCounts()
+  const refreshCounts = useCallback(() => {
+    if (!token) return
+    getSidebarCounts(token)
       .then(setCounts)
       .catch(() => setCounts({}))
       .finally(() => setLoadingCounts(false))
-  }, [])
+  }, [token])
+
+  useEffect(() => { refreshCounts() }, [refreshCounts])
+
+  useEffect(() => {
+    window.addEventListener('admin:counts:refresh', refreshCounts)
+    return () => window.removeEventListener('admin:counts:refresh', refreshCounts)
+  }, [refreshCounts])
 
   const isActive = (href) => {
     if (href === '/admin') return pathname === '/admin'

@@ -1,24 +1,29 @@
+'use client';
+
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { jobsService } from '@/services/jobsService';
 
 const CONTRACT_LABELS = {
-  CDI:          { label: 'CDI' },
-  CDD:          { label: 'CDD' },
-  STAGE:        { label: 'Stage' },
-  FREELANCE:    { label: 'Freelance' },
-  INTERIM:      { label: 'Intérim' },
-  ALTERNANCE:   { label: 'Alternance' },
-  ANAPEC:       { label: 'Anapec' },
-  TEMPS_PARTIEL:{ label: 'Temps partiel' },
-  STATUTAIRE:   { label: 'Statutaire' },
+  CDI:           { label: 'CDI' },
+  CDD:           { label: 'CDD' },
+  STAGE:         { label: 'Stage' },
+  FREELANCE:     { label: 'Freelance' },
+  INTERIM:       { label: 'Intérim' },
+  ALTERNANCE:    { label: 'Alternance' },
+  ANAPEC:        { label: 'Anapec' },
+  TEMPS_PARTIEL: { label: 'Temps partiel' },
+  STATUTAIRE:    { label: 'Statutaire' },
 };
 
 const EDUCATION_LABELS = {
-  BEFORE_BAC:    'Qualification avant Bac',
-  BAC:           'Bac',
-  BAC_PLUS_1:    'Bac+1',
-  BAC_PLUS_2:    'Bac+2',
-  BAC_PLUS_3:    'Bac+3',
-  BAC_PLUS_4:    'Bac+4',
+  BEFORE_BAC:      'Qualification avant Bac',
+  BAC:             'Bac',
+  BAC_PLUS_1:      'Bac+1',
+  BAC_PLUS_2:      'Bac+2',
+  BAC_PLUS_3:      'Bac+3',
+  BAC_PLUS_4:      'Bac+4',
   BAC_PLUS_5_PLUS: 'Bac+5 et plus',
 };
 
@@ -30,6 +35,7 @@ const EXPERIENCE_LABELS = {
   EXPERT_PLUS_10:     '> 10 ans',
 };
 
+// ─── Logo ─────────────────────────────────────────────────────────────────────
 function CompanyLogo({ logo, name }) {
   return (
     <div className="w-[130px] h-[130px] shrink-0 bg-white border border-[#A7D129]/40 rounded-xl flex items-center justify-center overflow-hidden">
@@ -60,6 +66,7 @@ function CompanyLogo({ logo, name }) {
   );
 }
 
+// ─── Info row ─────────────────────────────────────────────────────────────────
 function InfoRow({ label, value, valueClass = '' }) {
   if (!value) return null;
   return (
@@ -70,15 +77,89 @@ function InfoRow({ label, value, valueClass = '' }) {
   );
 }
 
-export default function JobCard({ job }) {
-    
+// ─── Bouton cœur ──────────────────────────────────────────────────────────────
+function FavoriteButton({ jobId, initialFavorited = false, onToggle }) {
+  const { user, token } = useAuth();
+  const [favorited, setFavorited] = useState(initialFavorited);
+  const [loading, setLoading] = useState(false);
+
+  // ← AJOUTER CE useEffect
+  useEffect(() => {
+    setFavorited(initialFavorited);
+  }, [initialFavorited]);
+
+  const handleClick = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Visiteur → scroll vers inscription
+    if (!user) {
+      const el = document.getElementById('inscription');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    if (loading) return;
+
+    // Handler externe fourni (ex: page favoris) → on délègue
+    if (onToggle) {
+      onToggle();
+      return;
+    }
+
+    // Comportement standard : toggle + appel API
+    const prev = favorited;
+    setFavorited(!prev);
+    setLoading(true);
+    try {
+      await jobsService.toggleFavorite(jobId, token);
+    } catch {
+      setFavorited(prev); // rollback si erreur
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      title={favorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+      className={`
+        shrink-0 w-9 h-9 rounded-full flex items-center justify-center
+        transition-all duration-200 hover:scale-110 active:scale-95
+ ${favorited
+  ? 'bg-[#E8F5D0] text-[#A7D129] hover:bg-[#A7D129]/15'
+  : 'bg-white/70 text-gray-300 hover:text-[#A7D129] hover:bg-[#E8F5D0]'
+}
+        ${loading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
+      `}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        className="w-5 h-5 transition-all duration-200"
+        fill={favorited ? 'currentColor' : 'none'}
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
+        />
+      </svg>
+    </button>
+  );
+}
+
+// ─── JobCard ──────────────────────────────────────────────────────────────────
+export default function JobCard({ job, initialFavorited = false, onFavoriteToggle }) {
   const formatSalary = (min, max) => {
-  if (!min && !max) return 'À discuter';  // ← ici
-  const fmt = (v) => Number(v).toLocaleString('fr-MA');
-  if (min && max) return `${fmt(min)} – ${fmt(max)} MAD/mois`;
-  if (min) return `À partir de ${fmt(min)} MAD/mois`;
-  return null;
-};
+    if (!min && !max) return 'À discuter';
+    const fmt = (v) => Number(v).toLocaleString('fr-MA');
+    if (min && max) return `${fmt(min)} – ${fmt(max)} MAD/mois`;
+    if (min) return `À partir de ${fmt(min)} MAD/mois`;
+    return null;
+  };
 
   const formatDate = (date) => {
     if (!date) return '';
@@ -92,14 +173,23 @@ export default function JobCard({ job }) {
 
   return (
     <Link href={`/jobs/${job.id}`} className="block group">
-      <div className="bg-[#E8F5D0] hover:bg-[#d8edbb] border border-[#A7D129]/50 rounded-2xl p-5 transition-all duration-200 hover:shadow-md hover:border-[#A7D129]">
-        <div className="flex gap-5">
+      <div className="relative bg-[#E8F5D0] hover:bg-[#d8edbb] border border-[#A7D129]/50 rounded-2xl p-5 transition-all duration-200 hover:shadow-md hover:border-[#A7D129]">
 
+        {/* Bouton cœur — coin supérieur droit */}
+        <div className="absolute top-3 right-3 z-10">
+          <FavoriteButton
+            jobId={job.id}
+            initialFavorited={initialFavorited}
+            onToggle={onFavoriteToggle}
+          />
+        </div>
+
+        <div className="flex gap-5">
           {/* Logo */}
           <CompanyLogo logo={job.user?.companyLogo} name={job.companyName} />
 
           {/* Content */}
-          <div className="flex-1 min-w-0 flex flex-col gap-3">
+          <div className="flex-1 min-w-0 flex flex-col gap-3 pr-8">
 
             {/* Title + company + date */}
             <div>

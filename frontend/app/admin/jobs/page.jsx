@@ -12,6 +12,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import ListingTable from '../../../components/admin/ListingTable'
 import { getListings, approveListing, rejectListing } from '../../../lib/adminApi'
+import { useAuth } from '../../../context/AuthContext'
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 const IconSearch = () => (
@@ -43,6 +44,7 @@ const STATUS_FILTERS = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function AdminJobsPage() {
+  const { token } = useAuth()
   const [listings, setListings]           = useState([])
   const [pagination, setPagination]       = useState({})
   const [tableLoading, setTableLoading]   = useState(true)
@@ -57,13 +59,13 @@ export default function AdminJobsPage() {
   const loadListings = useCallback(async () => {
     setTableLoading(true)
     try {
-      const result = await getListings({ module: 'emploi', status, search, page })
+     const result = await getListings({ module: 'emploi', status, search, page, token })
       setListings(result.data)
       setPagination(result.pagination)
     } finally {
       setTableLoading(false)
     }
-  }, [status, search, page])
+}, [status, search, page, token])
 
   useEffect(() => { loadListings() }, [loadListings])
   useEffect(() => { setPage(1) }, [status, search])
@@ -75,16 +77,22 @@ export default function AdminJobsPage() {
   }, [searchInput])
 
   // ── Actions ───────────────────────────────────────────────────────────────
-  const handleApprove = async (id) => {
+const handleApprove = async (id) => {
     setActionLoading(id)
-    try { await approveListing(id); await loadListings() }
-    finally { setActionLoading(null) }
+    try {
+      await approveListing(id, token)
+      await loadListings()
+      window.dispatchEvent(new Event('admin:counts:refresh'))
+    } finally { setActionLoading(null) }
   }
 
   const handleReject = async (id, note) => {
     setActionLoading(id)
-    try { await rejectListing(id, note); await loadListings() }
-    finally { setActionLoading(null) }
+    try {
+      await rejectListing(id, note, token)
+      await loadListings()
+      window.dispatchEvent(new Event('admin:counts:refresh'))
+    } finally { setActionLoading(null) }
   }
 
   return (

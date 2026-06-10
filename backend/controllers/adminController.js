@@ -142,6 +142,7 @@ const getListings = async (req, res) => {
           contractType: true,
           status:      true,
           adminNotes:  true,
+          description: true,
           createdAt:   true,
           user: { select: { id: true, name: true, email: true } },
         },
@@ -179,6 +180,7 @@ const getListings = async (req, res) => {
       contractType:    j.contractType,
       status:          j.status,
       adminNote:       j.adminNotes || null,
+      description:     j.description || null,
       createdAt:       j.createdAt,
     })
  

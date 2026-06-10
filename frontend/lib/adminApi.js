@@ -350,18 +350,15 @@ const paginate = (array, page = 1, limit = 10) => {
  * Returns summary stats for the 4 StatCards on the overview page.
  * Real: GET /api/admin/overview
  */
-export async function getOverview() {
-  await sleep()
+export async function getOverview(token) {
+  if (!token) return { pending: 0, approvedToday: 0, openReports: 0, totalUsers: 0 }
 
-  const pending = mockListings.filter((l) => l.status === 'PENDING').length
-  const today = new Date().toISOString().slice(0, 10)
-  const approvedToday = mockListings.filter(
-    (l) => l.status === 'PUBLISHED' && l.createdAt.startsWith(today)
-  ).length
-  const openReports = mockReports.filter((r) => r.status === 'OPEN').length
-  const totalUsers = mockUsers.length
-
-  return { pending, approvedToday, openReports, totalUsers }
+  const res = await fetch(`${API_URL}/api/admin/overview`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const json = await res.json()
+  if (!json.success) throw new Error(json.message)
+  return json.data
 }
 
 /**
@@ -371,24 +368,21 @@ export async function getOverview() {
  * status: 'PENDING' | 'PUBLISHED' | 'REJECTED' | '' (all)
  * Real: GET /api/admin/listings?module=&status=&search=&page=
  */
-export async function getListings({ module: mod = 'tous', status = '', search = '', page = 1 } = {}) {
-  await sleep()
+export async function getListings({ module: mod = 'tous', status = '', search = '', page = 1, token } = {}) {
+  if (!token) return { data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } }
 
-  let result = [...mockListings].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-
-  if (mod && mod !== 'tous') result = result.filter((l) => l.module === mod)
-  if (status) result = result.filter((l) => l.status === status)
-  if (search) {
-    const q = search.toLowerCase()
-    result = result.filter(
-      (l) =>
-        l.title.toLowerCase().includes(q) ||
-        l.company.toLowerCase().includes(q) ||
-        l.city.toLowerCase().includes(q)
-    )
-  }
-
-  return paginate(result, page, 10)
+  const params = new URLSearchParams({
+    ...(mod && mod !== 'tous' && { module: mod }),
+    ...(status && { status }),
+    ...(search && { search }),
+    page,
+  })
+  const res = await fetch(`${API_URL}/api/admin/listings?${params}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const json = await res.json()
+  if (!json.success) throw new Error(json.message)
+  return { data: json.data, pagination: json.pagination }
 }
 
 /**
@@ -396,12 +390,14 @@ export async function getListings({ module: mod = 'tous', status = '', search = 
  * Sets listing status to PUBLISHED.
  * Real: PATCH /api/admin/listings/:id/approve
  */
-export async function approveListing(id) {
-  await sleep()
-  const listing = mockListings.find((l) => l.id === id)
-  if (!listing) throw new Error('Annonce introuvable')
-  listing.status = 'PUBLISHED'
-  return { success: true, listing }
+export async function approveListing(id, token) {
+  const res = await fetch(`${API_URL}/api/admin/listings/${id}/approve`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const json = await res.json()
+  if (!json.success) throw new Error(json.message)
+  return json
 }
 
 /**
@@ -409,13 +405,18 @@ export async function approveListing(id) {
  * Sets listing status to REJECTED, saves admin note.
  * Real: PATCH /api/admin/listings/:id/reject  { status: 'REJECTED', adminNote: '...' }
  */
-export async function rejectListing(id, note) {
-  await sleep()
-  const listing = mockListings.find((l) => l.id === id)
-  if (!listing) throw new Error('Annonce introuvable')
-  listing.status = 'REJECTED'
-  listing.adminNote = note
-  return { success: true, listing }
+export async function rejectListing(id, note, token) {
+  const res = await fetch(`${API_URL}/api/admin/listings/${id}/reject`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ adminNote: note }),
+  })
+  const json = await res.json()
+  if (!json.success) throw new Error(json.message)
+  return json
 }
 
 /**
@@ -497,16 +498,26 @@ export async function getBusinesses() {
  * Returns badge counts for each sidebar nav item.
  * Real: GET /api/admin/overview (same endpoint, derived)
  */
-export async function getSidebarCounts() {
-  await sleep()
+export async function getSidebarCounts(token) {
+  const res = await fetch(`${API_URL}/api/admin/overview`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const json = await res.json()
+  if (!json.success) return { emploi: 0, immobilier: 0, vehicule: 0, signalements: 0, entreprises: 0, utilisateurs: 0 }
+
+  // Fetch pending counts per module
+  const [jobs, immo] = await Promise.all([
+    fetch(`${API_URL}/api/admin/listings?module=emploi&status=PENDING`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+    fetch(`${API_URL}/api/admin/listings?module=immobilier&status=PENDING`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+  ])
 
   return {
     overview: 0,
-    emploi: mockListings.filter((l) => l.module === 'emploi' && l.status === 'PENDING').length,
-    immobilier: mockListings.filter((l) => l.module === 'immobilier' && l.status === 'PENDING').length,
-    vehicule: mockListings.filter((l) => l.module === 'vehicule' && l.status === 'PENDING').length,
-    signalements: mockReports.filter((r) => r.status === 'OPEN').length,
-    entreprises: mockBusinesses.filter((b) => !b.isActive).length,
-    utilisateurs: mockUsers.filter((u) => !u.isActive).length,
+    emploi:      jobs.pagination?.total || 0,
+    immobilier:  immo.pagination?.total || 0,
+    vehicule:    0,
+    signalements: json.data?.openReports || 0,
+    entreprises: 0,
+    utilisateurs: 0,
   }
 }
