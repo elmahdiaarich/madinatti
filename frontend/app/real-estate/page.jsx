@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { realEstateService } from '@/services/realEstateService';
 import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 import RealEstateCard from '@/components/real-estate/RealEstateCard';
 import RealEstateFilter from '@/components/real-estate/RealEstateFilter';
 
@@ -24,6 +25,8 @@ const PROPERTY_TABS = [
 
 export default function RealEstatePage() {
   const { user, token } = useAuth();
+  const router = useRouter();
+  
 
   const [listings, setListings]     = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -31,11 +34,11 @@ export default function RealEstatePage() {
   const [filters, setFilters]       = useState({ page: 1, limit: 12 });
   const [activeType, setActiveType] = useState(null);
   const [activeProp, setActiveProp] = useState(null);
-  const [searchInput, setSearchInput] = useState('');
   const [favoritedIds, setFavoritedIds] = useState(new Set());
 
   useEffect(() => {
     const load = async () => {
+      console.log(user);
       setLoading(true);
       try {
         const [res, favRes] = await Promise.all([
@@ -68,8 +71,6 @@ export default function RealEstatePage() {
     });
   };
 
-  const handleSearch = () => setFilters((p) => ({ ...p, search: searchInput, page: 1 }));
-
   const handleTypeTab = (cat) => {
     setActiveType(cat.listingType);
     setActiveProp(null);
@@ -89,39 +90,14 @@ export default function RealEstatePage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+    const handlePublishClick = () => {
+    if (user.role === 'business') {
+      router.push('/my-space/services/real-estate/create');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-
-      {/* HERO */}
-      <div className="bg-white border-b border-gray-200 py-10">
-        <div className="max-w-[1200px] mx-auto px-4">
-          <h1 className="text-3xl font-bold text-center text-primary-dark mb-2">
-            Immobilier au Maroc
-          </h1>
-          <p className="text-center text-gray-500 text-sm mb-6">
-            {pagination ? `${pagination.total} annonces disponibles` : 'Chargement...'}
-          </p>
-          <div className="flex items-center max-w-2xl mx-auto border-2 border-black rounded-full px-4 py-2.5 bg-white shadow-sm">
-            <svg className="w-4 h-4 text-gray-400 shrink-0 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Ville, quartier, type de bien..."
-              value={searchInput}
-              className="flex-1 outline-none text-sm text-gray-700 bg-transparent"
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            />
-            <button
-              onClick={handleSearch}
-              className="ml-2 px-4 py-1.5 rounded-full bg-primary text-white text-sm font-medium hover:bg-primary-sage transition"
-            >
-              Rechercher
-            </button>
-          </div>
-        </div>
-      </div>
 
       {/* TYPE TABS */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
@@ -140,6 +116,17 @@ export default function RealEstatePage() {
                 {cat.label}
               </button>
             ))}
+          {user.role == "business" && (
+            <button
+              onClick={handlePublishClick}
+              className="ml-auto inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-[#2D5016] text-white font-bold text-sm shadow-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-150 hover:scale-105 active:scale-100 group shrink-0 cursor-pointer"
+            >
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current shrink-0">
+                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+              </svg>
+              Publier une annonce
+            </button>
+          )}
           </div>
           <div className="flex gap-1 flex-wrap pb-2.5">
             {PROPERTY_TABS.map((tab) => (

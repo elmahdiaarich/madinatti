@@ -25,6 +25,17 @@ const PROPERTY_TYPES = [
   { label: "Commerce", value: "SHOP" },
 ];
 
+// Maps PropertyType enum → category slug produced by the seed
+const PROPERTY_TYPE_TO_SLUG = {
+  APARTMENT: "immobilier-appartement",
+  VILLA:     "immobilier-villa",
+  HOUSE:     "immobilier-maison",
+  STUDIO:    "immobilier-studio",
+  LAND:      "immobilier-terrain",
+  OFFICE:    "immobilier-bureau",
+  SHOP:      "immobilier-commerce",
+};
+
 const EMPTY = {
   title: "",
   description: "",
@@ -113,6 +124,8 @@ function MapPicker({ latitude, longitude, onChange }) {
 
     const initMap = () => {
       if (!mapRef.current || !window.L) return;
+      // Prevent double-init (React StrictMode)
+      if (mapRef.current._leaflet_id) return;
 
       const L = window.L;
       const defaultLat = latitude ? parseFloat(latitude) : 33.9716;
@@ -307,7 +320,6 @@ function ImageUploader({ images, onChange, token, error }) {
         )}
       </div>
 
-      {/* Show validation error from parent */}
       {error && (
         <p className="text-xs text-red-500 flex items-center gap-1">
           <span>⚠</span>
@@ -315,7 +327,6 @@ function ImageUploader({ images, onChange, token, error }) {
         </p>
       )}
 
-      {/* Show upload error */}
       {uploadError && (
         <p className="text-xs text-red-500 flex items-center gap-1">
           <span>⚠</span>
@@ -453,7 +464,6 @@ function CreateListingForm() {
   const [serverError, setServerError] = useState(null);
   const [subcategories, setSubcategories] = useState([]);
 
-  // ── Refs for scroll-to-error ──────────────────────────────────────────────
   const sectionRefs = {
     title:       useRef(null),
     description: useRef(null),
@@ -463,7 +473,6 @@ function CreateListingForm() {
     images:      useRef(null),
   };
 
-  // Ordered list — first errored field wins the scroll
   const ERROR_ORDER = ["title", "description", "price", "city", "location", "images"];
 
   const cities = moroccoCities.cities
@@ -471,6 +480,7 @@ function CreateListingForm() {
     .filter(Boolean)
     .sort();
 
+  // ── Fetch immobilier subcategories ────────────────────────────────────────
   useEffect(() => {
     axios.get(`${API}/api/categories`).then((r) => {
       const data = r.data.data || [];
@@ -481,13 +491,11 @@ function CreateListingForm() {
     });
   }, []);
 
+  // ── Auto-set categoryId based on propertyType ─────────────────────────────
   useEffect(() => {
     if (!subcategories.length) return;
-    const match = subcategories.find(
-      (c) =>
-        c.name.toLowerCase().includes(form.propertyType.toLowerCase()) ||
-        c.slug?.toLowerCase().includes(form.propertyType.toLowerCase()),
-    );
+    const slug = PROPERTY_TYPE_TO_SLUG[form.propertyType];
+    const match = subcategories.find((c) => c.slug === slug);
     if (match) set("categoryId", match.id);
   }, [form.propertyType, subcategories]);
 
@@ -517,8 +525,6 @@ function CreateListingForm() {
     const e = validate();
     if (Object.keys(e).length) {
       setErrors(e);
-
-      // Scroll to the first error in logical form order
       const firstKey = ERROR_ORDER.find((k) => e[k]);
       if (firstKey && sectionRefs[firstKey]?.current) {
         sectionRefs[firstKey].current.scrollIntoView({
@@ -543,7 +549,7 @@ function CreateListingForm() {
         longitude: form.longitude ? parseFloat(form.longitude) : undefined,
       };
       await realEstateService.createListing(payload, token);
-      router.push("my-space/services/real-estate?created=1");
+      router.push("/my-space/services/real-estate?created=1");
     } catch (err) {
       setServerError(err.message || "Erreur serveur");
     } finally {
@@ -774,9 +780,7 @@ function CreateListingForm() {
           <SectionTitle>Photos *</SectionTitle>
           <ImageUploader
             images={form.images}
-            onChange={(v) => {
-              set("images", v);
-            }}
+            onChange={(v) => set("images", v)}
             token={token}
             error={errors.images}
           />

@@ -28,11 +28,13 @@ const SERVICES = [
     id: "immobilier",
     label: "Immobilier",
     categories: [
-      "Vendre appartement",
-      "Acheter appartement",
-      "Louer maison",
-      "Déménagement",
-      "Artisans",
+      "Appartement",
+      "Villa",
+      "Maison",
+      "Studio",
+      "Terrain",
+      "Bureau",
+      "Commerce",
     ],
   },
   {
