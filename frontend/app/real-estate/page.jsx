@@ -2,49 +2,59 @@
 
 import { useEffect, useState } from 'react';
 import { realEstateService } from '@/services/realEstateService';
+import { useAuth } from '@/context/AuthContext';
 import RealEstateCard from '@/components/real-estate/RealEstateCard';
 import RealEstateFilter from '@/components/real-estate/RealEstateFilter';
 
 const CATEGORIES = [
-  { label: 'Tous',         listingType: null  },
-  { label: 'Vente',        listingType: 'SALE' },
-  { label: 'Location',     listingType: 'RENT' },
+  { label: 'Tous',     listingType: null   },
+  { label: 'Vente',    listingType: 'SALE' },
+  { label: 'Location', listingType: 'RENT' },
 ];
 
 const PROPERTY_TABS = [
-  { label: 'Tous',         value: null            },
-  { label: 'Appartements', value: 'APARTMENT'     },
-  { label: 'Villas',       value: 'VILLA'         },
-  { label: 'Maisons',      value: 'HOUSE'         },
-  { label: 'Studios',      value: 'STUDIO'        },
-  { label: 'Terrains',     value: 'LAND'          },
-  { label: 'Bureaux',      value: 'OFFICE'        },
+  { label: 'Tous',         value: null        },
+  { label: 'Appartements', value: 'APARTMENT' },
+  { label: 'Villas',       value: 'VILLA'     },
+  { label: 'Maisons',      value: 'HOUSE'     },
+  { label: 'Studios',      value: 'STUDIO'    },
+  { label: 'Terrains',     value: 'LAND'      },
+  { label: 'Bureaux',      value: 'OFFICE'    },
 ];
 
 export default function RealEstatePage() {
-  const [listings, setListings]   = useState([]);
+  const { user, token } = useAuth();
+
+  const [listings, setListings]     = useState([]);
   const [pagination, setPagination] = useState(null);
-  const [loading, setLoading]     = useState(true);
-  const [filters, setFilters]     = useState({ page: 1, limit: 12 });
-  const [activeType, setActiveType]     = useState(null);
-  const [activeProp, setActiveProp]     = useState(null);
-  const [searchInput, setSearchInput]   = useState('');
+  const [loading, setLoading]       = useState(true);
+  const [filters, setFilters]       = useState({ page: 1, limit: 12 });
+  const [activeType, setActiveType] = useState(null);
+  const [activeProp, setActiveProp] = useState(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [favoritedIds, setFavoritedIds] = useState(new Set());
 
   useEffect(() => {
-    const fetch = async () => {
+    const load = async () => {
       setLoading(true);
       try {
-        const res = await realEstateService.getListings(filters);
+        const [res, favRes] = await Promise.all([
+          realEstateService.getListings(filters),
+          token
+            ? realEstateService.getFavorites(token).catch(() => ({ data: [] }))
+            : Promise.resolve({ data: [] }),
+        ]);
         setListings(res.listings);
         setPagination(res.pagination);
+        setFavoritedIds(new Set((favRes.data ?? []).map((l) => l.id)));
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
-    fetch();
-  }, [filters]);
+    load();
+  }, [filters, token]);
 
   const handleFilter = (newFilters) => {
     if (Object.keys(newFilters).length === 0) {
@@ -116,7 +126,6 @@ export default function RealEstatePage() {
       {/* TYPE TABS */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
         <div className="max-w-[1200px] mx-auto px-4 pt-2.5 pb-0 flex flex-col gap-0">
-          {/* Vente / Location */}
           <div className="flex gap-1.5 flex-wrap pb-2">
             {CATEGORIES.map((cat) => (
               <button
@@ -132,7 +141,6 @@ export default function RealEstatePage() {
               </button>
             ))}
           </div>
-          {/* Property type sub-tabs */}
           <div className="flex gap-1 flex-wrap pb-2.5">
             {PROPERTY_TABS.map((tab) => (
               <button
@@ -194,7 +202,11 @@ export default function RealEstatePage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {listings.map((l) => (
-                <RealEstateCard key={l.id} listing={l} />
+                <RealEstateCard
+                  key={l.id}
+                  listing={l}
+                  initialFavorited={favoritedIds.has(l.id)}
+                />
               ))}
             </div>
           )}

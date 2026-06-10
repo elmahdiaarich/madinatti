@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { realEstateService } from '@/services/realEstateService';
 
 const LISTING_TYPE_LABELS = {
   SALE: { label: 'Vente',    color: 'bg-orange-500 text-white' },
@@ -55,7 +57,73 @@ function PhotoFrame({ images, title }) {
   );
 }
 
-export default function RealEstateCard({ listing }) {
+// ─── Bouton cœur ──────────────────────────────────────────────────────────────
+function FavoriteButton({ listingId, initialFavorited = false, onToggle }) {
+  const { user, token } = useAuth();
+  const [favorited, setFavorited] = useState(initialFavorited);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setFavorited(initialFavorited);
+  }, [initialFavorited]);
+
+  const handleClick = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!user) {
+      const el = document.getElementById('inscription-realstate');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    if (loading) return;
+
+    if (onToggle) {
+      onToggle();
+      return;
+    }
+
+    const prev = favorited;
+    setFavorited(!prev);
+    setLoading(true);
+    try {
+      await realEstateService.toggleFavorite(listingId, token);
+    } catch {
+      setFavorited(prev);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      title={favorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+      className={`
+        w-8 h-8 rounded-full flex items-center justify-center
+        transition-all duration-200 hover:scale-110 active:scale-95
+        ${favorited
+          ? 'bg-orange-50 text-orange-400 hover:bg-orange-100'
+          : 'bg-white/80 text-gray-300 hover:text-orange-400 hover:bg-orange-50'
+        }
+        ${loading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
+      `}
+    >
+      <svg viewBox="0 0 24 24" className="w-4 h-4"
+        fill={favorited ? 'currentColor' : 'none'}
+        stroke="currentColor" strokeWidth={2}
+      >
+        <path strokeLinecap="round" strokeLinejoin="round"
+          d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
+        />
+      </svg>
+    </button>
+  );
+}
+
+// ─── RealEstateCard ───────────────────────────────────────────────────────────
+export default function RealEstateCard({ listing, initialFavorited = false, onFavoriteToggle }) {
   const listingType  = LISTING_TYPE_LABELS[listing.listingType];
   const propertyType = PROPERTY_TYPE_LABELS[listing.propertyType] || listing.propertyType;
   const fmtPrice     = (v) => Number(v).toLocaleString('fr-MA');
@@ -80,13 +148,14 @@ export default function RealEstateCard({ listing }) {
             </span>
           </div>
 
-          {listing.isFeatured && (
-            <div className="absolute top-3 right-3">
-              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-400 text-yellow-900">
-                ⭐ À la une
-              </span>
-            </div>
-          )}
+          {/* Bouton cœur — coin supérieur droit */}
+          <div className="absolute top-3 right-3 z-10">
+  <FavoriteButton
+    listingId={listing.id}
+    initialFavorited={initialFavorited}
+    onToggle={onFavoriteToggle}
+  />
+</div>
         </div>
 
         {/* Content */}
