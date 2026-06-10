@@ -24,17 +24,19 @@ const SERVICES = [
       "Demande d'emploi",
     ],
   },
-  {
-    id: "immobilier",
-    label: "Immobilier",
-    categories: [
-      "Vendre appartement",
-      "Acheter appartement",
-      "Louer maison",
-      "Déménagement",
-      "Artisans",
-    ],
-  },
+{
+  id: "immobilier",
+  label: "Immobilier",
+  categories: [
+    "Apartment",
+    "Villa",
+    "House",
+    "Studio",
+    "Land",
+    "Office",
+    "Shop",
+  ],
+},
   {
     id: "evenements",
     label: "Événements",
