@@ -18,6 +18,12 @@
  */
  
 const prisma = require('../config/db')
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key:    process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
  
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/admin/overview
@@ -237,7 +243,7 @@ const approveListing = async (req, res) => {
     const { id } = req.params
     const adminId = req.user.userId
     const now = new Date()
- 
+
     // Essai job d'abord
     const job = await prisma.jobListing.findUnique({ where: { id } })
     if (job) {
@@ -247,35 +253,59 @@ const approveListing = async (req, res) => {
       await prisma.jobListing.update({
         where: { id },
         data: {
-          status:     'PUBLISHED',
-          publishedAt: now,
-          reviewedAt:  now,
-          reviewedBy:  adminId,
-          adminNotes:  null,
+          status:      'PUBLISHED',
+          publishedAt:  now,
+          reviewedAt:   now,
+          reviewedBy:   adminId,
+          adminNotes:   null,
         },
       })
       return res.json({ success: true, message: 'Offre d\'emploi approuvée' })
     }
- 
+
     // Essai immobilier
     const re = await prisma.realEstateListing.findUnique({ where: { id } })
     if (re) {
       if (re.status !== 'PENDING') {
         return res.status(400).json({ success: false, message: 'Cette annonce n\'est pas en attente' })
       }
+
+      // Move images from temp/ to real-estate/
+      const images = re.images || []
+      const movedImages = await Promise.all(
+        images.map(async (img) => {
+          try {
+            // Extract public_id from URL — e.g. "madinatti/temp/abc123"
+            const urlParts = img.url.split('/upload/')
+            const withVersion = urlParts[1] // e.g. "v1234567/madinatti/temp/abc123.jpg"
+            const withoutVersion = withVersion.replace(/^v\d+\//, '') // "madinatti/temp/abc123.jpg"
+            const oldPublicId = withoutVersion.replace(/\.[^/.]+$/, '') // remove extension
+
+            const newPublicId = oldPublicId.replace('madinatti/temp', 'madinatti/real-estate')
+
+            const result = await cloudinary.uploader.rename(oldPublicId, newPublicId)
+            return { ...img, url: result.secure_url }
+          } catch (err) {
+            console.error('Failed to move image:', img.url, err.message)
+            return img // keep original if move fails, don't block approval
+          }
+        })
+      )
+
       await prisma.realEstateListing.update({
         where: { id },
         data: {
-          status:     'APPROVED',
-          publishedAt: now,
-          reviewedAt:  now,
-          reviewedBy:  adminId,
-          adminNotes:  null,
+          status:      'APPROVED',
+          publishedAt:  now,
+          reviewedAt:   now,
+          reviewedBy:   adminId,
+          adminNotes:   null,
+          images:       movedImages,
         },
       })
       return res.json({ success: true, message: 'Annonce immobilière approuvée' })
     }
- 
+
     res.status(404).json({ success: false, message: 'Annonce introuvable' })
   } catch (error) {
     console.error('admin approveListing error:', error)
@@ -293,7 +323,7 @@ const rejectListing = async (req, res) => {
     const { adminNote = '' } = req.body
     const adminId = req.user.userId
     const now = new Date()
- 
+
     // Essai job
     const job = await prisma.jobListing.findUnique({ where: { id } })
     if (job) {
@@ -308,10 +338,27 @@ const rejectListing = async (req, res) => {
       })
       return res.json({ success: true, message: 'Offre d\'emploi refusée' })
     }
- 
+
     // Essai immobilier
     const re = await prisma.realEstateListing.findUnique({ where: { id } })
     if (re) {
+      // Delete images from Cloudinary temp folder
+      const images = re.images || []
+      await Promise.all(
+        images.map(async (img) => {
+          try {
+            const urlParts = img.url.split('/upload/')
+            const withVersion = urlParts[1]
+            const withoutVersion = withVersion.replace(/^v\d+\//, '')
+            const publicId = withoutVersion.replace(/\.[^/.]+$/, '')
+            await cloudinary.uploader.destroy(publicId)
+          } catch (err) {
+            console.error('Failed to delete image:', img.url, err.message)
+            // don't block rejection if delete fails
+          }
+        })
+      )
+
       await prisma.realEstateListing.update({
         where: { id },
         data: {
@@ -323,7 +370,7 @@ const rejectListing = async (req, res) => {
       })
       return res.json({ success: true, message: 'Annonce immobilière refusée' })
     }
- 
+
     res.status(404).json({ success: false, message: 'Annonce introuvable' })
   } catch (error) {
     console.error('admin rejectListing error:', error)

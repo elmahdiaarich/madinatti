@@ -37,6 +37,7 @@ const SERVICES = [
       "Commerce",
     ],
   },
+
   {
     id: "evenements",
     label: "Événements",

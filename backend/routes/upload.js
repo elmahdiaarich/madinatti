@@ -34,7 +34,7 @@ router.post('/images', authMiddleware, upload.array('images', 10), async (req, r
         return new Promise((resolve, reject) => {
           const stream = cloudinary.uploader.upload_stream(
             {
-              folder: 'madinatti/real-estate',
+              folder: 'madinatti/temp',
               transformation: [{ width: 1200, height: 900, crop: 'limit', quality: 'auto' }],
             },
             (error, result) => {
