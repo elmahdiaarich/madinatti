@@ -27,18 +27,20 @@ async function seedRealEstate(prisma, roles, categories) {
     });
   }
 
-  // ── 2. Resolve immobilier sub-categories ──────────────────────────────────
-  // From your categories seed: parent slug = "immobilier"
-  // children slugs: immobilier-vendre-appartement, immobilier-acheter-appartement,
-  //                 immobilier-louer-maison, immobilier-demenagement, immobilier-artisans
+  // ── 2. Resolve immobilier categories from passed-in categories map ───────────
+  // categories.immobilier is keyed by slug: appartement, villa, maison, studio, terrain, bureau, commerce
+  const catAppartement = categories.immobilier['appartement'];
+  const catVilla       = categories.immobilier['villa'];
+  const catMaison      = categories.immobilier['maison'];
+  const catStudio      = categories.immobilier['studio'];
+  const catTerrain     = categories.immobilier['terrain'];
+  const catBureau      = categories.immobilier['bureau'];
 
-  const catVente    = await prisma.category.findUnique({ where: { slug: 'immobilier-vendre-appartement' } });
-  const catLocation = await prisma.category.findUnique({ where: { slug: 'immobilier-louer-maison' } });
-
-  if (!catVente || !catLocation) {
+  if (!catAppartement) {
     console.warn('⚠️  Immobilier categories not found. Run categories seed first.');
     return;
   }
+
 
   // ── 3. Listings data ──────────────────────────────────────────────────────
   const listings = [
@@ -47,7 +49,7 @@ async function seedRealEstate(prisma, roles, categories) {
       description:  'Superbe appartement de 85m² situé au cœur du quartier Maarif.\n- Séjour spacieux avec double exposition\n- 2 chambres avec placards\n- Cuisine équipée\n- Balcon avec vue dégagée\n\nParking inclus. Résidence sécurisée avec gardien.',
       listingType:  'SALE',
       propertyType: 'APARTMENT',
-      categoryId:   catVente.id,
+      categoryId:   catAppartement.id,
       price:        1_250_000,
       surface:      85,
       rooms:        3,
@@ -72,7 +74,7 @@ async function seedRealEstate(prisma, roles, categories) {
       description:  'Villa de standing de 320m² sur un terrain de 600m² dans le quartier résidentiel d\'Ain Diab.\n- Grand salon avec cheminée\n- 5 chambres dont une suite parentale\n- Piscine privée chauffée\n- Jardin paysager\n- Garage 2 voitures',
       listingType:  'SALE',
       propertyType: 'VILLA',
-      categoryId:   catVente.id,
+      categoryId:   catVilla.id,
       price:        8_500_000,
       surface:      320,
       rooms:        7,
@@ -97,7 +99,7 @@ async function seedRealEstate(prisma, roles, categories) {
       description:  'Studio entièrement meublé de 35m² idéal pour étudiant ou jeune professionnel.\n- Coin cuisine équipé\n- Salle de bain moderne\n- Internet fibre inclus\n- Proche tramway',
       listingType:  'RENT',
       propertyType: 'STUDIO',
-      categoryId:   catLocation.id,
+      categoryId:   catStudio.id,
       price:        3_200,
       surface:      35,
       rooms:        1,
@@ -120,7 +122,7 @@ async function seedRealEstate(prisma, roles, categories) {
       description:  'Bel appartement de 75m² dans la résidence Agdal Green.\n- 2 chambres\n- Salon lumineux\n- Cuisine moderne\n- Parking sous-sol\n- Piscine résidence',
       listingType:  'RENT',
       propertyType: 'APARTMENT',
-      categoryId:   catLocation.id,
+      categoryId:   catAppartement.id,
       price:        7_500,
       surface:      75,
       rooms:        3,
@@ -144,7 +146,7 @@ async function seedRealEstate(prisma, roles, categories) {
       description:  'Belle maison individuelle de 180m² sur terrain de 250m².\n- 4 chambres\n- Grand salon marocain + salon européen\n- Cuisine équipée\n- Terrasse 40m²\n- Quartier calme et résidentiel',
       listingType:  'SALE',
       propertyType: 'HOUSE',
-      categoryId:   catVente.id,
+      categoryId:   catMaison.id,
       price:        1_800_000,
       surface:      180,
       rooms:        6,
@@ -168,7 +170,7 @@ async function seedRealEstate(prisma, roles, categories) {
       description:  'Bureau moderne de 60m² en open space dans le Technopark.\n- Climatisation centrale\n- Salles de réunion partagées\n- Accès 24h/24\n- Parking visiteurs',
       listingType:  'RENT',
       propertyType: 'OFFICE',
-      categoryId:   catLocation.id,
+      categoryId:   catBureau.id,
       price:        9_000,
       surface:      60,
       rooms:        1,
@@ -191,7 +193,7 @@ async function seedRealEstate(prisma, roles, categories) {
       description:  'Terrain constructible de 500m² avec titre foncier.\n- Viabilisé (eau, électricité, assainissement)\n- Zone résidentielle R+2 autorisé\n- Façade 20m\n- Proche des commodités',
       listingType:  'SALE',
       propertyType: 'LAND',
-      categoryId:   catVente.id,
+      categoryId:   catTerrain.id,
       price:        950_000,
       surface:      500,
       rooms:        null,
@@ -214,7 +216,7 @@ async function seedRealEstate(prisma, roles, categories) {
       description:  'Magnifique appartement de 120m² avec vue panoramique sur la mer.\n- 3 chambres\n- Grande terrasse 30m²\n- Résidence sécurisée avec piscine\n- Finitions haut de gamme\n- Parking double',
       listingType:  'SALE',
       propertyType: 'APARTMENT',
-      categoryId:   catVente.id,
+      categoryId:   catAppartement.id,
       price:        3_200_000,
       surface:      120,
       rooms:        4,

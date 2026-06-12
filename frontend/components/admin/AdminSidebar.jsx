@@ -96,6 +96,16 @@ const IconCompany = () => (
   </svg>
 )
 
+const IconCategories = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M6 5h12l-6 9z" />
+    <circle cx="12" cy="19" r="2" />
+    <line x1="12" y1="14" x2="12" y2="17" />
+  </svg>
+)
+
 const IconLogout = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
     fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -108,13 +118,14 @@ const IconLogout = () => (
 // ── Nav items definition ──────────────────────────────────────────────────────
 
 const NAV_ITEMS = [
-  { key: 'overview',     label: 'Vue d\'ensemble', href: '/admin',            icon: IconDashboard },
-  { key: 'emploi',       label: 'Offres d\'emploi', href: '/admin/jobs',       icon: IconBriefcase },
-  { key: 'immobilier',   label: 'Immobilier',       href: '/admin/real-estate',icon: IconBuilding },
-  { key: 'vehicule',     label: 'Véhicules',        href: '/admin/vehicles',   icon: IconCar },
-  { key: 'signalements', label: 'Signalements',     href: '/admin/reports',    icon: IconFlag },
-  { key: 'entreprises',  label: 'Entreprises',      href: '/admin/businesses', icon: IconCompany },
-  { key: 'utilisateurs', label: 'Utilisateurs',     href: '/admin/users',      icon: IconUsers },
+  { key: 'overview',     label: 'Vue d\'ensemble', href: '/admin',              icon: IconDashboard },
+  { key: 'emploi',       label: 'Offres d\'emploi', href: '/admin/jobs',         icon: IconBriefcase },
+  { key: 'immobilier',   label: 'Immobilier',       href: '/admin/real-estate',  icon: IconBuilding },
+  { key: 'categories',   label: 'Catégories',       href: '/admin/categories',   icon: IconCategories },
+  { key: 'vehicule',     label: 'Véhicules',        href: '/admin/vehicles',     icon: IconCar },
+  { key: 'signalements', label: 'Signalements',     href: '/admin/reports',      icon: IconFlag },
+  { key: 'entreprises',  label: 'Entreprises',      href: '/admin/businesses',   icon: IconCompany },
+  { key: 'utilisateurs', label: 'Utilisateurs',     href: '/admin/users',        icon: IconUsers },
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────

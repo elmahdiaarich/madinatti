@@ -99,7 +99,7 @@ async function seedJobs(prisma, { business }, {
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'CDI', remote: 'HYBRID',
-      educationLevel: 'BAC_PLUS_3', experienceLevel: 'MID_2_TO_5',
+      educationLevel: ['BAC_PLUS_3'], experienceLevel: 'MID_2_TO_5',
       salaryMin: 8000, salaryMax: 12000, isFeatured: true,
       languages: [
         { language: 'arabe',    level: 'maternelle'    },
@@ -126,7 +126,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'CDI', remote: 'HYBRID',
-      educationLevel: 'BAC_PLUS_5_PLUS', experienceLevel: 'SENIOR_5_TO_10',
+      educationLevel: ['BAC_PLUS_5_PLUS'], experienceLevel: 'SENIOR_5_TO_10',
       salaryMin: 15000, salaryMax: 22000, isFeatured: true,
       languages: [
         { language: 'arabe',    level: 'maternelle' },
@@ -153,7 +153,7 @@ Profil :
       location: 'Rabat', region: 'Rabat-Salé-Kénitra',
       latitude: COORDS.Rabat.lat, longitude: COORDS.Rabat.lng,
       contractType: 'CDI', remote: 'REMOTE',
-      educationLevel: 'BAC_PLUS_5_PLUS', experienceLevel: 'EXPERT_PLUS_10',
+      educationLevel: ['BAC_PLUS_5_PLUS'], experienceLevel: 'EXPERT_PLUS_10',
       salaryMin: 25000, salaryMax: 35000, isFeatured: true,
       languages: [
         { language: 'anglais',  level: 'courant'    },
@@ -180,7 +180,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'CDI', remote: 'HYBRID',
-      educationLevel: 'BAC_PLUS_5_PLUS', experienceLevel: 'MID_2_TO_5',
+      educationLevel: ['BAC_PLUS_5_PLUS'], experienceLevel: 'MID_2_TO_5',
       salaryMin: 12000, salaryMax: 18000, isFeatured: false,
       languages: [
         { language: 'anglais',  level: 'courant'      },
@@ -207,7 +207,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'CDD', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_3', experienceLevel: 'MID_2_TO_5',
+      educationLevel: ['BAC_PLUS_3'], experienceLevel: 'MID_2_TO_5',
       salaryMin: null, salaryMax: null, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle'    },
@@ -234,7 +234,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'STAGE', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_2', experienceLevel: 'STUDENT_FRESH_GRAD',
+      educationLevel: ['BAC_PLUS_2'], experienceLevel: 'STUDENT_FRESH_GRAD',
       salaryMin: 2000, salaryMax: 3000, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle'    },
@@ -261,7 +261,7 @@ Profil :
       location: 'Rabat', region: 'Rabat-Salé-Kénitra',
       latitude: COORDS.Rabat.lat, longitude: COORDS.Rabat.lng,
       contractType: 'CDI', remote: 'HYBRID',
-      educationLevel: 'BAC_PLUS_3', experienceLevel: 'MID_2_TO_5',
+      educationLevel: ['BAC_PLUS_3'], experienceLevel: 'MID_2_TO_5',
       salaryMin: 5000, salaryMax: 7000, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle'    },
@@ -288,7 +288,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'CDI', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_5_PLUS', experienceLevel: 'MID_2_TO_5',
+      educationLevel: ['BAC_PLUS_5_PLUS'], experienceLevel: 'MID_2_TO_5',
       salaryMin: 10000, salaryMax: 14000, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle' },
@@ -315,7 +315,7 @@ Profil :
       location: 'Rabat', region: 'Rabat-Salé-Kénitra',
       latitude: COORDS.Rabat.lat, longitude: COORDS.Rabat.lng,
       contractType: 'FREELANCE', remote: 'REMOTE',
-      educationLevel: 'BAC_PLUS_2', experienceLevel: 'JUNIOR_LESS_2',
+      educationLevel: ['BAC_PLUS_2'], experienceLevel: 'JUNIOR_LESS_2',
       salaryMin: 3000, salaryMax: 5000, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle'    },
@@ -342,7 +342,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'CDI', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_5_PLUS', experienceLevel: 'MID_2_TO_5',
+      educationLevel: ['BAC_PLUS_5_PLUS'], experienceLevel: 'MID_2_TO_5',
       salaryMin: 12000, salaryMax: 17000, isFeatured: true,
       languages: [
         { language: 'arabe',    level: 'maternelle' },
@@ -369,7 +369,7 @@ Profil :
       location: 'Rabat', region: 'Rabat-Salé-Kénitra',
       latitude: COORDS.Rabat.lat, longitude: COORDS.Rabat.lng,
       contractType: 'CDI', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_5_PLUS', experienceLevel: 'MID_2_TO_5',
+      educationLevel: ['BAC_PLUS_5_PLUS'], experienceLevel: 'MID_2_TO_5',
       salaryMin: 11000, salaryMax: 15000, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle'    },
@@ -396,7 +396,7 @@ Profil :
       location: 'Rabat', region: 'Rabat-Salé-Kénitra',
       latitude: COORDS.Rabat.lat, longitude: COORDS.Rabat.lng,
       contractType: 'TEMPS_PARTIEL', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_2', experienceLevel: 'JUNIOR_LESS_2',
+      educationLevel: ['BAC_PLUS_2'], experienceLevel: 'JUNIOR_LESS_2',
       salaryMin: null, salaryMax: null, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle' },
@@ -422,7 +422,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'CDI', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_5_PLUS', experienceLevel: 'SENIOR_5_TO_10',
+      educationLevel: ['BAC_PLUS_5_PLUS'], experienceLevel: 'SENIOR_5_TO_10',
       salaryMin: 9000, salaryMax: 13000, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle'    },
@@ -449,7 +449,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'CDI', remote: 'HYBRID',
-      educationLevel: 'BAC_PLUS_3', experienceLevel: 'JUNIOR_LESS_2',
+      educationLevel: ['BAC_PLUS_3'], experienceLevel: 'JUNIOR_LESS_2',
       salaryMin: 5500, salaryMax: 7500, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle'    },
@@ -476,7 +476,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'ANAPEC', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_2', experienceLevel: 'STUDENT_FRESH_GRAD',
+      educationLevel: ['BAC_PLUS_2'], experienceLevel: 'STUDENT_FRESH_GRAD',
       salaryMin: null, salaryMax: null, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle' },
@@ -502,7 +502,7 @@ Profil :
       location: 'Marrakech', region: 'Marrakech-Safi',
       latitude: COORDS.Marrakech.lat, longitude: COORDS.Marrakech.lng,
       contractType: 'CDI', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_5_PLUS', experienceLevel: 'MID_2_TO_5',
+      educationLevel: ['BAC_PLUS_5_PLUS'], experienceLevel: 'MID_2_TO_5',
       salaryMin: 10000, salaryMax: 15000, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle'    },
@@ -529,7 +529,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'CDI', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_5_PLUS', experienceLevel: 'MID_2_TO_5',
+      educationLevel: ['BAC_PLUS_5_PLUS'], experienceLevel: 'MID_2_TO_5',
       salaryMin: null, salaryMax: null, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle' },
@@ -556,7 +556,7 @@ Profil :
       location: 'Ouarzazate', region: 'Drâa-Tafilalet',
       latitude: COORDS.Ouarzazate.lat, longitude: COORDS.Ouarzazate.lng,
       contractType: 'CDI', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_5_PLUS', experienceLevel: 'MID_2_TO_5',
+      educationLevel: ['BAC_PLUS_5_PLUS'], experienceLevel: 'MID_2_TO_5',
       salaryMin: 12000, salaryMax: 18000, isFeatured: true,
       languages: [
         { language: 'arabe',    level: 'maternelle' },
@@ -583,7 +583,7 @@ Profil :
       location: 'Tanger', region: 'Tanger-Tétouan-Al Hoceïma',
       latitude: COORDS.Tanger.lat, longitude: COORDS.Tanger.lng,
       contractType: 'CDI', remote: 'ON_SITE',
-      educationLevel: 'BAC', experienceLevel: 'MID_2_TO_5',
+      educationLevel: ['BAC'], experienceLevel: 'MID_2_TO_5',
       salaryMin: null, salaryMax: null, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle'    },
@@ -609,7 +609,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'CDI', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_2', experienceLevel: 'JUNIOR_LESS_2',
+      educationLevel: ['BAC_PLUS_2'], experienceLevel: 'JUNIOR_LESS_2',
       salaryMin: 5000, salaryMax: 9000, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle'    },
@@ -636,7 +636,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'CDI', remote: 'HYBRID',
-      educationLevel: 'BAC_PLUS_5_PLUS', experienceLevel: 'SENIOR_5_TO_10',
+      educationLevel: ['BAC_PLUS_5_PLUS'], experienceLevel: 'SENIOR_5_TO_10',
       salaryMin: 18000, salaryMax: 28000, isFeatured: true,
       languages: [
         { language: 'arabe',    level: 'maternelle' },
@@ -663,7 +663,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'CDI', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_3', experienceLevel: 'JUNIOR_LESS_2',
+      educationLevel: ['BAC_PLUS_3'], experienceLevel: 'JUNIOR_LESS_2',
       salaryMin: 5500, salaryMax: 7500, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle'    },
@@ -690,7 +690,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'ANAPEC', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_2', experienceLevel: 'STUDENT_FRESH_GRAD',
+      educationLevel: ['BAC_PLUS_2'], experienceLevel: 'STUDENT_FRESH_GRAD',
       salaryMin: 2800, salaryMax: 3500, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle' },
@@ -716,7 +716,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'CDI', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_5_PLUS', experienceLevel: 'MID_2_TO_5',
+      educationLevel: ['BAC_PLUS_5_PLUS'], experienceLevel: 'MID_2_TO_5',
       salaryMin: 15000, salaryMax: 25000, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle' },
@@ -742,7 +742,7 @@ Profil :
       location: 'Rabat', region: 'Rabat-Salé-Kénitra',
       latitude: COORDS.Rabat.lat, longitude: COORDS.Rabat.lng,
       contractType: 'CDI', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_3', experienceLevel: 'JUNIOR_LESS_2',
+      educationLevel: ['BAC_PLUS_3'], experienceLevel: 'JUNIOR_LESS_2',
       salaryMin: 5000, salaryMax: 7000, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle' },
@@ -768,7 +768,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'CDI', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_5_PLUS', experienceLevel: 'SENIOR_5_TO_10',
+      educationLevel: ['BAC_PLUS_5_PLUS'], experienceLevel: 'SENIOR_5_TO_10',
       salaryMin: 12000, salaryMax: 16000, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle'    },
@@ -795,7 +795,7 @@ Profil :
       location: 'Tanger', region: 'Tanger-Tétouan-Al Hoceïma',
       latitude: COORDS.Tanger.lat, longitude: COORDS.Tanger.lng,
       contractType: 'CDI', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_2', experienceLevel: 'MID_2_TO_5',
+      educationLevel: ['BAC_PLUS_2'], experienceLevel: 'MID_2_TO_5',
       salaryMin: 6000, salaryMax: 9000, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle'    },
@@ -822,7 +822,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'CDI', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_5_PLUS', experienceLevel: 'MID_2_TO_5',
+      educationLevel: ['BAC_PLUS_5_PLUS'], experienceLevel: 'MID_2_TO_5',
       salaryMin: 11000, salaryMax: 15000, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle' },
@@ -849,7 +849,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'CDI', remote: 'HYBRID',
-      educationLevel: 'BAC_PLUS_3', experienceLevel: 'MID_2_TO_5',
+      educationLevel: ['BAC_PLUS_3'], experienceLevel: 'MID_2_TO_5',
       salaryMin: 7000, salaryMax: 10000, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle'    },
@@ -876,7 +876,7 @@ Profil :
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'CDI', remote: 'ON_SITE',
-      educationLevel: 'BAC_PLUS_5_PLUS', experienceLevel: 'SENIOR_5_TO_10',
+      educationLevel: ['BAC_PLUS_5_PLUS'], experienceLevel: 'SENIOR_5_TO_10',
       salaryMin: 15000, salaryMax: 20000, isFeatured: false,
       languages: [
         { language: 'arabe',    level: 'maternelle' },

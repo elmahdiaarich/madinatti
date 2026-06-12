@@ -628,4 +628,65 @@ export async function getSidebarCounts() {
     utilisateurs: mockUsers.filter((u) => !u.isActive).length,
   }
 }
- 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CATEGORIES  (real API — /api/admin/categories)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * getAdminCategories(parentSlug?)
+ * GET /api/admin/categories?parentSlug=emploi|immobilier
+ * Returns: { success, data: Parent[] } where each Parent includes children[]
+ */
+export async function getAdminCategories(parentSlug = '') {
+  const params = new URLSearchParams()
+  if (parentSlug) params.set('parentSlug', parentSlug)
+  const json = await apiFetch(`/api/admin/categories?${params}`)
+  return json.data ?? []
+}
+
+/**
+ * adminCreateCategory({ name, parentId })
+ * POST /api/admin/categories
+ */
+export async function adminCreateCategory({ name, parentId }) {
+  const json = await apiFetch('/api/admin/categories', {
+    method: 'POST',
+    body: JSON.stringify({ name, parentId }),
+  })
+  return json.data
+}
+
+/**
+ * adminUpdateCategory(id, { name })
+ * PATCH /api/admin/categories/:id
+ */
+export async function adminUpdateCategory(id, { name }) {
+  const json = await apiFetch(`/api/admin/categories/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ name }),
+  })
+  return json.data
+}
+
+/**
+ * adminToggleCategory(id)
+ * PATCH /api/admin/categories/:id/toggle
+ */
+export async function adminToggleCategory(id) {
+  const json = await apiFetch(`/api/admin/categories/${id}/toggle`, {
+    method: 'PATCH',
+  })
+  return json
+}
+
+/**
+ * adminDeleteCategory(id)
+ * DELETE /api/admin/categories/:id
+ */
+export async function adminDeleteCategory(id) {
+  const json = await apiFetch(`/api/admin/categories/${id}`, {
+    method: 'DELETE',
+  })
+  return json
+}

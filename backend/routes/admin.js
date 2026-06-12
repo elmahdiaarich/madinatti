@@ -13,6 +13,12 @@ const {
   getUsers,
   toggleUser,
   getBusinesses,
+  // Categories
+  getCategories,
+  createCategory,
+  updateCategory,
+  toggleCategoryActive,
+  deleteCategory,
 } = require('../controllers/adminController')
  
 // ── Middleware global sur toutes les routes admin ─────────────────────────────
@@ -51,5 +57,21 @@ router.patch('/users/:id/toggle', toggleUser)
 // ── Businesses ────────────────────────────────────────────────────────────────
 // GET /api/admin/businesses
 router.get('/businesses', getBusinesses)
+
+// ── Categories ────────────────────────────────────────────────────────────────
+// GET    /api/admin/categories?parentSlug=emploi|immobilier
+router.get('/categories', getCategories)
+
+// POST   /api/admin/categories   body: { name, parentId }
+router.post('/categories', createCategory)
+
+// PATCH  /api/admin/categories/:id   body: { name }
+router.patch('/categories/:id', updateCategory)
+
+// PATCH  /api/admin/categories/:id/toggle
+router.patch('/categories/:id/toggle', toggleCategoryActive)
+
+// DELETE /api/admin/categories/:id
+router.delete('/categories/:id', deleteCategory)
  
-module.exports = router
+module.exports = router

@@ -605,6 +605,251 @@ const getBusinesses = async (req, res) => {
   }
 }
  
+// ─────────────────────────────────────────────────────────────────────────────
+// CATEGORY MANAGEMENT
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Utility — convert a name to a slug.
+ * e.g. "Informatique & Tech" → "informatique-tech"
+ */
+function toSlug(text) {
+  return text
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/['']/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/admin/categories
+// Query: parentSlug (e.g. "emploi" | "immobilier") — optional filter
+// Returns parent categories with their children and listing counts.
+// ─────────────────────────────────────────────────────────────────────────────
+const getCategories = async (req, res) => {
+  try {
+    const { parentSlug } = req.query
+
+    const where = parentSlug
+      ? { parentId: null, slug: parentSlug }
+      : { parentId: null }
+
+    const parents = await prisma.category.findMany({
+      where,
+      orderBy: { name: 'asc' },
+      include: {
+        children: {
+          orderBy: { name: 'asc' },
+          include: {
+            _count: {
+              select: {
+                jobListings: true,
+                realEstateListings: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            jobListings: true,
+            realEstateListings: true,
+          },
+        },
+      },
+    })
+
+    res.json({ success: true, data: parents })
+  } catch (error) {
+    console.error('admin getCategories error:', error)
+    res.status(500).json({ success: false, message: 'Erreur serveur' })
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/admin/categories
+// Body: { name, parentId }
+// Creates a new child category under a given parent.
+// ─────────────────────────────────────────────────────────────────────────────
+const createCategory = async (req, res) => {
+  try {
+    const { name, parentId } = req.body
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Le nom est requis' })
+    }
+    if (!parentId) {
+      return res.status(400).json({ success: false, message: 'parentId est requis' })
+    }
+
+    const parent = await prisma.category.findUnique({ where: { id: parentId } })
+    if (!parent) {
+      return res.status(404).json({ success: false, message: 'Catégorie parente introuvable' })
+    }
+
+    const slug = `${parent.slug}-${toSlug(name.trim())}`
+
+    // Check for slug collision
+    const existing = await prisma.category.findUnique({ where: { slug } })
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'Une catégorie avec ce nom existe déjà' })
+    }
+
+    const category = await prisma.category.create({
+      data: {
+        name:     name.trim(),
+        slug,
+        isActive: true,
+        parentId,
+      },
+    })
+
+    res.status(201).json({ success: true, data: category })
+  } catch (error) {
+    console.error('admin createCategory error:', error)
+    res.status(500).json({ success: false, message: 'Erreur serveur' })
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /api/admin/categories/:id
+// Body: { name }
+// Renames a category and regenerates its slug.
+// ─────────────────────────────────────────────────────────────────────────────
+const updateCategory = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { name } = req.body
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Le nom est requis' })
+    }
+
+    const cat = await prisma.category.findUnique({ where: { id } })
+    if (!cat) {
+      return res.status(404).json({ success: false, message: 'Catégorie introuvable' })
+    }
+
+    // Rebuild slug: if it's a child, prefix with parent slug
+    let newSlug
+    if (cat.parentId) {
+      const parent = await prisma.category.findUnique({ where: { id: cat.parentId } })
+      newSlug = `${parent.slug}-${toSlug(name.trim())}`
+    } else {
+      newSlug = toSlug(name.trim())
+    }
+
+    // Check collision (exclude self)
+    const collision = await prisma.category.findFirst({
+      where: { slug: newSlug, NOT: { id } },
+    })
+    if (collision) {
+      return res.status(409).json({ success: false, message: 'Une catégorie avec ce nom existe déjà' })
+    }
+
+    const updated = await prisma.category.update({
+      where: { id },
+      data: { name: name.trim(), slug: newSlug },
+    })
+
+    res.json({ success: true, data: updated })
+  } catch (error) {
+    console.error('admin updateCategory error:', error)
+    res.status(500).json({ success: false, message: 'Erreur serveur' })
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /api/admin/categories/:id/toggle
+// Flips isActive. Toggling a parent also cascades to children.
+// ─────────────────────────────────────────────────────────────────────────────
+const toggleCategoryActive = async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const cat = await prisma.category.findUnique({
+      where: { id },
+      include: { children: { select: { id: true } } },
+    })
+    if (!cat) {
+      return res.status(404).json({ success: false, message: 'Catégorie introuvable' })
+    }
+
+    const newValue = !cat.isActive
+
+    // Update the category itself
+    await prisma.category.update({ where: { id }, data: { isActive: newValue } })
+
+    // Cascade to children if it's a parent
+    if (cat.children.length > 0) {
+      await prisma.category.updateMany({
+        where: { parentId: id },
+        data: { isActive: newValue },
+      })
+    }
+
+    res.json({
+      success:  true,
+      isActive: newValue,
+      message:  newValue ? 'Catégorie activée' : 'Catégorie désactivée',
+    })
+  } catch (error) {
+    console.error('admin toggleCategoryActive error:', error)
+    res.status(500).json({ success: false, message: 'Erreur serveur' })
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE /api/admin/categories/:id
+// Blocks deletion if the category has linked job or real-estate listings.
+// ─────────────────────────────────────────────────────────────────────────────
+const deleteCategory = async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const cat = await prisma.category.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: {
+            jobListings:        true,
+            realEstateListings: true,
+            children:           true,
+          },
+        },
+      },
+    })
+    if (!cat) {
+      return res.status(404).json({ success: false, message: 'Catégorie introuvable' })
+    }
+
+    const totalListings = cat._count.jobListings + cat._count.realEstateListings
+    if (totalListings > 0) {
+      return res.status(409).json({
+        success: false,
+        message: `Impossible de supprimer : ${totalListings} annonce(s) sont liées à cette catégorie. Désactivez-la à la place.`,
+      })
+    }
+
+    if (cat._count.children > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Impossible de supprimer une catégorie parente qui a des sous-catégories.',
+      })
+    }
+
+    await prisma.category.delete({ where: { id } })
+
+    res.json({ success: true, message: 'Catégorie supprimée' })
+  } catch (error) {
+    console.error('admin deleteCategory error:', error)
+    res.status(500).json({ success: false, message: 'Erreur serveur' })
+  }
+}
+
 module.exports = {
   getOverview,
   getListings,
@@ -615,5 +860,11 @@ module.exports = {
   getUsers,
   toggleUser,
   getBusinesses,
+  // Categories
+  getCategories,
+  createCategory,
+  updateCategory,
+  toggleCategoryActive,
+  deleteCategory,
 }
  

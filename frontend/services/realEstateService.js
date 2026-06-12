@@ -10,6 +10,12 @@ export const realEstateService = {
     return res.json();
   },
 
+  getCategories: async () => {
+    const res = await fetch(`${API_URL}/real-estate/categories`);
+    if (!res.ok) throw new Error("Erreur lors de la récupération des catégories");
+    return res.json();
+  },
+
   getListingById: async (id) => {
     const res = await fetch(`${API_URL}/real-estate/${id}`);
     if (!res.ok) throw new Error("Annonce introuvable");

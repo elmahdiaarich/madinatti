@@ -4,6 +4,7 @@ const {
   getJobs,
   getJobById,
   getFiltersCount,
+  getJobCategories,
   createJob,
   toggleFavorite,
   getMyFavorites,
@@ -13,6 +14,7 @@ const roleMiddleware = require('../middlewares/roleMiddleware');
 
 router.get('/', getJobs);
 router.get('/filters-count', getFiltersCount);
+router.get('/categories', getJobCategories);
 
 // ⚠️ /favorites/me AVANT /:id sinon Express croit que "favorites" est un :id
 router.get('/favorites/me', authMiddleware, getMyFavorites);

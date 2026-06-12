@@ -17,5 +17,5 @@ CREATE TYPE "ContractType" AS ENUM ('CDI', 'CDD', 'INTERIM', 'FREELANCE', 'STAGE
 -- AlterTable
 ALTER TABLE "JobListing" DROP COLUMN "type",
 ADD COLUMN     "contractType" "ContractType" NOT NULL,
-ADD COLUMN     "educationLevel" "EducationLevel",
+ADD COLUMN     "educationLevel" "EducationLevel"[] DEFAULT ARRAY[]::"EducationLevel"[],
 ADD COLUMN     "experienceLevel" "ExperienceLevel";

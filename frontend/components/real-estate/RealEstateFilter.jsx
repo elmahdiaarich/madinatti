@@ -1,30 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { realEstateService } from "@/services/realEstateService";
 
 const LISTING_TYPES = [
   { value: "SALE", label: "Vente" },
   { value: "RENT", label: "Location" },
 ];
-const PROPERTY_TYPES = [
-  { value: "APARTMENT", label: "Appartement" },
-  { value: "VILLA", label: "Villa" },
-  { value: "HOUSE", label: "Maison" },
-  { value: "STUDIO", label: "Studio" },
-  { value: "LAND", label: "Terrain" },
-  { value: "OFFICE", label: "Bureau" },
-  { value: "SHOP", label: "Commerce" },
-];
 
 export default function RealEstateFilter({ onFilter }) {
+  const [categories, setCategories] = useState([]);
   const [form, setForm] = useState({
     listingType: "",
-    propertyType: "",
+    categoryId: "",
     minPrice: "",
     maxPrice: "",
     rooms: "",
     city: "",
   });
+
+  // ── Fetch immobilier categories from API ───────────────────
+  useEffect(() => {
+    realEstateService
+      .getCategories()
+      .then((res) => setCategories(res.data || []))
+      .catch((err) => console.error("Erreur chargement catégories:", err));
+  }, []);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -38,7 +39,7 @@ export default function RealEstateFilter({ onFilter }) {
   const handleReset = () => {
     setForm({
       listingType: "",
-      propertyType: "",
+      categoryId: "",
       minPrice: "",
       maxPrice: "",
       rooms: "",
@@ -96,18 +97,18 @@ export default function RealEstateFilter({ onFilter }) {
         </div>
       </div>
 
-      {/* Type de bien */}
+      {/* Type de bien — fetched from API */}
       <div>
         <p className={label}>Type de bien</p>
         <select
           className={select}
-          value={form.propertyType}
-          onChange={(e) => set("propertyType", e.target.value)}
+          value={form.categoryId}
+          onChange={(e) => set("categoryId", e.target.value)}
         >
           <option value="">Tous</option>
-          {PROPERTY_TYPES.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.name}
             </option>
           ))}
         </select>

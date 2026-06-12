@@ -382,8 +382,20 @@ async function adminGetStats(req, res) {
   }
 }
 
+// ─── PUBLIC — CATEGORIES (immobilier) ───────────────────────────────────────
+async function getCategories(req, res) {
+  try {
+    const categories = await service.getCategories();
+    return res.json({ success: true, data: categories });
+  } catch (err) {
+    console.error('[getCategories]', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
 module.exports = {
   // public
+  getCategories,
   createListing,
   getListings,
   getListingById,

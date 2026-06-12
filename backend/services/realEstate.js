@@ -14,22 +14,24 @@ function generateSlug(title) {
   return `${base}-${Date.now().toString(36)}`;
 }
 
-// ─── Leaf Category Check ─────────────────────────────────────────────────────
+// ─── Category Validation ─────────────────────────────────────────────────────
 async function validateLeafCategory(categoryId) {
   const category = await prisma.category.findUnique({
     where: { id: categoryId },
-    include: { children: { select: { id: true } } },
   });
   if (!category) return { valid: false, message: "Category not found." };
   if (!category.isActive)
     return { valid: false, message: "Category is inactive." };
-  if (category.children.length > 0)
-    return {
-      valid: false,
-      message:
-        "Select a specific sub-category (e.g. Apartment, Villa), not a parent.",
-    };
   return { valid: true };
+}
+
+// ─── Get Categories (immobilier) ─────────────────────────────────────────────
+async function getCategories() {
+  return prisma.category.findMany({
+    where: { module: 'immobilier', isActive: true },
+    select: { id: true, name: true, slug: true },
+    orderBy: { name: 'asc' },
+  });
 }
 
 // ─── Shared listing select for business (includes admin notes + inquiry count) ─
@@ -133,6 +135,7 @@ async function getListings(query) {
     city,
     listingType,
     propertyType,
+    categoryId,
     minPrice,
     maxPrice,
     rooms,
@@ -147,6 +150,7 @@ async function getListings(query) {
     ...(city && { city: { contains: city, mode: "insensitive" } }),
     ...(listingType && { listingType }),
     ...(propertyType && { propertyType }),
+    ...(categoryId && { categoryId }),
     ...(rooms && { rooms: { gte: parseInt(rooms) } }),
     ...((minPrice || maxPrice) && {
       price: {
@@ -806,6 +810,7 @@ module.exports = {
   // helpers
   validateLeafCategory,
   // public
+  getCategories,
   createListing,
   getListings,
   getListingById,

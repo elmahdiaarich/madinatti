@@ -5,6 +5,7 @@ const roleMiddleware = require('../middlewares/roleMiddleware');
 const ctrl = require('../controllers/realEstate');
 
 // ── PUBLIC ───────────────────────────────────────────────────────────────────
+router.get('/categories', ctrl.getCategories);
 router.get('/', ctrl.getListings);
 
 // ── AUTHENTICATED ────────────────────────────────────────────────────────────

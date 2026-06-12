@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,19 +10,7 @@ import { cities } from 'morocco-cities';
 import PricingModal from '@/components/shared/PricingModal';
 
 // ─── Données statiques ────────────────────────────────────────────────────────
-
-const CATEGORIES = [
-  { label: 'Informatique & Tech',      slug: 'informatique' },
-  { label: 'Marketing & Comm.',        slug: 'marketing' },
-  { label: 'Finance & Compta.',        slug: 'finance' },
-  { label: 'Ressources Humaines',      slug: 'rh' },
-  { label: 'BTP & Construction',       slug: 'btp' },
-  { label: 'Vente & Commerce',         slug: 'vente' },
-  { label: 'Santé & Médical',          slug: 'sante' },
-  { label: 'Logistique & Transport',   slug: 'logistique' },
-  { label: 'Juridique',                slug: 'juridique' },
-  { label: 'Enseignement & Formation', slug: 'enseignement' },
-];
+// CATEGORIES loaded dynamically from API (see useEffect below)
 
 const CONTRACT_TYPES = [
   { value: 'CDI',           label: 'CDI',           desc: 'Contrat à durée indéterminée' },
@@ -55,12 +44,19 @@ const EXPERIENCE_LEVELS = [
   { value: 'STUDENT_FRESH_GRAD', label: 'Étudiant / Jeune diplômé' },
   { value: 'JUNIOR_LESS_2',      label: 'Débutant (< 2 ans)' },
   { value: 'MID_2_TO_5',         label: "2 à 5 ans d'expérience" },
-  { value: 'SENIOR_5_TO_10',     label: '5 à 10 ans d\'expérience' },
+  { value: 'SENIOR_5_TO_10',     label: "5 à 10 ans d'expérience" },
   { value: 'EXPERT_PLUS_10',     label: 'Expert (+ 10 ans)' },
 ];
 
 const LANGUAGES = ['arabe', 'français', 'anglais', 'espagnol', 'allemand', 'italien'];
 const LANGUAGE_LEVELS = ['maternelle', 'courant', 'bon niveau', 'intermédiaire', 'notions'];
+
+const WHY_JOIN_SUGGESTIONS = [
+  'Équipe jeune et dynamique',
+  'Évolution rapide en interne',
+  'Projets variés et stimulants',
+  'Formation continue',
+];
 
 // ─── Villes par région ────────────────────────────────────────────────────────
 const citiesByRegion = cities.reduce((acc, city) => {
@@ -143,16 +139,88 @@ function ErrorMsg({ msg }) {
   return <p className="text-red-500 text-xs mt-1 flex items-center gap-1">⚠ {msg}</p>;
 }
 
+// ─── ListSection — composant générique pour missions/profil/avantages/whyJoin ─
+function ListSection({
+  label, required, optionalLabel, help,
+  items, setItems, placeholderFn,
+  maxItems = 8, addLabel,
+  badgeClass = 'bg-[#E8F5D0] text-[#2D5016]',
+  icon, iconClass = '', error,
+}) {
+  return (
+    <div>
+      <FieldLabel required={required}>
+        {label}{' '}
+        {optionalLabel && <span className="text-gray-400 font-normal">(optionnel)</span>}
+      </FieldLabel>
+      {help && <p className="text-xs text-gray-400 mb-3">{help}</p>}
+      <div className="space-y-2">
+        {items.map((value, i) => (
+          <div key={i} className="flex items-center gap-2">
+            {icon ? (
+              <span className={`text-sm shrink-0 ${iconClass}`}>{icon}</span>
+            ) : (
+              <span className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${badgeClass}`}>
+                {i + 1}
+              </span>
+            )}
+            <Input
+              value={value}
+              onChange={(e) => {
+                const updated = [...items];
+                updated[i] = e.target.value;
+                setItems(updated);
+              }}
+              placeholder={`Ex: ${placeholderFn(i)}`}
+              className="flex-1"
+            />
+            {items.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setItems(items.filter((_, j) => j !== i))}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 transition"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      {items.length < maxItems && (
+        <button
+          type="button"
+          onClick={() => setItems([...items, ''])}
+          className="mt-3 flex items-center gap-2 text-xs font-semibold text-[#2D5016] hover:text-[#A7D129] transition"
+        >
+          <span className="w-5 h-5 rounded-full border-2 border-[#2D5016] flex items-center justify-center text-sm leading-none">+</span>
+          {addLabel}
+        </button>
+      )}
+      <ErrorMsg msg={error} />
+    </div>
+  );
+}
+
 // ─── Page principale ──────────────────────────────────────────────────────────
 function PublierJobContent() {
   const { user, token } = useAuth();
   const router = useRouter();
 
   const [step, setStep] = useState(1);
-  const [selectedPlan, setSelectedPlan] = useState(null)
+  const [selectedPlan, setSelectedPlan] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [errors, setErrors] = useState({});
+  const [categories, setCategories] = useState([]);
+
+  // ── Fetch categories from API ───────────────────────────────
+  useEffect(() => {
+    jobsService.getCategories()
+      .then((res) => {
+        setCategories(res.data.map((c) => ({ label: c.name, slug: c.slug })));
+      })
+      .catch((err) => console.error('Erreur chargement catégories:', err));
+  }, []);
 
   const [form, setForm] = useState({
     // Étape 1 — Poste
@@ -167,20 +235,33 @@ function PublierJobContent() {
     salaryMax: '',
     applicationDeadline: '',
     // Étape 3 — Profil recherché
-    educationLevel: '',
+    educationLevel: [],        // ✅ array (multi-select)
     experienceLevel: '',
     skills: [],
     skillInput: '',
     languages: [],
     // Étape 4 — Description
+    descMode: 'paste',         // ✅ 'paste' par défaut | 'guided'
+    description: '',           // mode paste
     missions: [''],
     profil: [''],
     avantages: [''],
+    whyJoin: [''],             // ✅ nouvelle section
   });
 
   const set = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setErrors((prev) => ({ ...prev, [key]: '' }));
+  };
+
+  // ── Toggle educationLevel (multi-select) ──────────────────
+  const toggleEducationLevel = (value) => {
+    set(
+      'educationLevel',
+      form.educationLevel.includes(value)
+        ? form.educationLevel.filter((v) => v !== value)
+        : [...form.educationLevel, value]
+    );
   };
 
   // ── Validation par étape ──────────────────────────────────
@@ -189,23 +270,33 @@ function PublierJobContent() {
     if (step === 1) {
       if (!form.title.trim()) e.title = 'Le titre est requis';
       if (!form.categorySlug) e.categorySlug = 'Choisissez une catégorie';
-      if (!form.location)     e.location = 'Choisissez une ville';
+      if (!form.region)   e.region   = 'Choisissez une région';
+      if (!form.location) e.location = 'Choisissez une ville';
     }
     if (step === 2) {
       if (!form.contractType) e.contractType = 'Choisissez un type de contrat';
     }
     if (step === 4) {
-      if (form.missions.filter(m => m.trim()).length === 0)
-        e.missions = 'Ajoutez au moins une mission';
-      if (form.profil.filter(p => p.trim()).length === 0)
-        e.profil = 'Ajoutez au moins un critère de profil';
+      if (form.descMode === 'paste') {
+        if (!form.description.trim() || form.description.trim().length < 50)
+          e.description = 'La description doit contenir au moins 50 caractères';
+      } else {
+        if (form.missions.filter((m) => m.trim()).length === 0)
+          e.missions = 'Ajoutez au moins une mission';
+        if (form.profil.filter((p) => p.trim()).length === 0)
+          e.profil = 'Ajoutez au moins un critère de profil';
+      }
     }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const next = () => { if (validate()) setStep((s) => s + 1); };
-  const back = () => setStep((s) => s - 1);
+const next = () => {
+  if (validate()) {
+    setStep((s) => s + 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+};  const back = () => setStep((s) => s - 1);
 
   // ── Skills ────────────────────────────────────────────────
   const addSkill = () => {
@@ -226,28 +317,30 @@ function PublierJobContent() {
   const removeLanguage = (lang) =>
     set('languages', form.languages.filter((l) => l.language !== lang));
   const setLangLevel = (lang, level) =>
-    set('languages', form.languages.map((l) => l.language === lang ? { ...l, level } : l));
+    set('languages', form.languages.map((l) => (l.language === lang ? { ...l, level } : l)));
 
   // ── Région auto à partir de la ville ──────────────────────
-  const handleCityChange = (city) => {
-    const found = cities.find((c) => c.name === city);
-    set('location', city);
-    if (found) set('region', found.region_name);
-  };
+  const handleRegionChange = (region) => {
+  set('region', region);
+  set('location', ''); // reset la ville quand on change de région
+};
 
-  // ── Build description ─────────────────────────────────────
+const handleCityChange = (city) => {
+  set('location', city);
+};
+
+  // ── Build description (mode guided) ──────────────────────
   const buildDescription = () => {
-    const missionsText = form.missions.filter(m => m.trim())
-      .map(m => `- ${m.trim()}`).join('\n');
-    const profilText = form.profil.filter(p => p.trim())
-      .map(p => `- ${p.trim()}`).join('\n');
-    const avantagesText = form.avantages.filter(a => a.trim())
-      .map(a => `- ${a.trim()}`).join('\n');
+    const missionsText  = form.missions.filter((m) => m.trim()).map((m) => `- ${m.trim()}`).join('\n');
+    const profilText    = form.profil.filter((p) => p.trim()).map((p) => `- ${p.trim()}`).join('\n');
+    const avantagesText = form.avantages.filter((a) => a.trim()).map((a) => `- ${a.trim()}`).join('\n');
+    const whyJoinText   = form.whyJoin.filter((w) => w.trim()).map((w) => `- ${w.trim()}`).join('\n');
 
     return [
       `Missions :\n${missionsText}`,
       `Profil recherché :\n${profilText}`,
       avantagesText ? `Nous offrons :\n${avantagesText}` : '',
+      whyJoinText   ? `Pourquoi nous rejoindre :\n${whyJoinText}` : '',
     ].filter(Boolean).join('\n\n');
   };
 
@@ -266,11 +359,11 @@ function PublierJobContent() {
         salaryMin:           form.salaryMin ? Number(form.salaryMin) : null,
         salaryMax:           form.salaryMax ? Number(form.salaryMax) : null,
         applicationDeadline: form.applicationDeadline || null,
-        educationLevel:      form.educationLevel || null,
+        educationLevel:      form.educationLevel,           // ✅ array
         experienceLevel:     form.experienceLevel || null,
         skills:              form.skills,
         languages:           form.languages,
-        description:         buildDescription(), // ✅ fixed: single key, uses builder
+        description:         form.descMode === 'paste' ? form.description : buildDescription(),
       }, token);
       setStep(6);
     } catch (err) {
@@ -285,69 +378,66 @@ function PublierJobContent() {
 
   // ─── Render ───────────────────────────────────────────────
   return (
-   <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {!selectedPlan && (
         <PricingModal module="jobs" onSelect={(planId) => setSelectedPlan(planId)} />
       )}
 
-      {/* Header */}
-      <div className="bg-gradient-to-r from-[#2D5016] to-[#3d6b1e] text-white py-8 px-4">
+      {/* Header — compacté */}
+      <div className="bg-gradient-to-r from-[#2D5016] to-[#3d6b1e] text-white py-4 px-4">
         <div className="max-w-3xl mx-auto">
-          <div className="flex items-center gap-3 mb-1">
+          <div className="flex items-center justify-between gap-3 mb-1">
             <button
               onClick={() => router.push('/jobs')}
-              className="text-white/60 hover:text-white transition text-sm flex items-center gap-1"
+              className="text-white/60 hover:text-white transition text-xs flex items-center gap-1"
             >
               ← Retour aux offres
             </button>
-          </div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Publier une offre d'emploi</h1>
-          <p className="text-white/70 text-sm mt-1">
-            Votre offre sera examinée par notre équipe avant publication
-          </p>
-          {selectedPlan && (
-            <div className="mt-3 flex items-center gap-2">
-              <span className="text-xs text-white/60">Plan :</span>
-              <span className={`text-xs font-bold px-2 py-0.5 rounded-full
-                ${selectedPlan === 'vip' ? 'bg-[#2D5016] text-[#E8F5D0]'
-                : selectedPlan === 'pro' ? 'bg-[#A7D129] text-[#1a3a00]'
-                : 'bg-white/20 text-white'}`}>
-                {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}
-              </span>
-              <button
-                onClick={() => setSelectedPlan(null)}
-                className="text-xs text-white/50 hover:text-white underline transition"
-              >
-                Changer
-              </button>
-            </div>
-          )}
 
-          {/* Progress bar */}
+            {selectedPlan && (
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full
+                  ${selectedPlan === 'vip' ? 'bg-[#2D5016] text-[#E8F5D0]'
+                  : selectedPlan === 'pro' ? 'bg-[#A7D129] text-[#1a3a00]'
+                  : 'bg-white/20 text-white'}`}>
+                  Plan {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}
+                </span>
+                <button
+                  onClick={() => setSelectedPlan(null)}
+                  className="text-xs text-white/50 hover:text-white underline transition"
+                >
+                  Changer
+                </button>
+              </div>
+            )}
+          </div>
+
+          <h1 className="text-lg font-extrabold tracking-tight leading-tight">Publier une offre d'emploi</h1>
+
+          {/* Progress bar — compacte, juste les pastilles + barre, sans labels texte */}
           {step <= 5 && (
-            <div className="mt-6">
-              <div className="flex items-center gap-0 mb-3">
+            <div className="mt-3">
+              <div className="flex items-center gap-0">
                 {STEPS.map((s, i) => (
                   <div key={s.id} className="flex items-center flex-1 last:flex-none">
-                    <div className="flex flex-col items-center gap-1">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all
+                    <div
+                      title={s.label}
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all shrink-0
                         ${step > s.id  ? 'bg-[#A7D129] text-[#2D5016]' :
-                          step === s.id ? 'bg-white text-[#2D5016] shadow-lg scale-110' :
+                          step === s.id ? 'bg-white text-[#2D5016] shadow scale-110' :
                           'bg-white/20 text-white/60'}`}>
-                        {step > s.id ? '✓' : s.id}
-                      </div>
-                      <span className={`text-[10px] font-semibold whitespace-nowrap
-                        ${step === s.id ? 'text-white' : 'text-white/50'}`}>
-                        {s.label}
-                      </span>
+                      {step > s.id ? '✓' : s.id}
                     </div>
                     {i < STEPS.length - 1 && (
-                      <div className={`flex-1 h-0.5 mx-1 mb-4 transition-all
+                      <div className={`flex-1 h-0.5 mx-1 transition-all
                         ${step > s.id ? 'bg-[#A7D129]' : 'bg-white/20'}`} />
                     )}
                   </div>
                 ))}
               </div>
+              <p className="text-[11px] text-white/70 mt-1.5">
+                Étape {step}/{STEPS.length} — {STEPS[step - 1].label}
+              </p>
             </div>
           )}
         </div>
@@ -378,7 +468,7 @@ function PublierJobContent() {
               <div>
                 <FieldLabel required>Secteur d'activité</FieldLabel>
                 <div className="grid grid-cols-2 gap-2">
-                  {CATEGORIES.map((cat) => (
+                  {categories.map((cat) => (
                     <button
                       key={cat.slug}
                       type="button"
@@ -396,37 +486,44 @@ function PublierJobContent() {
                 <ErrorMsg msg={errors.categorySlug} />
               </div>
 
-              {/* Ville + Région */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <FieldLabel required>Ville</FieldLabel>
-                  <Select
-                    value={form.location}
-                    onChange={(e) => handleCityChange(e.target.value)}
-                  >
-                    <option value="">Choisir une ville</option>
-                    {Object.entries(citiesByRegion)
-                      .sort(([a], [b]) => a.localeCompare(b))
-                      .map(([region, regionCities]) => (
-                        <optgroup key={region} label={region}>
-                          {regionCities.sort().map((city) => (
-                            <option key={city} value={city}>{city}</option>
-                          ))}
-                        </optgroup>
-                      ))}
-                  </Select>
-                  <ErrorMsg msg={errors.location} />
-                </div>
-                <div>
-                  <FieldLabel>Région</FieldLabel>
-                  <Input
-                    value={form.region}
-                    readOnly
-                    className="bg-gray-50 cursor-default border-gray-200"
-                    placeholder="Auto-remplie"
-                  />
-                </div>
-              </div>
+             {/* Région */}
+             <div className="grid grid-cols-2 gap-4">
+<div>
+  <FieldLabel required>Région</FieldLabel>
+  <Select
+    value={form.region}
+    onChange={(e) => handleRegionChange(e.target.value)}
+  >
+    <option value="">Choisir une région</option>
+    {Object.keys(citiesByRegion)
+      .sort((a, b) => a.localeCompare(b, 'fr'))
+      .map((region) => (
+        <option key={region} value={region}>{region}</option>
+      ))}
+  </Select>
+  <ErrorMsg msg={errors.region} />
+</div>
+
+{/* Ville — désactivée jusqu'à ce qu'une région soit choisie */}
+<div>
+  <FieldLabel required>Ville</FieldLabel>
+  <Select
+    value={form.location}
+    onChange={(e) => handleCityChange(e.target.value)}
+    disabled={!form.region}
+  >
+    <option value="">
+      {form.region ? 'Choisir une ville' : '← Choisissez d\'abord une région'}
+    </option>
+    {(citiesByRegion[form.region] || [])
+      .sort((a, b) => a.localeCompare(b, 'fr'))
+      .map((city) => (
+        <option key={city} value={city}>{city}</option>
+      ))}
+  </Select>
+  <ErrorMsg msg={errors.location} />
+</div>
+</div>
 
               {/* Remote */}
               <div>
@@ -537,17 +634,20 @@ function PublierJobContent() {
               subtitle="Définissez les critères du candidat idéal" />
 
             <div className="space-y-6">
-              {/* Niveau d'études */}
+              {/* Niveau d'études — multi-select */}
               <div>
-                <FieldLabel>Niveau d'études minimum</FieldLabel>
+                <FieldLabel>
+                  Niveau d'études{' '}
+                  <span className="text-gray-400 font-normal">(plusieurs choix possibles)</span>
+                </FieldLabel>
                 <div className="flex flex-wrap gap-2">
                   {EDUCATION_LEVELS.map((e) => (
                     <button
                       key={e.value}
                       type="button"
-                      onClick={() => set('educationLevel', form.educationLevel === e.value ? '' : e.value)}
+                      onClick={() => toggleEducationLevel(e.value)}
                       className={`px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-all
-                        ${form.educationLevel === e.value
+                        ${form.educationLevel.includes(e.value)
                           ? 'border-[#A7D129] bg-[#A7D129] text-[#2D5016]'
                           : 'border-gray-200 text-gray-600 hover:border-[#A7D129]/50'
                         }`}
@@ -664,147 +764,145 @@ function PublierJobContent() {
         {step === 4 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
             <StepHeader step={4} title="Description du poste"
-              subtitle="Renseignez les missions, le profil et les avantages" />
+              subtitle="Choisissez la méthode qui vous convient" />
 
-            <div className="space-y-8">
-
-              {/* MISSIONS */}
-              <div>
-                <FieldLabel required>Missions principales</FieldLabel>
-                <p className="text-xs text-gray-400 mb-3">Décrivez ce que le candidat va faire au quotidien</p>
-                <div className="space-y-2">
-                  {form.missions.map((mission, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-[#E8F5D0] text-[#2D5016] text-xs font-bold flex items-center justify-center shrink-0">
-                        {i + 1}
-                      </span>
-                      <Input
-                        value={mission}
-                        onChange={(e) => {
-                          const updated = [...form.missions];
-                          updated[i] = e.target.value;
-                          set('missions', updated);
-                        }}
-                        placeholder={`Ex: ${i === 0 ? 'Développer les fonctionnalités front-end' : i === 1 ? 'Participer aux réunions Agile / Scrum' : 'Mission ' + (i + 1)}`}
-                        className="flex-1"
-                      />
-                      {form.missions.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => set('missions', form.missions.filter((_, j) => j !== i))}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 transition"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                {form.missions.length < 8 && (
-                  <button
-                    type="button"
-                    onClick={() => set('missions', [...form.missions, ''])}
-                    className="mt-3 flex items-center gap-2 text-xs font-semibold text-[#2D5016] hover:text-[#A7D129] transition"
-                  >
-                    <span className="w-5 h-5 rounded-full border-2 border-[#2D5016] flex items-center justify-center text-sm leading-none">+</span>
-                    Ajouter une mission
-                  </button>
-                )}
-                <ErrorMsg msg={errors.missions} />
-              </div>
-
-              <div className="h-px bg-gray-100" />
-
-              {/* PROFIL */}
-              <div>
-                <FieldLabel required>Profil recherché</FieldLabel>
-                <p className="text-xs text-gray-400 mb-3">Listez les critères que doit avoir le candidat idéal</p>
-                <div className="space-y-2">
-                  {form.profil.map((critere, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-[#A7D129]/20 text-[#7BA428] text-xs font-bold flex items-center justify-center shrink-0">
-                        {i + 1}
-                      </span>
-                      <Input
-                        value={critere}
-                        onChange={(e) => {
-                          const updated = [...form.profil];
-                          updated[i] = e.target.value;
-                          set('profil', updated);
-                        }}
-                        placeholder={`Ex: ${i === 0 ? 'Bac+3 minimum en informatique' : i === 1 ? "2 ans d'expérience en React" : 'Critère ' + (i + 1)}`}
-                        className="flex-1"
-                      />
-                      {form.profil.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => set('profil', form.profil.filter((_, j) => j !== i))}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 transition"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                {form.profil.length < 8 && (
-                  <button
-                    type="button"
-                    onClick={() => set('profil', [...form.profil, ''])}
-                    className="mt-3 flex items-center gap-2 text-xs font-semibold text-[#2D5016] hover:text-[#A7D129] transition"
-                  >
-                    <span className="w-5 h-5 rounded-full border-2 border-[#2D5016] flex items-center justify-center text-sm leading-none">+</span>
-                    Ajouter un critère
-                  </button>
-                )}
-                <ErrorMsg msg={errors.profil} />
-              </div>
-
-              <div className="h-px bg-gray-100" />
-
-              {/* AVANTAGES */}
-              <div>
-                <FieldLabel>Ce que vous offrez <span className="text-gray-400 font-normal">(optionnel)</span></FieldLabel>
-                <p className="text-xs text-gray-400 mb-3">Mutuelle, télétravail, tickets restaurant, formation...</p>
-                <div className="space-y-2">
-                  {form.avantages.map((avantage, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="text-[#A7D129] text-sm shrink-0">✦</span>
-                      <Input
-                        value={avantage}
-                        onChange={(e) => {
-                          const updated = [...form.avantages];
-                          updated[i] = e.target.value;
-                          set('avantages', updated);
-                        }}
-                        placeholder={`Ex: ${i === 0 ? "Mutuelle d'entreprise prise en charge à 100%" : i === 1 ? '2 jours de télétravail par semaine' : 'Avantage ' + (i + 1)}`}
-                        className="flex-1"
-                      />
-                      {form.avantages.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => set('avantages', form.avantages.filter((_, j) => j !== i))}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 transition"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                {form.avantages.length < 6 && (
-                  <button
-                    type="button"
-                    onClick={() => set('avantages', [...form.avantages, ''])}
-                    className="mt-3 flex items-center gap-2 text-xs font-semibold text-[#2D5016] hover:text-[#A7D129] transition"
-                  >
-                    <span className="w-5 h-5 rounded-full border-2 border-[#2D5016] flex items-center justify-center text-sm leading-none">+</span>
-                    Ajouter un avantage
-                  </button>
-                )}
-              </div>
-
+            {/* Toggle mode — "J'ai déjà ma description" en premier / par défaut */}
+            <div className="flex gap-2 mb-6 p-1 bg-gray-100 rounded-xl w-fit">
+              <button
+                type="button"
+                onClick={() => set('descMode', 'paste')}
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all
+                  ${form.descMode === 'paste' ? 'bg-white text-[#2D5016] shadow-sm' : 'text-gray-500'}`}
+              >
+                📋 J'ai déjà ma description
+              </button>
+              <button
+                type="button"
+                onClick={() => set('descMode', 'guided')}
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all
+                  ${form.descMode === 'guided' ? 'bg-white text-[#2D5016] shadow-sm' : 'text-gray-500'}`}
+              >
+                🧭 Aidez-moi à rédiger
+              </button>
             </div>
+
+            {/* ── MODE PASTE ── */}
+            {form.descMode === 'paste' && (
+              <div>
+                <FieldLabel required>Description complète de l'offre</FieldLabel>
+                <p className="text-xs text-gray-400 mb-3">
+                  Collez votre annonce existante (missions, profil, avantages...)
+                </p>
+                <Textarea
+                  value={form.description}
+                  onChange={(e) => set('description', e.target.value)}
+                  rows={12}
+                  placeholder={`Missions :\n- ...\n\nProfil recherché :\n- ...\n\nNous offrons :\n- ...`}
+                />
+                <div className="flex items-center justify-between mt-2">
+                  <ErrorMsg msg={errors.description} />
+                  <span className={`text-xs ml-auto ${form.description.trim().length < 50 ? 'text-gray-400' : 'text-[#7BA428]'}`}>
+                    {form.description.trim().length} / 50 min
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* ── MODE GUIDED ── */}
+            {form.descMode === 'guided' && (
+              <div className="space-y-8">
+
+                {/* MISSIONS */}
+                <ListSection
+                  label="Missions principales" required
+                  help="Décrivez ce que le candidat va faire au quotidien"
+                  items={form.missions}
+                  setItems={(v) => set('missions', v)}
+                  badgeClass="bg-[#E8F5D0] text-[#2D5016]"
+                  placeholderFn={(i) =>
+                    i === 0 ? 'Développer les fonctionnalités front-end'
+                    : i === 1 ? 'Participer aux réunions Agile / Scrum'
+                    : `Mission ${i + 1}`
+                  }
+                  maxItems={8}
+                  addLabel="Ajouter une mission"
+                  error={errors.missions}
+                />
+
+                <div className="h-px bg-gray-100" />
+
+                {/* PROFIL */}
+                <ListSection
+                  label="Profil recherché" required
+                  help="Listez les critères que doit avoir le candidat idéal"
+                  items={form.profil}
+                  setItems={(v) => set('profil', v)}
+                  badgeClass="bg-[#A7D129]/20 text-[#7BA428]"
+                  placeholderFn={(i) =>
+                    i === 0 ? 'Bac+3 minimum en informatique'
+                    : i === 1 ? "2 ans d'expérience en React"
+                    : `Critère ${i + 1}`
+                  }
+                  maxItems={8}
+                  addLabel="Ajouter un critère"
+                  error={errors.profil}
+                />
+
+                <div className="h-px bg-gray-100" />
+
+                {/* AVANTAGES */}
+                <ListSection
+                  label="Ce que vous offrez" optionalLabel
+                  help="Mutuelle, télétravail, tickets restaurant, formation..."
+                  items={form.avantages}
+                  setItems={(v) => set('avantages', v)}
+                  icon="✦"
+                  iconClass="text-[#A7D129]"
+                  placeholderFn={(i) =>
+                    i === 0 ? "Mutuelle d'entreprise prise en charge à 100%"
+                    : i === 1 ? '2 jours de télétravail par semaine'
+                    : `Avantage ${i + 1}`
+                  }
+                  maxItems={6}
+                  addLabel="Ajouter un avantage"
+                />
+
+                <div className="h-px bg-gray-100" />
+
+                {/* POURQUOI NOUS REJOINDRE */}
+                <ListSection
+                  label="Pourquoi nous rejoindre ?" optionalLabel
+                  help="Culture d'entreprise, ambiance, perspectives d'évolution..."
+                  items={form.whyJoin}
+                  setItems={(v) => set('whyJoin', v)}
+                  icon="🌱"
+                  iconClass="text-[#7BA428]"
+                  placeholderFn={(i) => WHY_JOIN_SUGGESTIONS[i] || `Raison ${i + 1}`}
+                  maxItems={6}
+                  addLabel="Ajouter une raison"
+                />
+
+                {/* Générer brouillon */}
+                <div className="bg-[#E8F5D0] border border-[#A7D129]/40 rounded-xl p-4 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-bold text-[#2D5016]">✨ Générer un brouillon</p>
+                    <p className="text-xs text-[#7BA428] mt-0.5">
+                      Assemblez vos champs en un texte structuré, puis affinez-le librement.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      set('description', buildDescription());
+                      set('descMode', 'paste');
+                    }}
+                    className="shrink-0 px-4 py-2.5 rounded-xl bg-[#2D5016] text-white text-sm font-bold hover:bg-[#A7D129] hover:text-[#2D5016] transition whitespace-nowrap"
+                  >
+                    Générer →
+                  </button>
+                </div>
+              </div>
+            )}
 
             <NavButtons onBack={back} onNext={next} nextLabel="Aperçu & Confirmer →" />
           </div>
@@ -832,7 +930,7 @@ function PublierJobContent() {
                       <div className="flex flex-wrap gap-2 mt-2">
                         {form.contractType && (
                           <span className="px-2 py-0.5 bg-[#A7D129] text-[#2D5016] rounded-full text-xs font-bold">
-                            {CONTRACT_TYPES.find(c => c.value === form.contractType)?.label}
+                            {CONTRACT_TYPES.find((c) => c.value === form.contractType)?.label}
                           </span>
                         )}
                         {form.location && (
@@ -840,8 +938,8 @@ function PublierJobContent() {
                         )}
                         {form.remote && (
                           <span className="px-2 py-0.5 bg-white/20 rounded-full text-xs">
-                            {REMOTE_TYPES.find(r => r.value === form.remote)?.icon}{' '}
-                            {REMOTE_TYPES.find(r => r.value === form.remote)?.label}
+                            {REMOTE_TYPES.find((r) => r.value === form.remote)?.icon}{' '}
+                            {REMOTE_TYPES.find((r) => r.value === form.remote)?.label}
                           </span>
                         )}
                       </div>
@@ -849,17 +947,27 @@ function PublierJobContent() {
                   </div>
                 </div>
 
-                {/* ✅ Updated Summary body */}
+                {/* Summary body */}
                 <div className="p-6 text-sm">
                   <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                     <SummaryRow label="Catégorie"
-                      value={CATEGORIES.find(c => c.slug === form.categorySlug)?.label} />
+                      value={CATEGORIES.find((c) => c.slug === form.categorySlug)?.label} />
                     <SummaryRow label="Contrat"
-                      value={CONTRACT_TYPES.find(c => c.value === form.contractType)?.label} />
+                      value={CONTRACT_TYPES.find((c) => c.value === form.contractType)?.label} />
                     <SummaryRow label="Expérience"
-                      value={EXPERIENCE_LEVELS.find(e => e.value === form.experienceLevel)?.label} />
+                      value={EXPERIENCE_LEVELS.find((e) => e.value === form.experienceLevel)?.label} />
                     <SummaryRow label="Mode de travail"
-                      value={REMOTE_TYPES.find(r => r.value === form.remote)?.label} />
+                      value={REMOTE_TYPES.find((r) => r.value === form.remote)?.label} />
+                    <SummaryRow
+                      label="Niveau d'études"
+                      value={
+                        form.educationLevel.length
+                          ? form.educationLevel
+                              .map((v) => EDUCATION_LEVELS.find((e) => e.value === v)?.label)
+                              .join(', ')
+                          : null
+                      }
+                    />
                     <SummaryRow label="Salaire"
                       value={
                         form.salaryMin && form.salaryMax
@@ -880,7 +988,6 @@ function PublierJobContent() {
                     )}
                   </div>
                 </div>
-
               </div>
 
               {/* Notice validation */}
@@ -955,9 +1062,10 @@ function PublierJobContent() {
                   setForm({
                     title: '', categorySlug: '', location: '', region: '',
                     remote: 'ON_SITE', contractType: '', salaryMin: '', salaryMax: '',
-                    applicationDeadline: '', educationLevel: '', experienceLevel: '',
+                    applicationDeadline: '', educationLevel: [], experienceLevel: '',
                     skills: [], skillInput: '', languages: [],
-                    missions: [''], profil: [''], avantages: [''],
+                    descMode: 'paste', description: '',
+                    missions: [''], profil: [''], avantages: [''], whyJoin: [''],
                   });
                 }}
                 className="px-6 py-3 rounded-xl bg-[#2D5016] text-white font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition"

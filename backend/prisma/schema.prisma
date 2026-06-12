@@ -135,14 +135,12 @@ model Favorite {
 }
 
 model Category {
-  id              String          @id @default(uuid())
-  parentId        String?
-  name            String
-  slug            String          @unique
-  isActive        Boolean         @default(true)
-  parent          Category?       @relation("CategoryChildren", fields: [parentId], references: [id])
-  children        Category[]      @relation("CategoryChildren")
-  jobListings     JobListing[]
+  id                 String              @id @default(uuid())
+  name               String
+  slug               String              @unique
+  module             String              // "emploi" | "immobilier" | "vehicule"
+  isActive           Boolean             @default(true)
+  jobListings        JobListing[]
   realEstateListings RealEstateListing[]
 }
 
@@ -217,7 +215,7 @@ model JobListing {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   contractType        ContractType
-  educationLevel      EducationLevel?
+  educationLevel      EducationLevel[]  @default([])
   experienceLevel     ExperienceLevel?
   region              String?
   remote              RemoteType    @default(ON_SITE)

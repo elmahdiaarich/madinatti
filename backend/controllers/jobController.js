@@ -32,7 +32,7 @@ const getJobs = async (req, res) => {
       }),
       ...(categoryId     && { categoryId }),
       ...(contractType   && { contractType }),
-      ...(educationLevel && { educationLevel }),
+      ...(educationLevel && { educationLevel: { hasSome: educationLevel.split(',') } }),
       ...(experienceLevel && { experienceLevel }),
       ...(categorySlug   && { category: { slug: categorySlug } }),
       ...(location       && { location: { contains: location, mode: 'insensitive' } }),
@@ -148,10 +148,9 @@ const getFiltersCount = async (req, res) => {
           where: baseWhere,
           _count: { experienceLevel: true },
         }),
-        prisma.jobListing.groupBy({
-          by: ['educationLevel'],
+        prisma.jobListing.findMany({
           where: baseWhere,
-          _count: { educationLevel: true },
+          select: { educationLevel: true },
         }),
         prisma.jobListing.groupBy({
           by: ['location'],
@@ -188,7 +187,12 @@ const getFiltersCount = async (req, res) => {
       data: {
         contractType:    toMap(contractCounts,   'contractType',   'contractType'),
         experienceLevel: toMap(experienceCounts, 'experienceLevel','experienceLevel'),
-        educationLevel:  toMap(educationCounts,  'educationLevel', 'educationLevel'),
+       educationLevel: educationCounts.reduce((acc, job) => {
+  (job.educationLevel || []).forEach((lvl) => {
+    acc[lvl] = (acc[lvl] || 0) + 1;
+  });
+  return acc;
+}, {}),
         location:        toMap(locationCounts,   'location',       'location'),
         categories:      categoryCounts.map((c) => ({
           id:    c.id,
@@ -260,7 +264,7 @@ const createJob = async (req, res) => {
         salaryMax:           salaryMax   ? Number(salaryMax)   : null,
         salaryPeriod:        salaryMin || salaryMax ? 'MONTHLY' : null,
         applicationDeadline: applicationDeadline ? new Date(applicationDeadline) : null,
-        educationLevel:      educationLevel  || null,
+        educationLevel: Array.isArray(educationLevel) ? educationLevel : [],
         experienceLevel:     experienceLevel || null,
         skills:              Array.isArray(skills) ? skills : [],
         languages:           Array.isArray(languages) ? languages : [],
@@ -351,4 +355,21 @@ const getMyFavorites = async (req, res) => {
   }
 };
 
-module.exports = { getJobs, getJobById, getFiltersCount, createJob,toggleFavorite, getMyFavorites };
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/jobs/categories  — catégories emploi
+// ─────────────────────────────────────────────────────────────────────────────
+const getJobCategories = async (req, res) => {
+  try {
+    const categories = await prisma.category.findMany({
+      where: { module: 'emploi', isActive: true },
+      select: { id: true, name: true, slug: true },
+      orderBy: { name: 'asc' },
+    });
+    res.json({ success: true, data: categories });
+  } catch (error) {
+    console.error('getJobCategories error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+module.exports = { getJobs, getJobById, getFiltersCount, getJobCategories, createJob, toggleFavorite, getMyFavorites };

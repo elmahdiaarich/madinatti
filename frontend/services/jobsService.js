@@ -8,6 +8,12 @@ export const jobsService = {
     return res.json();
   },
 
+  getCategories: async () => {
+    const res = await fetch(`${API_URL}/jobs/categories`);
+    if (!res.ok) throw new Error('Erreur lors de la récupération des catégories');
+    return res.json();
+  },
+
   getJobById: async (id) => {
     const res = await fetch(`${API_URL}/jobs/${id}`);
     if (!res.ok) throw new Error('Offre introuvable');
