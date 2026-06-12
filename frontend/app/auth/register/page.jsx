@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../context/AuthContext";
 import { cities } from "morocco-cities";
-
+import GuestRoute from "@/components/shared/GuestRoute";
 import AuthLayout from "../../../components/auth/AuthLayout";
 import PasswordInput from "../../../components/auth/PasswordInput";
 import GoogleAuth from "../../../components/auth/GoogleAuth";
@@ -140,167 +140,167 @@ export default function RegisterPage() {
   };
 
   return (
-    <AuthLayout title="Créer un compte">
-
-      {error && (
-        <div className="bg-red-100 text-red-600 p-3 rounded-lg mb-4 text-sm">
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-
-        <input
-          name="name"
-          placeholder="Nom complet"
-          onChange={handleChange}
-          className="input-green p-3 border rounded-lg"
-        />
-
-        <input
-          name="email"
-          placeholder="Email"
-          onChange={handleChange}
-          className="input-green p-3 border rounded-lg"
-        />
-
-        <PasswordInput
-          value={formData.password}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, password: e.target.value }))
-          }
-        />
-
-        <input
-          name="phone"
-          placeholder="Téléphone"
-          onChange={handleChange}
-          className="input-green p-3 border rounded-lg"
-        />
-
-{/* REGION SELECT */}
-<select
-  onChange={(e) => {
-    setSelectedRegion(e.target.value);
-    setFormData((prev) => ({ ...prev, city: "" }));
-    setCitySearch("");
-  }}
-  value={selectedRegion}
-  className="input-green p-3 border rounded-lg w-full"
->
-  <option value="">Choisir une région</option>
-  {Object.keys(citiesByRegion).sort().map((region) => (
-    <option key={region} value={region}>
-      {region}
-    </option>
-  ))}
-</select>
-
-{/* CITY SELECT — apparaît seulement si région choisie */}
-{selectedRegion && (
-  <select
-    name="city"
-    value={formData.city}
-    onChange={(e) =>
-      setFormData((prev) => ({ ...prev, city: e.target.value }))
-    }
-    className="input-green p-3 border rounded-lg w-full"
-  >
-    <option value="">Choisir une ville</option>
-    {citiesByRegion[selectedRegion].map((ville) => (
-      <option key={ville} value={ville}>
-        {ville}
-      </option>
-    ))}
-  </select>
-)}
-
-        {/* ROLE SELECT */}
-        <select
-          name="role"
-          value={formData.role}
-          onChange={handleChange}
-          className="input-green p-3 border rounded-lg"
-        >
-          <option value="citizen">Citoyen</option>
-          <option value="business">Entreprise</option>
-        </select>
-
-        {/* BUSINESS FIELDS */}
-        {isBusiness && (
-          <div className="border border-green-100 bg-green-50 rounded-xl p-4 flex flex-col gap-3">
-            <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">
-              Informations entreprise
-            </p>
-
-            <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">
-                Nom de l'entreprise <span className="text-red-400">*</span>
-              </label>
-              <input
-                name="companyName"
-                placeholder="Ex: Madinatti SARL"
-                onChange={handleChange}
-                className="input-green p-3 border bg-white rounded-lg w-full"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">
-                Site web
-              </label>
-              <input
-                name="companyWebsite"
-                placeholder="https://monentreprise.ma"
-                onChange={handleChange}
-                className="input-green p-3 border bg-white rounded-lg w-full"
-                type="text"
-              />
-            </div>
-
-            {/* LOGO UPLOAD */}
-            <div>
-              <label className="text-xs font-medium text-gray-500 mb-2 block">
-                Logo de l'entreprise
-              </label>
-              <div className="flex items-center gap-3">
-                <div className="w-14 h-14 rounded-xl border-2 border-green-200 overflow-hidden bg-white flex items-center justify-center flex-shrink-0">
-                  {companyLogoPreview ? (
-                    <img
-                      src={companyLogoPreview}
-                      alt="Aperçu logo"
-                      className="w-full h-full object-contain"
-                    />
-                  ) : (
-                    <span className="text-2xl">🏢</span>
-                  )}
-                </div>
-                <label className="text-sm text-green-600 cursor-pointer hover:text-green-700 underline underline-offset-2">
-                  {companyLogoPreview ? "Changer le logo" : "Ajouter le logo"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoChange}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-            </div>
+    <GuestRoute>
+      <AuthLayout title="Créer un compte">
+        {error && (
+          <div className="bg-red-100 text-red-600 p-3 rounded-lg mb-4 text-sm">
+            {error}
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-primary text-white p-3 rounded-lg"
-        >
-          {loading ? "Création..." : "Créer un compte"}
-        </button>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <input
+            name="name"
+            placeholder="Nom complet"
+            onChange={handleChange}
+            className="input-green p-3 border rounded-lg"
+          />
 
-      </form>
+          <input
+            name="email"
+            placeholder="Email"
+            onChange={handleChange}
+            className="input-green p-3 border rounded-lg"
+          />
 
-      <GoogleAuth />
+          <PasswordInput
+            value={formData.password}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, password: e.target.value }))
+            }
+          />
 
-    </AuthLayout>
+          <input
+            name="phone"
+            placeholder="Téléphone"
+            onChange={handleChange}
+            className="input-green p-3 border rounded-lg"
+          />
+
+          {/* REGION SELECT */}
+          <select
+            onChange={(e) => {
+              setSelectedRegion(e.target.value);
+              setFormData((prev) => ({ ...prev, city: "" }));
+              setCitySearch("");
+            }}
+            value={selectedRegion}
+            className="input-green p-3 border rounded-lg w-full"
+          >
+            <option value="">Choisir une région</option>
+            {Object.keys(citiesByRegion)
+              .sort()
+              .map((region) => (
+                <option key={region} value={region}>
+                  {region}
+                </option>
+              ))}
+          </select>
+
+          {/* CITY SELECT — apparaît seulement si région choisie */}
+          {selectedRegion && (
+            <select
+              name="city"
+              value={formData.city}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, city: e.target.value }))
+              }
+              className="input-green p-3 border rounded-lg w-full"
+            >
+              <option value="">Choisir une ville</option>
+              {citiesByRegion[selectedRegion].map((ville) => (
+                <option key={ville} value={ville}>
+                  {ville}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {/* ROLE SELECT */}
+          <select
+            name="role"
+            value={formData.role}
+            onChange={handleChange}
+            className="input-green p-3 border rounded-lg"
+          >
+            <option value="citizen">Citoyen</option>
+            <option value="business">Entreprise</option>
+          </select>
+
+          {/* BUSINESS FIELDS */}
+          {isBusiness && (
+            <div className="border border-green-100 bg-green-50 rounded-xl p-4 flex flex-col gap-3">
+              <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">
+                Informations entreprise
+              </p>
+
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">
+                  Nom de l'entreprise <span className="text-red-400">*</span>
+                </label>
+                <input
+                  name="companyName"
+                  placeholder="Ex: Madinatti SARL"
+                  onChange={handleChange}
+                  className="input-green p-3 border bg-white rounded-lg w-full"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">
+                  Site web
+                </label>
+                <input
+                  name="companyWebsite"
+                  placeholder="https://monentreprise.ma"
+                  onChange={handleChange}
+                  className="input-green p-3 border bg-white rounded-lg w-full"
+                  type="text"
+                />
+              </div>
+
+              {/* LOGO UPLOAD */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-2 block">
+                  Logo de l'entreprise
+                </label>
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 rounded-xl border-2 border-green-200 overflow-hidden bg-white flex items-center justify-center flex-shrink-0">
+                    {companyLogoPreview ? (
+                      <img
+                        src={companyLogoPreview}
+                        alt="Aperçu logo"
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <span className="text-2xl">🏢</span>
+                    )}
+                  </div>
+                  <label className="text-sm text-green-600 cursor-pointer hover:text-green-700 underline underline-offset-2">
+                    {companyLogoPreview ? "Changer le logo" : "Ajouter le logo"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoChange}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-primary text-white p-3 rounded-lg"
+          >
+            {loading ? "Création..." : "Créer un compte"}
+          </button>
+        </form>
+
+        <GoogleAuth />
+      </AuthLayout>
+    </GuestRoute>
   );
 }

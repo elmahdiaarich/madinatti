@@ -189,6 +189,7 @@ async function apiFetch(path, options = {}) {
     let message = `HTTP ${res.status}`
     try {
       const body = await res.json()
+      console.error('API error body:', body)
       message = body.message || body.error || message
     } catch (_) {}
     throw new Error(message)

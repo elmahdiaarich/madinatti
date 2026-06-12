@@ -43,44 +43,46 @@ export default function LoginPage() {
   };
 
   return (
-    <AuthLayout title="Connexion">
-      {error && (
-        <div className="bg-red-100 text-red-600 p-3 rounded-lg mb-4 text-sm">
-          {error}
-        </div>
-      )}
+    <GuestRoute>
+      <AuthLayout title="Connexion">
+        {error && (
+          <div className="bg-red-100 text-red-600 p-3 rounded-lg mb-4 text-sm">
+            {error}
+          </div>
+        )}
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="input-green p-3 border rounded-lg"
-          required
-        />
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="input-green p-3 border rounded-lg"
+            required
+          />
 
-        <PasswordInput
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+          <PasswordInput
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
-        <button
-          disabled={loading}
-          className="bg-primary text-white p-3 rounded-lg"
-        >
-          {loading ? "Connexion..." : "Se connecter"}
-        </button>
-      </form>
+          <button
+            disabled={loading}
+            className="bg-primary text-white p-3 rounded-lg"
+          >
+            {loading ? "Connexion..." : "Se connecter"}
+          </button>
+        </form>
 
-      <GoogleAuth />
+        <GoogleAuth />
 
-      <p className="text-center text-sm mt-4">
-        Pas de compte ?{" "}
-        <a href="/auth/register" className="text-primary-dark font-medium">
-          S'inscrire
-        </a>
-      </p>
-    </AuthLayout>
+        <p className="text-center text-sm mt-4">
+          Pas de compte ?{" "}
+          <a href="/auth/register" className="text-primary-dark font-medium">
+            S'inscrire
+          </a>
+        </p>
+      </AuthLayout>
+    </GuestRoute>
   );
 }

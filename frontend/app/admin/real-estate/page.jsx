@@ -33,7 +33,7 @@ const IconHome = () => (
 const STATUS_FILTERS = [
   { key: '',          label: 'Tous' },
   { key: 'PENDING',   label: 'En attente' },
-  { key: 'PUBLISHED', label: 'Approuvés' },
+  { key: 'APPROVED', label: 'Approuvés' },
   { key: 'REJECTED',  label: 'Refusés' },
 ]
 

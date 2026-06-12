@@ -116,7 +116,7 @@ export default function RealEstatePage() {
                 {cat.label}
               </button>
             ))}
-          {user.role == "business" && (
+          {user?.role == "business" && (
             <button
               onClick={handlePublishClick}
               className="ml-auto inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-[#2D5016] text-white font-bold text-sm shadow-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-150 hover:scale-105 active:scale-100 group shrink-0 cursor-pointer"

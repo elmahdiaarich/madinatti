@@ -314,7 +314,7 @@ export default function MySpaceLayout({ children }) {
           onClick={!sidebarOpen ? toggleSidebar : undefined}
           className={`
     shrink-0 bg-white border-r border-gray-100 flex flex-col
-    sticky top-[57px] h-[calc(100vh-57px)]
+    sticky top-[57px] h-[calc(100vh-65px)]
     transition-[width] duration-[250ms] ease-in-out overflow-hidden
     ${sidebarOpen ? "w-64" : "w-[60px] cursor-pointer"}
   `}

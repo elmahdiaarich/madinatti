@@ -214,13 +214,17 @@ function ListingCard({ listing, onDelete, onViewInquiries, onViewDetails }) {
 
   return (
     <div
-      className="group bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col sm:flex-row cursor-pointer hover:border-gray-200 hover:shadow-sm transition-all sm:h-32"
+      className={`group bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col sm:flex-row cursor-pointer hover:border-gray-200 hover:shadow-sm transition-all ${
+        listing.status === "REJECTED" && listing.adminNotes
+          ? "sm:min-h-32"
+          : "sm:h-32"
+      }`}
       onClick={() => onViewDetails(listing)}
     >
       {/* Thumbnail */}
-      <div className="relative h-40 sm:h-auto sm:w-44 shrink-0 sm:self-stretch bg-gray-50">
+      <div className="relative h-32 sm:h-auto sm:w-44 sm:self-stretch shrink-0 bg-gray-50">
         {cover?.url ? (
-          <img src={cover.url} alt="" className="w-full h-full object-cover" />
+          <img src={cover.url} alt="" className="w-full h-full object-cover absolute inset-0" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-300">
             <svg

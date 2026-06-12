@@ -78,7 +78,7 @@ const MODULE_FILTERS = [
 const STATUS_FILTERS = [
   { key: '',          label: 'Tous statuts' },
   { key: 'PENDING',   label: 'En attente' },
-  { key: 'PUBLISHED', label: 'Approuvés' },
+  { key: 'APPROVED', label: 'Approuvés' },
   { key: 'REJECTED',  label: 'Refusés' },
 ]
 

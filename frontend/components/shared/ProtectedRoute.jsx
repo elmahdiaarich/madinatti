@@ -20,9 +20,7 @@ export default function ProtectedRoute({ children, roles }) {
   }, [user, loading])
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">
-      <p className="text-primary-dark">Chargement...</p>
-    </div>
+    return <LoadingSpinner message="Connexion sécurisée en cours..." />;
   }
 
   if (!user) return null
