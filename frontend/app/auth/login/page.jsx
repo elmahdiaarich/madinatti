@@ -6,6 +6,7 @@ import { useAuth } from "../../../context/AuthContext";
 import AuthLayout from "../../../components/auth/AuthLayout";
 import PasswordInput from "../../../components/auth/PasswordInput";
 import GoogleAuth from "../../../components/auth/GoogleAuth";
+import GuestRoute from "@/components/shared/GuestRoute";
 
 export default function LoginPage() {
   const { login } = useAuth();
