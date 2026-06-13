@@ -51,4 +51,51 @@ export const jobsService = {
     if (!res.ok) throw new Error('Erreur récupération favoris');
     return res.json();
   },
+  getMyJobs: async (params = {}, token) => {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_URL}/jobs/my?${query}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Erreur récupération de vos offres');
+    return res.json(); // { success, jobs, pagination }
+  },
+ 
+  getMyJobById: async (id, token) => {
+    // Reuse the owner's own listing — bypass status check by hitting /my/:id
+    // Since we don't have a dedicated route, we fetch from getMyJobs with no filter
+    // and find locally — OR we just reuse the admin-style fetch. 
+    // Simplest: fetch all owned jobs and find by id (fine for small datasets)
+    const res = await fetch(`${API_URL}/jobs/my?limit=100`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Erreur récupération de l\'offre');
+    const json = await res.json();
+    const job = (json.jobs || []).find((j) => j.id === id);
+    if (!job) throw new Error('Offre introuvable');
+    return { data: job };
+  },
+ 
+  updateMyJob: async (id, data, token) => {
+    const res = await fetch(`${API_URL}/jobs/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.message || 'Erreur mise à jour');
+    return json;
+  },
+ 
+  deleteMyJob: async (id, token) => {
+    const res = await fetch(`${API_URL}/jobs/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.message || 'Erreur suppression');
+    return json;
+  },
 };

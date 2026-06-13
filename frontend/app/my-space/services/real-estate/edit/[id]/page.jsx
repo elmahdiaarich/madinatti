@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import ProtectedRoute from '@/components/shared/ProtectedRoute';
 import { realEstateService } from '@/services/realEstateService';
+import LoadingSpinner from '@/components/shared/LoadingSpinner';
 
 // Reuse the same small sub-components from create page
 const LISTING_TYPES = [{ label: 'Vente', value: 'SALE' }, { label: 'Location', value: 'RENT' }];
@@ -110,11 +111,7 @@ function EditForm() {
     }
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-gray-400 animate-pulse">Chargement...</div>
-    </div>
-  );
+  if (loading) return <LoadingSpinner message="Chargement de l'annonce..." />;
 
   if (!form) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center text-red-500">{error}</div>

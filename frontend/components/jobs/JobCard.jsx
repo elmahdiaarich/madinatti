@@ -154,11 +154,13 @@ function FavoriteButton({ jobId, initialFavorited = false, onToggle }) {
 // ─── JobCard ──────────────────────────────────────────────────────────────────
 export default function JobCard({ job, initialFavorited = false, onFavoriteToggle }) {
   const formatSalary = (min, max) => {
-    if (!min && !max) return 'À discuter';
+    const hasMin = min != null && Number(min) > 0;
+    const hasMax = max != null && Number(max) > 0;
+    if (!hasMin && !hasMax) return 'À discuter';
     const fmt = (v) => Number(v).toLocaleString('fr-MA');
-    if (min && max) return `${fmt(min)} – ${fmt(max)} MAD/mois`;
-    if (min) return `À partir de ${fmt(min)} MAD/mois`;
-    return null;
+    if (hasMin && hasMax) return `${fmt(min)} – ${fmt(max)} MAD/mois`;
+    if (hasMin) return `À partir de ${fmt(min)} MAD/mois`;
+    return `Jusqu'à ${fmt(max)} MAD/mois`;
   };
 
   const formatDate = (date) => {

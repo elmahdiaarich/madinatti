@@ -10,6 +10,7 @@ import { cities } from 'morocco-cities';
 import InlineRegisterSection from '@/components/jobs/InlineRegisterSection';
 import MapFrame from '@/components/shared/MapFrame';
 import ApplyModal from '@/components/jobs/ApplyModal';
+import LoadingSpinner from '@/components/shared/LoadingSpinner';
 
 const CONTRACT_LABELS = {
   CDI: 'CDI', CDD: 'CDD', STAGE: 'Stage', FREELANCE: 'Freelance',
@@ -50,10 +51,12 @@ const fmtNum = (v) => Number(v).toLocaleString('fr-MA');
 const fmtDate = (d) =>
   d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
 const formatSalary = (min, max) => {
-  if (!min && !max) return 'À discuter';
-  if (min && max) return `${fmtNum(min)} - ${fmtNum(max)} MAD/mois`;
-  if (min) return `A partir de ${fmtNum(min)} MAD/mois`;
-  return null;
+  const hasMin = min != null && Number(min) > 0;
+  const hasMax = max != null && Number(max) > 0;
+  if (!hasMin && !hasMax) return 'À discuter';
+  if (hasMin && hasMax) return `${fmtNum(min)} - ${fmtNum(max)} MAD/mois`;
+  if (hasMin) return `À partir de ${fmtNum(min)} MAD/mois`;
+  return `Jusqu'à ${fmtNum(max)} MAD/mois`;
 };
 
 const scrollToInscription = () => {
@@ -258,26 +261,6 @@ function FloatingButtons({ isVisitor, userRole }) {
   );
 }
 
-function Skeleton() {
-  return (
-    <div className="min-h-screen bg-gray-50 animate-pulse">
-      <div className="h-12 bg-white border-b border-gray-100" />
-      <div className="h-48 bg-[#2D5016]/80" />
-      <div className="max-w-[1200px] mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
-        <div className="space-y-5">
-          {[120, 200, 160].map((h, i) => (
-            <div key={i} className="bg-white rounded-2xl border border-gray-100" style={{ height: h }} />
-          ))}
-        </div>
-        <div className="space-y-5">
-          <div className="bg-white rounded-2xl border border-gray-100 h-56" />
-          <div className="bg-[#E8F5D0] rounded-2xl h-32" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function LanguagesSection({ languages }) {
   if (!languages || !Array.isArray(languages) || languages.length === 0) return null;
   const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -385,7 +368,7 @@ export default function JobDetailPage() {
     }
   };
 
-  if (loading) return <Skeleton />;
+  if (loading) return <LoadingSpinner message="Chargement de l'offre..." />;
 
   if (error || !job) {
     return (

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { realEstateService } from "@/services/realEstateService";
 import MapFrame from "@/components/shared/MapFrame";
 import InlineRegisterSection from "@/components/real-estate/InlineRegisterSection";
+import LoadingSpinner from "@/components/shared/LoadingSpinner";
 
 const LISTING_TYPE_LABELS = {
   SALE: "Vente",
@@ -234,7 +235,7 @@ export default function RealEstateDetailPage() {
     load();
   }, [id]);
 
-  if (loading) return <Skeleton />;
+  if (loading) return <LoadingSpinner message="Chargement de l'annonce..." />;
 
   if (error || !listing)
     return (

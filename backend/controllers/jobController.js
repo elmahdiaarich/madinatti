@@ -371,5 +371,137 @@ const getJobCategories = async (req, res) => {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
-
-module.exports = { getJobs, getJobById, getFiltersCount, getJobCategories, createJob, toggleFavorite, getMyFavorites };
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/jobs/my  — business: list own job postings
+// ─────────────────────────────────────────────────────────────────────────────
+const getMyJobs = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { page = 1, limit = 10, status, search, contractType } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+ 
+    const where = {
+      userId,
+      ...(status && { status }),
+      ...(contractType && { contractType }),
+      ...(search && {
+        OR: [
+          { title:    { contains: search, mode: 'insensitive' } },
+          { location: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+    };
+ 
+    const [jobs, total] = await Promise.all([
+      prisma.jobListing.findMany({
+        where,
+        skip,
+        take: parseInt(limit),
+        orderBy: { createdAt: 'desc' },
+        include: {
+          category: { select: { id: true, name: true } },
+          _count:   { select: { applications: true } },
+        },
+      }),
+      prisma.jobListing.count({ where }),
+    ]);
+ 
+    res.json({
+      success: true,
+      jobs,
+      pagination: {
+        total,
+        page:       parseInt(page),
+        limit:      parseInt(limit),
+        totalPages: Math.ceil(total / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    console.error('getMyJobs error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+ 
+// ─────────────────────────────────────────────────────────────────────────────
+// PUT /api/jobs/:id  — owner only, resets to PENDING
+// ─────────────────────────────────────────────────────────────────────────────
+const updateJob = async (req, res) => {
+  try {
+    const userId  = req.user.userId;
+    const { id }  = req.params;
+ 
+    const existing = await prisma.jobListing.findUnique({ where: { id } });
+    if (!existing)              return res.status(404).json({ success: false, message: 'Offre introuvable' });
+    if (existing.userId !== userId) return res.status(403).json({ success: false, message: 'Accès refusé' });
+ 
+    const {
+      title, categorySlug, location, region, remote, contractType,
+      salaryMin, salaryMax, applicationDeadline,
+      educationLevel, experienceLevel, skills, languages, description,
+    } = req.body;
+ 
+    // Resolve category if slug provided
+    let categoryId = existing.categoryId;
+    if (categorySlug) {
+      const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
+      if (!category) return res.status(400).json({ success: false, message: 'Catégorie introuvable' });
+      categoryId = category.id;
+    }
+ 
+    const updated = await prisma.jobListing.update({
+      where: { id },
+      data: {
+        ...(title        && { title: title.trim() }),
+        ...(description  && { description: description.trim() }),
+        ...(categoryId   && { categoryId }),
+        ...(location     && { location }),
+        ...(region  !== undefined && { region: region || null }),
+        ...(remote       && { remote }),
+        ...(contractType && { contractType }),
+        salaryMin:           salaryMin   ? Number(salaryMin)   : null,
+        salaryMax:           salaryMax   ? Number(salaryMax)   : null,
+        salaryPeriod:        salaryMin || salaryMax ? 'MONTHLY' : null,
+        applicationDeadline: applicationDeadline ? new Date(applicationDeadline) : null,
+        ...(educationLevel  && { educationLevel: Array.isArray(educationLevel) ? educationLevel : [] }),
+        ...(experienceLevel !== undefined && { experienceLevel: experienceLevel || null }),
+        ...(skills          && { skills: Array.isArray(skills) ? skills : [] }),
+        ...(languages       && { languages: Array.isArray(languages) ? languages : [] }),
+        // Reset to pending after any edit
+        status:      'PENDING',
+        reviewedAt:  null,
+        reviewedBy:  null,
+        publishedAt: null,
+        adminNotes:  null,
+      },
+    });
+ 
+    res.json({ success: true, message: 'Offre mise à jour, en attente de validation', data: updated });
+  } catch (error) {
+    console.error('updateJob error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+ 
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE /api/jobs/:id  — owner only
+// ─────────────────────────────────────────────────────────────────────────────
+const deleteJob = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+ 
+    const existing = await prisma.jobListing.findUnique({ where: { id } });
+    if (!existing)                  return res.status(404).json({ success: false, message: 'Offre introuvable' });
+    if (existing.userId !== userId) return res.status(403).json({ success: false, message: 'Accès refusé' });
+ 
+    // Delete related applications first to avoid FK constraint
+    await prisma.jobApplication.deleteMany({ where: { jobId: id } });
+    await prisma.jobListing.delete({ where: { id } });
+ 
+    res.json({ success: true, message: 'Offre supprimée' });
+  } catch (error) {
+    console.error('deleteJob error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+module.exports = { getJobs, getJobById, getFiltersCount, getJobCategories, createJob, toggleFavorite, getMyFavorites,getMyJobs,updateJob,deleteJob };

@@ -399,54 +399,61 @@ const paginate = (array, page = 1, limit = 10) => {
 }
  
 // ─────────────────────────────────────────────────────────────────────────────
-// OVERVIEW  (mock — will be replaced once /api/admin/overview exists)
+// OVERVIEW  (real API — /api/admin/overview)
 // ─────────────────────────────────────────────────────────────────────────────
- 
-export async function getOverview() {
-  await sleep()
-  const pending = mockListings.filter((l) => l.status === 'PENDING').length
-  const today = new Date().toISOString().slice(0, 10)
-  const approvedToday = mockListings.filter(
-    (l) => l.status === 'PUBLISHED' && l.createdAt.startsWith(today)
-  ).length
-  const openReports = mockReports.filter((r) => r.status === 'OPEN').length
-  const totalUsers = mockUsers.length
-  return { pending, approvedToday, openReports, totalUsers }
+
+export async function getOverview(token) {
+  const json = await apiFetch('/api/admin/overview', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+  return json.data ?? { pending: 0, approvedToday: 0, openReports: 0, totalUsers: 0 }
 }
  
 // ─────────────────────────────────────────────────────────────────────────────
 // LISTINGS
 // ─────────────────────────────────────────────────────────────────────────────
- 
+
 /**
- * getListings({ module, status, search, page })
+ * getListings({ module, status, search, page, token })
  *
- * - module === 'immobilier'  →  real backend  GET /api/real-estate/admin/listings
- * - everything else          →  mock data (emploi / vehicule / tous)
+ * - module === 'immobilier'             → real backend  GET /api/real-estate/admin/listings
+ * - module === 'emploi' | 'tous'        → real backend  GET /api/admin/listings?module=...
+ * - module === 'vehicule' | other mock  → mock data
  *
  * Always returns: { data: Listing[], pagination: { total, page, limit, totalPages } }
  */
-export async function getListings({ module: mod = 'tous', status = '', search = '', page = 1 } = {}) {
-  // ── Real estate: hit the actual API ──────────────────────────────────────
+export async function getListings({ module: mod = 'tous', status = '', search = '', page = 1, token } = {}) {
+  // ── Real estate: hit the real-estate-specific API ─────────────────────────
   if (mod === 'immobilier') {
     const params = new URLSearchParams({ page })
-    if (status)  params.set('status',  status)
-    if (search)  params.set('search',  search)
- 
-    const json = await apiFetch(`/api/real-estate/admin/listings?${params}`)
-    // Backend returns { success, listings, pagination }
-    // Normalize to { data, pagination } so the page component stays untouched
+    if (status) params.set('status', status)
+    if (search) params.set('search', search)
+    const json = await apiFetch(`/api/real-estate/admin/listings?${params}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
     return {
       data:       normalizeRealEstateListings(json.listings ?? []),
       pagination: json.pagination ?? { total: 0, page: 1, limit: 20, totalPages: 0 },
     }
   }
- 
-  // ── Everything else: mock ─────────────────────────────────────────────────
+
+  // ── Jobs / tous: hit the admin listings API (real data) ───────────────────
+  if (mod === 'emploi' || mod === 'tous') {
+    const params = new URLSearchParams({ module: mod, page })
+    if (status) params.set('status', status)
+    if (search) params.set('search', search)
+    const json = await apiFetch(`/api/admin/listings?${params}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    return {
+      data:       json.data ?? [],
+      pagination: json.pagination ?? { total: 0, page: 1, limit: 10, totalPages: 0 },
+    }
+  }
+
+  // ── Vehicule / other modules: mock (not yet migrated) ─────────────────────
   await sleep()
   let result = [...mockListings].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
   if (mod && mod !== 'tous') result = result.filter((l) => l.module === mod)
-  if (status)  result = result.filter((l) => l.status === status)
+  if (status) result = result.filter((l) => l.status === status)
   if (search) {
     const q = search.toLowerCase()
     result = result.filter(
@@ -497,50 +504,76 @@ function normalizeRealEstateListings(listings) {
 }
  
 // ─────────────────────────────────────────────────────────────────────────────
-// APPROVE / REJECT  (real estate → real API, jobs still mock)
+// APPROVE / REJECT
 // ─────────────────────────────────────────────────────────────────────────────
- 
+
 /**
- * approveListing(id)
+ * approveListing(id, token)
  *
- * For real-estate IDs the backend route is:
- *   PATCH /api/real-estate/admin/:id/moderate   { action: 'approve' }
+ * Real UUIDs (jobs + real estate) → real backend:
+ *   - Jobs:        PATCH /api/admin/listings/:id/approve
+ *   - Real estate: PATCH /api/real-estate/admin/:id/moderate { action: 'approve' }
  *
- * For mock job IDs we keep the in-memory mutation.
+ * Short mock IDs ('l1', 'l2' …) → in-memory mutation (vehicule mock only).
  */
-export async function approveListing(id) {
-  // Mock IDs are short strings like 'l1', 'l2' …
-  // Real UUIDs are 36 characters (8-4-4-4-12).
+export async function approveListing(id, token) {
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+
   if (_isRealId(id)) {
-    const json = await apiFetch(`/api/real-estate/admin/${id}/moderate`, {
-      method: 'PATCH',
-      body: JSON.stringify({ action: 'approve' }),
-    })
-    return { success: true, listing: json.data }
+    // Try job first (unified admin endpoint)
+    try {
+      const json = await apiFetch(`/api/admin/listings/${id}/approve`, {
+        method: 'PATCH',
+        headers,
+      })
+      return { success: true, message: json.message }
+    } catch (_) {
+      // Fallback: could be a real-estate listing
+      const json = await apiFetch(`/api/real-estate/admin/${id}/moderate`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'approve' }),
+        headers,
+      })
+      return { success: true, listing: json.data }
+    }
   }
- 
-  // Mock fallback
+
+  // Mock fallback (vehicule, etc.)
   await sleep()
   const listing = mockListings.find((l) => l.id === id)
   if (!listing) throw new Error('Annonce introuvable')
   listing.status = 'PUBLISHED'
   return { success: true, listing }
 }
- 
+
 /**
- * rejectListing(id, note)
+ * rejectListing(id, note, token)
  *
- * PATCH /api/real-estate/admin/:id/moderate   { action: 'reject', adminNotes: note }
+ * Real UUIDs → real backend:
+ *   - Jobs:        PATCH /api/admin/listings/:id/reject  { adminNote }
+ *   - Real estate: PATCH /api/real-estate/admin/:id/moderate { action: 'reject', adminNotes: note }
  */
-export async function rejectListing(id, note) {
+export async function rejectListing(id, note, token) {
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+
   if (_isRealId(id)) {
-    const json = await apiFetch(`/api/real-estate/admin/${id}/moderate`, {
-      method: 'PATCH',
-      body: JSON.stringify({ action: 'reject', adminNotes: note }),
-    })
-    return { success: true, listing: json.data }
+    try {
+      const json = await apiFetch(`/api/admin/listings/${id}/reject`, {
+        method: 'PATCH',
+        body: JSON.stringify({ adminNote: note }),
+        headers,
+      })
+      return { success: true, message: json.message }
+    } catch (_) {
+      const json = await apiFetch(`/api/real-estate/admin/${id}/moderate`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'reject', adminNotes: note }),
+        headers,
+      })
+      return { success: true, listing: json.data }
+    }
   }
- 
+
   // Mock fallback
   await sleep()
   const listing = mockListings.find((l) => l.id === id)
@@ -549,8 +582,8 @@ export async function rejectListing(id, note) {
   listing.adminNote = note
   return { success: true, listing }
 }
- 
-/** Returns true for real UUID strings (36 chars, contains dashes at positions 8,13,18,23) */
+
+/** Returns true for real UUID strings (36 chars, 8-4-4-4-12 format) */
 function _isRealId(id) {
   return typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
 }
@@ -616,16 +649,31 @@ export async function getBusinesses() {
 // SIDEBAR COUNTS
 // ─────────────────────────────────────────────────────────────────────────────
  
-export async function getSidebarCounts() {
-  await sleep()
-  return {
-    overview:     0,
-    emploi:       mockListings.filter((l) => l.module === 'emploi'     && l.status === 'PENDING').length,
-    immobilier:   0,   // derived from real API — fetch separately if needed
-    vehicule:     mockListings.filter((l) => l.module === 'vehicule'   && l.status === 'PENDING').length,
-    signalements: mockReports.filter((r) => r.status === 'OPEN').length,
-    entreprises:  mockBusinesses.filter((b) => !b.isActive).length,
-    utilisateurs: mockUsers.filter((u) => !u.isActive).length,
+export async function getSidebarCounts(token) {
+  try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    const json = await apiFetch('/api/admin/overview', { headers })
+    const data = json.data ?? {}
+    return {
+      overview:     data.pending ?? 0,
+      emploi:       0, // refined by module below if needed
+      immobilier:   0,
+      vehicule:     mockListings.filter((l) => l.module === 'vehicule' && l.status === 'PENDING').length,
+      signalements: data.openReports ?? 0,
+      entreprises:  0,
+      utilisateurs: 0,
+    }
+  } catch (_) {
+    // Fallback to mock counts if API fails
+    return {
+      overview:     0,
+      emploi:       mockListings.filter((l) => l.module === 'emploi' && l.status === 'PENDING').length,
+      immobilier:   0,
+      vehicule:     mockListings.filter((l) => l.module === 'vehicule' && l.status === 'PENDING').length,
+      signalements: mockReports.filter((r) => r.status === 'OPEN').length,
+      entreprises:  mockBusinesses.filter((b) => !b.isActive).length,
+      utilisateurs: mockUsers.filter((u) => !u.isActive).length,
+    }
   }
 }
 

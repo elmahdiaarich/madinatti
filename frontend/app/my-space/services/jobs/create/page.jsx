@@ -951,7 +951,7 @@ const handleCityChange = (city) => {
                 <div className="p-6 text-sm">
                   <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                     <SummaryRow label="Catégorie"
-                      value={CATEGORIES.find((c) => c.slug === form.categorySlug)?.label} />
+                      value={categories.find((c) => c.slug === form.categorySlug)?.label} />
                     <SummaryRow label="Contrat"
                       value={CONTRACT_TYPES.find((c) => c.value === form.contractType)?.label} />
                     <SummaryRow label="Expérience"

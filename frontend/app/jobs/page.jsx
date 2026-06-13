@@ -57,7 +57,7 @@ export default function JobsPage() {
 
   const handlePublishClick = () => {
     if (userRole === 'business') {
-      router.push('/jobs/publier');
+      router.push('/my-space/services/jobs/create');
     } else {
       // visiteur ou citoyen → scroll vers le formulaire d'inscription
       scrollToInscription();
