@@ -20,6 +20,21 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { 
+  Star, 
+  Rocket, 
+  Camera, 
+  Maximize2, 
+  Bed, 
+  Bath, 
+  Building, 
+  MapPin, 
+  Eye, 
+  User, 
+  Tag, 
+  Calendar, 
+  Check 
+} from 'lucide-react';
 import StatusBadge from './StatusBadge'
 import RejectModal from './RejectModal'
 
@@ -265,21 +280,62 @@ function Lightbox({ images, startIndex, onClose }) {
 
 // ── Real-estate body ──────────────────────────────────────────────────────────
 function RealEstateBody({ listing }) {
-  const [lightboxIndex, setLightboxIndex] = useState(null)
+  console.log("listing: ", listing.latitude);
+  const [lightboxIndex, setLightboxIndex] = useState(null);
 
-  const images = Array.isArray(listing.images) ? listing.images : []
-  const coverImage = images.find(img => img?.isCover) || images[0]
-  const otherImages = images.filter(img => img !== coverImage)
-  const allImages = coverImage ? [coverImage, ...otherImages] : images
+  const images = Array.isArray(listing.images) ? listing.images : [];
+  const coverImage = images.find(img => img?.isCover) || images[0];
+  const otherImages = images.filter(img => img !== coverImage);
+  const allImages = coverImage ? [coverImage, ...otherImages] : images;
+
+  const formatDate = (dateString) => {
+    if (!dateString) return null;
+    return new Date(dateString).toLocaleDateString('fr-MA', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const submittedByName = listing.submittedBy || listing.company || listing.user?.name || 'Inconnu';
+  const submittedByEmail = listing.submittedByEmail || listing.user?.email;
+  const inquiryCount = listing.inquiryCount ?? listing._count?.inquiries ?? 0;
+  const adminNotes = listing.adminNotes || listing.adminNote;
 
   return (
-    <>
+    <div className="flex flex-col gap-5 max-w-3xl mx-auto p-1">
+      
+      {/* ── Admin Badges & System Status ─────────────────────────────── */}
+      <div className="flex flex-wrap gap-2 items-center bg-gray-100 p-2.5 rounded-xl border border-gray-200">
+        <span className={`text-xs font-bold px-2.5 py-1 rounded-md uppercase ${
+          listing.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+          listing.status === 'PENDING' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'
+        }`}>
+          Statut: {listing.status || 'PENDING'}
+        </span>
+        <span className={`text-xs font-semibold px-2.5 py-1 rounded-md ${listing.isActive !== false ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-200 text-gray-600'}`}>
+          {listing.isActive !== false ? '● En ligne (Actif)' : '○ Hors ligne (Inactif)'}
+        </span>
+        {listing.isFeatured && (
+          <span className="inline-flex items-center gap-1 text-xs bg-purple-100 text-purple-800 font-semibold px-2.5 py-1 rounded-md border border-purple-200">
+            <Star className="w-3.5 h-3.5 fill-purple-800 text-purple-800" /> Vedette
+          </span>
+        )}
+        {listing.isSponsored && (
+          <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-800 font-semibold px-2.5 py-1 rounded-md border border-blue-200">
+            <Rocket className="w-3.5 h-3.5 text-blue-800" /> Sponsorisé
+          </span>
+        )}
+      </div>
+
       {/* ── Images ────────────────────────────────────────────────────── */}
       {allImages.length > 0 && (
         <div className="flex flex-col gap-2">
           {/* Cover */}
           <div
-            className="w-full h-52 bg-gray-100 rounded-xl overflow-hidden relative cursor-pointer group"
+            className="w-full h-64 bg-gray-100 rounded-xl overflow-hidden relative cursor-pointer group"
             onClick={() => setLightboxIndex(0)}
           >
             <img
@@ -289,8 +345,8 @@ function RealEstateBody({ listing }) {
             />
             {allImages.length > 1 && (
               <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs
-                px-2.5 py-1 rounded-full font-semibold pointer-events-none">
-                📷 {allImages.length} photos
+                px-2.5 py-1 rounded-full font-semibold pointer-events-none inline-flex items-center gap-1.5">
+                <Camera className="w-3.5 h-3.5" /> {allImages.length} photos
               </span>
             )}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
@@ -318,17 +374,22 @@ function RealEstateBody({ listing }) {
         </div>
       )}
 
-      {/* ── Title & price ─────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-1">
+      {/* ── Title, Subtitle & Price ───────────────────────────────────── */}
+      <div className="flex flex-col gap-1.5">
         {listing.propertyType && (
           <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">
-            {PROPERTY_LABELS[listing.propertyType] || listing.propertyType}
+            {listing.propertyType}
             {listing.category?.name ? ` · ${listing.category.name}` : ''}
           </p>
         )}
+        
+        <h2 className="text-xl font-bold text-gray-800 leading-snug">
+          {listing.title || 'Sans titre'}
+        </h2>
+
         {listing.price != null && (
           <p className="text-2xl font-bold text-[#2D5016]">
-            {Number(listing.price).toLocaleString('fr-MA')} MAD
+            {originalPriceString(listing.price)} MAD
             {listing.listingType === 'RENT' && (
               <span className="text-sm font-normal text-gray-400"> / mois</span>
             )}
@@ -337,43 +398,45 @@ function RealEstateBody({ listing }) {
       </div>
 
       {/* ── Key stats ─────────────────────────────────────────────────── */}
-      {(listing.surface || listing.rooms || listing.bathrooms || listing.viewsCount != null) && (
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            listing.surface    && { icon: '📐', label: 'Surface',   value: `${listing.surface} m²` },
-            listing.rooms      && { icon: '🛏',  label: 'Pièces',    value: listing.rooms },
-            listing.bathrooms  && { icon: '🚿',  label: 'SDB',       value: listing.bathrooms },
-            listing.floor != null && { icon: '🏢', label: 'Étage',  value: listing.floor === 0 ? 'RDC' : `${listing.floor}ème` },
-            listing.city       && { icon: '📍',  label: 'Ville',     value: listing.city },
-            { icon: '👁',        label: 'Vues',     value: listing.viewsCount ?? 0 },
-          ].filter(Boolean).map(({ icon, label, value }) => (
-            <div key={label} className="bg-gray-50 rounded-xl px-3 py-2.5 flex flex-col gap-0.5 border border-gray-100">
-              <p className="text-xs text-gray-400">{icon} {label}</p>
-              <p className="text-sm font-bold text-gray-800">{value}</p>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {[
+          listing.surface    && { icon: Maximize2, label: 'Surface',    value: `${listing.surface} m²` },
+          listing.rooms      && { icon: Bed,       label: 'Pièces',     value: listing.rooms },
+          listing.bathrooms  && { icon: Bath,      label: 'SDB',        value: listing.bathrooms },
+          listing.floor != null && { icon: Building, label: 'Étage',      value: listing.floor === 0 ? 'RDC' : `${listing.floor}ème` },
+          listing.city       && { icon: MapPin,    label: 'Ville',      value: listing.region ? `${listing.city} (${listing.region})` : listing.city },
+          { icon: Eye,        label: 'Vues Total', value: listing.viewsCount ?? 0 },
+        ].filter(Boolean).map(({ icon: IconComponent, label, value }) => (
+          <div key={label} className="bg-gray-50 rounded-xl px-3 py-2.5 flex flex-col gap-1 border border-gray-100">
+            <p className="text-xs text-gray-400 flex items-center gap-1.5">
+              <IconComponent className="w-3.5 h-3.5 stroke-[1.8] text-gray-400" /> 
+              {label}
+            </p>
+            <p className="text-sm font-bold text-gray-800 pl-5">{value}</p>
+          </div>
+        ))}
+      </div>
 
       {/* ── Meta grid ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
-        <MetaItem icon={<IconBuilding />} label="Soumis par"  value={listing.company} />
-        <MetaItem icon={<IconMapPin />}   label="Ville"       value={listing.city} />
-        <MetaItem icon={<IconContract />} label="Transaction" value={listing.listingType === 'SALE' ? 'Vente' : listing.listingType === 'RENT' ? 'Location' : listing.listingType} />
-        <MetaItem icon={<IconCalendar />} label="Soumis le"   value={formatDate(listing.createdAt)} />
-        {listing.submittedByEmail && (
-          <div className="flex items-center gap-2 text-sm text-gray-600 sm:col-span-2">
-            <span className="text-gray-400">Email :</span>
-            <a href={`mailto:${listing.submittedByEmail}`}
-              className="font-medium text-[#2D5016] hover:underline truncate">
-              {listing.submittedByEmail}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+        <MetaItem icon={<User className="w-4 h-4 text-gray-400" />} label="Soumis par" value={submittedByName} />
+        <MetaItem icon={<MapPin className="w-4 h-4 text-gray-400" />} label="Ville" value={listing.city} />
+        <MetaItem icon={<Tag className="w-4 h-4 text-gray-400" />} label="Transaction" value={listing.listingType === 'SALE' ? 'Vente' : listing.listingType === 'RENT' ? 'Location' : listing.listingType} />
+        <MetaItem icon={<Calendar className="w-4 h-4 text-gray-400" />} label="Soumis le" value={formatDate(listing.createdAt)} />
+        
+        {submittedByEmail && (
+          <div className="flex items-center gap-2 text-sm text-gray-600 sm:col-span-2 pt-2 border-t border-gray-200/60">
+            <span className="text-gray-400">Email Propriétaire :</span>
+            <a href={`mailto:${submittedByEmail}`} className="font-medium text-[#2D5016] hover:underline truncate">
+              {submittedByEmail}
             </a>
           </div>
         )}
-        {listing.inquiryCount > 0 && (
+        
+        {inquiryCount > 0 && (
           <div className="flex items-center gap-2 text-sm text-gray-600 sm:col-span-2">
             <span className="text-gray-400">Messages reçus :</span>
-            <span className="font-medium text-gray-800">{listing.inquiryCount}</span>
+            <span className="font-medium text-gray-800">{inquiryCount} demandes</span>
           </div>
         )}
       </div>
@@ -382,8 +445,7 @@ function RealEstateBody({ listing }) {
       {listing.description && (
         <div>
           <h3 className="text-sm font-semibold text-gray-700 mb-2">Description</h3>
-          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line bg-gray-50
-            rounded-xl border border-gray-100 px-4 py-3">
+          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
             {listing.description}
           </p>
         </div>
@@ -395,14 +457,25 @@ function RealEstateBody({ listing }) {
           <h3 className="text-sm font-semibold text-gray-700 mb-2">Équipements</h3>
           <div className="flex flex-wrap gap-1.5">
             {Object.entries(listing.features).map(([k, v]) => (
-              <span key={k} className="text-xs bg-[#E8F5D0] border border-[#A7D129]/40
-                text-[#2D5016] px-2.5 py-1 rounded-full font-medium">
-                ✓ {k}{v !== true ? `: ${v}` : ''}
+              <span key={k} className="inline-flex items-center gap-1 text-xs bg-[#E8F5D0] border border-[#A7D129]/40 text-[#2D5016] px-2.5 py-1 rounded-full font-medium">
+                <Check className="w-3 h-3 stroke-[3]" /> {k}{v !== true ? `: ${v}` : ''}
               </span>
             ))}
           </div>
         </div>
       )}
+
+      {/* ── Internal Admin Notes ──────────────────────────────────────── */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-700 mb-2">Notes Administrateur (Privé)</h3>
+        <div className="bg-amber-50/60 border border-amber-200/70 rounded-xl px-4 py-3 text-sm text-amber-900">
+          {adminNotes ? (
+            <p className="whitespace-pre-line">{adminNotes}</p>
+          ) : (
+            <p className="text-gray-400 italic">Aucune note interne rédigée pour le moment.</p>
+          )}
+        </div>
+      </div>
 
       {/* ── Location & map ────────────────────────────────────────────── */}
       {(listing.location || listing.latitude || listing.longitude) && (
@@ -410,7 +483,7 @@ function RealEstateBody({ listing }) {
           <h3 className="text-sm font-semibold text-gray-700 mb-2">Localisation</h3>
           {listing.location && (
             <p className="text-sm text-gray-600 mb-2 flex items-center gap-1.5">
-              <span>📍</span>
+              <MapPin className="w-4 h-4 text-gray-400" />
               <span>{listing.location}{listing.city ? `, ${listing.city}` : ''}</span>
             </p>
           )}
@@ -419,51 +492,37 @@ function RealEstateBody({ listing }) {
             longitude={listing.longitude}
             location={listing.location}
           />
-          {listing.latitude && listing.longitude && (
-            <a
-              href={`https://www.google.com/maps?q=${listing.latitude},${listing.longitude}`}
-              target="_blank" rel="noopener noreferrer"
-              className="text-xs text-[#2D5016] font-semibold hover:underline mt-1.5 inline-block"
-            >
-              Ouvrir dans Google Maps →
-            </a>
-          )}
         </div>
       )}
 
-      {/* ── Contact ───────────────────────────────────────────────────── */}
-      {listing.contactPhone && (
-        <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">Contact</h3>
-          <div className="flex gap-2">
-            <a href={`tel:${listing.contactPhone}`}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5
-                bg-[#2D5016] text-white rounded-xl text-sm font-bold hover:bg-[#3a6b1e] transition"
-            >
-              📞 Appeler
-            </a>
-            <a href={`https://wa.me/${listing.contactPhone.replace(/\D/g, '')}`}
-              target="_blank" rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-2 py-2.5
-                bg-green-500 text-white rounded-xl text-sm font-bold hover:bg-green-600 transition"
-            >
-              💬 WhatsApp
-            </a>
-          </div>
-        </div>
-      )}
-
-      {/* Lightbox portal */}
-      {lightboxIndex !== null && (
-        <Lightbox
-          images={allImages}
-          startIndex={lightboxIndex}
-          onClose={() => setLightboxIndex(null)}
-        />
-      )}
-    </>
-  )
+      {/* ── System Audit Logs Metadata ────────────────────────────────── */}
+      <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-[11px] text-gray-400 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 font-mono">
+        <div>ID Système : <span className="text-gray-600">{listing.id}</span></div>
+        <div>Module App : <span className="text-gray-600">{listing.module || 'N/A'}</span></div>
+        <div>Modifié le : <span className="text-gray-600">{formatDate(listing.updatedAt || listing.createdAt)}</span></div>
+        {listing.submittedById && <div>ID Soumetteur : <span className="text-gray-600">{listing.submittedById}</span></div>}
+      </div>
+    </div>
+  );
 }
+
+// Helper to format string or decimal prices safely
+function originalPriceString(price) {
+  const num = Number(price);
+  return isNaN(num) ? price : num.toLocaleString('fr-MA');
+}
+
+// Small sub-component validation logic helper mapping structure
+// function MetaItem({ icon, label, value }) {
+//   if (!value) return null;
+//   return (
+//     <div className="flex items-center gap-2.5 text-sm text-gray-600">
+//       <div className="text-gray-400 w-4 h-4 flex items-center justify-center">{icon}</div>
+//       <span className="text-gray-400">{label} :</span>
+//       <span className="font-medium text-gray-800 truncate">{value}</span>
+//     </div>
+//   );
+// }
 
 // ── Generic listing body (emploi / véhicule / etc.) ───────────────────────────
 function GenericBody({ listing }) {

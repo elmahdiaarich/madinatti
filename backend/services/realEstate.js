@@ -614,17 +614,34 @@ async function adminGetAllListings(query) {
         id: true,
         slug: true,
         title: true,
+        description: true,         // Added
         listingType: true,
         propertyType: true,
         price: true,
+        surface: true,             // Added
+        rooms: true,               // Added
+        bathrooms: true,           // Added
+        floor: true,               // Added
         city: true,
+        region: true,              // Added
+        location: true,            // Added
+        latitude: true,
+        longitude: true,
+        contactPhone: true,        // Added
+        images: true,
+        features: true,            // Added
         status: true,
         isActive: true,
         isFeatured: true,
+        isSponsored: true,         // Added
+        boostExpiresAt: true,      // Added
         viewsCount: true,
         adminNotes: true,
-        createdAt: true,
         reviewedAt: true,
+        reviewedBy: true,          // Added
+        publishedAt: true,         // Added
+        createdAt: true,
+        updatedAt: true,           // Added
         user: { select: { id: true, name: true, email: true } },
         category: { select: { id: true, name: true } },
         _count: { select: { inquiries: true } },

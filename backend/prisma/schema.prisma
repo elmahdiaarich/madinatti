@@ -30,9 +30,12 @@ enum PropertyType {
 }
 
 enum ListingStatus {
-  PENDING
-  APPROVED
-  REJECTED
+  PENDING      // Awaiting admin validation (Default)
+  APPROVED     // Moderation passed, eligible to be live
+  REJECTED     // Denied validation (never went live)
+  SUSPENDED    // Admin revoked approval after it was live (The "Undo" button)
+  EXPIRED      // The listing's paid or free time limit ran out
+  ARCHIVED     // Soft-deleted or successfully sold/rented
 }
 
 model User {
