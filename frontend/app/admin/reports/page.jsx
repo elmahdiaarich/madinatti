@@ -1,38 +1,29 @@
 /**
  * app/admin/reports/page.jsx
  * ─────────────────────────────────────────────────────────────────────────────
- * Page de gestion des signalements.
- * Affiche tous les reports avec actions : Ignorer (dismiss) ou Supprimer l'annonce.
- * Utilise getReports() et handleReport() depuis adminApi.
+ * Dashboard admin des signalements.
+ * Connecté à l'API réelle :
+ *   GET    /api/admin/reports/stats
+ *   GET    /api/admin/reports?status=&type=&page=&limit=&search=
+ *   PATCH  /api/admin/reports/:id
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { getReports, handleReport } from '../../../lib/adminApi'
-import StatusBadge from '../../../components/admin/StatusBadge'
+import { useAuth } from '@/context/AuthContext'
+import { reportService } from '@/services/reportService'
+import ReportTable from '@/components/admin/ReportTable'
+import StatCard from '@/components/admin/StatCard'
+import ReportDetailPanel from '@/components/admin/ReportDetailPanel'
 
-// ── Icons ─────────────────────────────────────────────────────────────────────
+// ─── Icons ────────────────────────────────────────────────────────────────────
 const IconFlag = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
     fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <path d="M5 5a5 5 0 0 1 7 0a5 5 0 0 0 7 0v9a5 5 0 0 1 -7 0a5 5 0 0 0 -7 0v-9z" />
     <path d="M5 21v-7" />
-  </svg>
-)
-const IconCheck = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M5 12l5 5l10 -10" />
-  </svg>
-)
-const IconTrash = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" />
-    <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" />
-    <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
   </svg>
 )
 const IconRefresh = () => (
@@ -42,187 +33,127 @@ const IconRefresh = () => (
     <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" />
   </svg>
 )
-const IconInbox = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 4m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z" />
-    <path d="M4 13h3l3 3h4l3 -3h3" />
+const IconSearch = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
   </svg>
 )
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const formatDate = (iso) => {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('fr-FR', {
-    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-  })
-}
-
-// ── Status filters ────────────────────────────────────────────────────────────
-const STATUS_FILTERS = [
-  { key: 'all',       label: 'Tous' },
-  { key: 'OPEN',      label: 'Ouverts' },
-  { key: 'DISMISSED', label: 'Ignorés' },
+// ─── Filter constants ─────────────────────────────────────────────────────────
+const STATUS_TABS = [
+  { key: '',         label: 'Tous' },
+  { key: 'PENDING',  label: 'En attente' },
+  { key: 'REVIEWED', label: 'En cours' },
+  { key: 'RESOLVED', label: 'Résolus' },
+  { key: 'REJECTED', label: 'Rejetés' },
 ]
 
-// ── Skeleton card ─────────────────────────────────────────────────────────────
-const SkeletonCard = () => (
-  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 animate-pulse">
-    <div className="flex items-start justify-between gap-4">
-      <div className="flex-1 flex flex-col gap-2">
-        <div className="h-4 bg-gray-100 rounded-full w-2/3" />
-        <div className="h-3 bg-gray-100 rounded-full w-1/3" />
-        <div className="h-3 bg-gray-100 rounded-full w-full mt-2" />
-        <div className="h-3 bg-gray-100 rounded-full w-4/5" />
-      </div>
-      <div className="flex gap-2 shrink-0">
-        <div className="h-8 w-20 bg-gray-100 rounded-lg" />
-        <div className="h-8 w-28 bg-gray-100 rounded-lg" />
-      </div>
-    </div>
-  </div>
-)
+const TYPE_OPTIONS = [
+  { value: '',            label: 'Tous les types' },
+  { value: 'REAL_ESTATE', label: 'Immobilier' },
+  { value: 'JOB',         label: 'Emploi' },
+  { value: 'USER',        label: 'Utilisateur' },
+]
 
-// ─────────────────────────────────────────────────────────────────────────────
-// REPORT CARD
-// ─────────────────────────────────────────────────────────────────────────────
-
-function ReportCard({ report, onAction, actionLoading }) {
-  const isOpen      = report.status === 'OPEN'
-  const isActioning = actionLoading === report.id
-
-  return (
-    <div className={`bg-white rounded-2xl border shadow-sm p-5 transition-all
-      ${isOpen ? 'border-red-100' : 'border-gray-100 opacity-60'}`}>
-
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-
-        {/* ── Left: info ─────────────────────────────────────────────── */}
-        <div className="flex-1 min-w-0 flex flex-col gap-2">
-          {/* Module badge + listing title */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <StatusBadge module={report.listingModule} size="sm" />
-            <span className="font-semibold text-gray-900 text-sm truncate">
-              {report.listingTitle}
-            </span>
-            {!isOpen && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 font-medium">
-                Ignoré
-              </span>
-            )}
-          </div>
-
-          {/* Reporter info */}
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <span>Signalé par</span>
-            <span className="font-semibold text-gray-600">{report.reportedBy}</span>
-            <span className="text-gray-300">•</span>
-            <a href={`mailto:${report.reportedByEmail}`}
-              className="text-blue-400 hover:text-blue-600 transition-colors"
-              onClick={(e) => e.stopPropagation()}>
-              {report.reportedByEmail}
-            </a>
-            <span className="text-gray-300">•</span>
-            <span>{formatDate(report.createdAt)}</span>
-          </div>
-
-          {/* Reason */}
-          <div className={`rounded-xl px-4 py-3 text-sm leading-relaxed
-            ${isOpen ? 'bg-red-50 text-red-700' : 'bg-gray-50 text-gray-500'}`}>
-            <span className="font-semibold">Raison : </span>
-            {report.reason}
-          </div>
-        </div>
-
-        {/* ── Right: actions ─────────────────────────────────────────── */}
-        {isOpen && (
-          <div className="flex items-center gap-2 shrink-0 self-start">
-            {/* Ignorer */}
-            <button
-              onClick={() => onAction(report.id, 'dismiss')}
-              disabled={isActioning}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold
-                text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors
-                disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {isActioning ? (
-                <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                </svg>
-              ) : <IconCheck />}
-              Ignorer
-            </button>
-
-            {/* Supprimer l'annonce */}
-            <button
-              onClick={() => onAction(report.id, 'delete')}
-              disabled={isActioning}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold
-                text-white bg-red-500 hover:bg-red-600 transition-colors
-                disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {isActioning ? (
-                <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                </svg>
-              ) : <IconTrash />}
-              Supprimer l'annonce
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
+const ITEMS_PER_PAGE = 20
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PAGE COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function AdminReportsPage() {
-  const [reports, setReports]             = useState([])
-  const [loading, setLoading]             = useState(true)
-  const [actionLoading, setActionLoading] = useState(null)
-  const [statusFilter, setStatusFilter]   = useState('OPEN')
+  const { token } = useAuth()
 
-  // ── Load ──────────────────────────────────────────────────────────────────
+  // Stats
+  const [stats,       setStats]       = useState(null)
+  const [statsLoading,setStatsLoading]= useState(true)
+
+  // Table
+  const [reports,     setReports]     = useState([])
+  const [loading,     setLoading]     = useState(true)
+  const [pagination,  setPagination]  = useState({ total: 0, page: 1, totalPages: 1 })
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState('')
+  const [typeFilter,   setTypeFilter]   = useState('')
+  const [search,       setSearch]       = useState('')
+  const [page,         setPage]         = useState(1)
+
+  // Detail panel
+  const [selectedReportId, setSelectedReportId] = useState(null)
+
+  // ── Fetch stats ─────────────────────────────────────────────────────────────
+  const loadStats = useCallback(async () => {
+    if (!token) return
+    setStatsLoading(true)
+    try {
+      const res = await reportService.getStats(token)
+      setStats(res.data)
+    } catch (err) {
+      console.error('loadStats error:', err)
+    } finally {
+      setStatsLoading(false)
+    }
+  }, [token])
+
+  // ── Fetch reports ───────────────────────────────────────────────────────────
   const loadReports = useCallback(async () => {
+    if (!token) return
     setLoading(true)
     try {
-      const data = await getReports()
-      setReports(data)
+      const params = {
+        limit: ITEMS_PER_PAGE,
+        page,
+        ...(statusFilter && { status: statusFilter }),
+        ...(typeFilter   && { type:   typeFilter   }),
+        ...(search       && { search              }),
+      }
+      const res = await reportService.getAdminReports(params, token)
+      setReports(res.data || [])
+      setPagination(res.pagination || { total: 0, page: 1, totalPages: 1 })
+    } catch (err) {
+      console.error('loadReports error:', err)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [token, statusFilter, typeFilter, search, page])
 
+  useEffect(() => { loadStats() }, [loadStats])
   useEffect(() => { loadReports() }, [loadReports])
 
-  // ── Action ────────────────────────────────────────────────────────────────
-  const handleAction = async (id, action) => {
-    setActionLoading(id)
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1) }, [statusFilter, typeFilter, search])
+
+  // ── Status change ───────────────────────────────────────────────────────────
+  const handleStatusChange = async (id, status) => {
     try {
-      await handleReport(id, action)
-      await loadReports()
-    } finally {
-      setActionLoading(null)
+      await reportService.updateReport(id, { status }, token)
+      // Optimistic update
+      setReports((prev) => prev.map((r) => r.id === id ? { ...r, status } : r))
+      loadStats()
+    } catch (err) {
+      console.error('handleStatusChange error:', err)
     }
   }
 
-  // ── Filter ────────────────────────────────────────────────────────────────
-  const filtered = reports.filter((r) => {
-    if (statusFilter === 'all') return true
-    return r.status === statusFilter
-  })
+  // ── Notes update ────────────────────────────────────────────────────────────
+  const handleNotesUpdate = async (id, adminNotes) => {
+    try {
+      await reportService.updateReport(id, { adminNotes }, token)
+      setReports((prev) => prev.map((r) => r.id === id ? { ...r, adminNotes } : r))
+    } catch (err) {
+      console.error('handleNotesUpdate error:', err)
+    }
+  }
 
-  const openCount = reports.filter((r) => r.status === 'OPEN').length
+  const pendingCount = stats?.byStatus?.pending ?? 0
 
   return (
+    <>
     <div className="flex flex-col gap-6">
 
-      {/* ── Header ────────────────────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-500">
@@ -231,21 +162,20 @@ export default function AdminReportsPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold text-gray-900">Signalements</h1>
-              {openCount > 0 && (
+              {pendingCount > 0 && (
                 <span className="px-2 py-0.5 rounded-full bg-red-500 text-white text-xs font-bold">
-                  {openCount}
+                  {pendingCount}
                 </span>
               )}
             </div>
             <p className="text-sm text-gray-400 mt-0.5">
-              Signalements soumis par les utilisateurs sur des annonces publiées
+              Gérez les contenus signalés par les utilisateurs
             </p>
           </div>
         </div>
 
-        {/* Actualiser */}
         <button
-          onClick={loadReports}
+          onClick={() => { loadStats(); loadReports() }}
           disabled={loading}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
             text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition-colors
@@ -256,66 +186,147 @@ export default function AdminReportsPage() {
         </button>
       </div>
 
-      {/* ── Status tabs ───────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+      {/* ── Stats cards ─────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          label="En attente"
+          value={stats?.byStatus?.pending ?? '—'}
+          variant="orange"
+          loading={statsLoading}
+          sub="à traiter"
+          icon={<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+        />
+        <StatCard
+          label="En cours"
+          value={stats?.byStatus?.reviewed ?? '—'}
+          variant="blue"
+          loading={statsLoading}
+          sub="en examen"
+          icon={<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>}
+        />
+        <StatCard
+          label="Résolus"
+          value={stats?.byStatus?.resolved ?? '—'}
+          variant="green"
+          loading={statsLoading}
+          sub="traités avec succès"
+          icon={<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+        />
+        <StatCard
+          label="Total"
+          value={stats?.total ?? '—'}
+          variant="blue"
+          loading={statsLoading}
+          sub="tous statuts confondus"
+          icon={<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" /></svg>}
+        />
+      </div>
+
+      {/* ── Filters ─────────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col gap-4">
+
+        {/* Status tabs */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-semibold text-gray-400 mr-1">Afficher :</span>
-          {STATUS_FILTERS.map((f) => (
+          <span className="text-xs font-semibold text-gray-400 mr-1">Statut :</span>
+          {STATUS_TABS.map((tab) => (
             <button
-              key={f.key}
-              onClick={() => setStatusFilter(f.key)}
+              key={tab.key}
+              onClick={() => setStatusFilter(tab.key)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors
-                ${statusFilter === f.key
+                ${statusFilter === tab.key
                   ? 'bg-[#2D5016] text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
             >
-              {f.label}
-              {f.key === 'OPEN' && openCount > 0 && (
+              {tab.label}
+              {tab.key === 'PENDING' && pendingCount > 0 && (
                 <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
-                  {openCount}
+                  {pendingCount}
                 </span>
               )}
             </button>
           ))}
         </div>
+
+        {/* Type filter + search */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-gray-700"
+          >
+            {TYPE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+
+          <div className="flex-1 relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+              <IconSearch />
+            </span>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher par email, description, ID…"
+              className="
+                w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-xl
+                focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-transparent
+                placeholder:text-gray-300
+              "
+            />
+          </div>
+        </div>
       </div>
 
-      {/* ── Reports list ──────────────────────────────────────────────── */}
+      {/* ── Table ───────────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-gray-700">
-            {filtered.length} signalement{filtered.length !== 1 ? 's' : ''}
+          <h2 className="text-sm font-semibold text-gray-500">
+            {loading ? '...' : `${pagination.total} signalement${pagination.total !== 1 ? 's' : ''}`}
           </h2>
         </div>
 
-        {/* Skeletons */}
-        {loading && Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}
+        <ReportTable
+          reports={reports}
+          loading={loading}
+          onStatusChange={handleStatusChange}
+          onNotesUpdate={handleNotesUpdate}
+          onRowClick={(report) => setSelectedReportId(report.id)}
+          selectedId={selectedReportId}
+        />
 
-        {/* Empty state */}
-        {!loading && filtered.length === 0 && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm py-16">
-            <div className="flex flex-col items-center gap-3 text-gray-300">
-              <IconInbox />
-              <p className="text-sm font-medium text-gray-400">
-                {statusFilter === 'OPEN'
-                  ? 'Aucun signalement ouvert — tout est en ordre ✓'
-                  : 'Aucun signalement trouvé'}
-              </p>
-            </div>
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              ← Précédent
+            </button>
+            <span className="text-xs text-gray-500">
+              Page {page} / {pagination.totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+              disabled={page === pagination.totalPages}
+              className="px-3 py-1.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Suivant →
+            </button>
           </div>
         )}
-
-        {/* Report cards */}
-        {!loading && filtered.map((report) => (
-          <ReportCard
-            key={report.id}
-            report={report}
-            onAction={handleAction}
-            actionLoading={actionLoading}
-          />
-        ))}
       </div>
     </div>
+
+    {/* ── Panneau de détail ────────────────────────────────────────────── */}
+    <ReportDetailPanel
+      reportId={selectedReportId}
+      onClose={() => setSelectedReportId(null)}
+      onRefresh={() => { loadStats(); loadReports() }}
+    />
+    </>
   )
 }

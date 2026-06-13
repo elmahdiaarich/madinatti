@@ -30,6 +30,10 @@ app.use('/api/jobs', jobRoutes);
 
 const adminRoutes = require('./routes/admin');
 app.use('/api/admin', adminRoutes);
+
+const reportRoutes = require('./routes/reports');
+app.use('/api/reports', reportRoutes);
+
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)

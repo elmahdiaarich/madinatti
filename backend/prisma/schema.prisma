@@ -64,6 +64,7 @@ model User {
   jobAlerts         Alert[]        @relation("JobAlerts")
   realEstateListings RealEstateListing[]
   propertyInquiries PropertyInquiry[]
+  reports           Report[]
 }
 
 model Role {
@@ -316,4 +317,52 @@ model PropertyInquiry {
 
   @@index([listingId])
   @@index([userId])
+}
+
+// ─── Signalement (Report) ────────────────────────────────────────────────────
+
+enum ReportTarget {
+  REAL_ESTATE
+  JOB
+  USER
+}
+
+enum ReportReason {
+  FAKE
+  FRAUD
+  DUPLICATE
+  INAPPROPRIATE
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  REJECTED
+}
+
+model Report {
+  id            String       @id @default(uuid())
+  targetType    ReportTarget
+  targetId      String
+  reason        ReportReason
+  description   String?
+  reporterEmail String?      // Pour visiteurs anonymes
+  userId        String?      // Null si visiteur anonyme
+  ipAddress     String?
+  status        ReportStatus @default(PENDING)
+  adminNotes    String?
+  resolvedAt    DateTime?
+  resolvedBy    String?
+  createdAt     DateTime     @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  // Empêcher le double signalement (user + cible)
+  @@unique([userId, targetId, targetType])
+  @@index([targetId, targetType])
+  @@index([status])
+  @@index([ipAddress])
+  @@index([createdAt])
 }

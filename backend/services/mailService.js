@@ -132,6 +132,36 @@ const sendResetPasswordEmail = async (
   })
 }
 
-module.exports = {
-  sendResetPasswordEmail
+async function sendReportContactEmail({ to, ownerName, listingTitle, adminMessage }) {
+  await transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to,
+    subject: `[Madinatti] Signalement concernant votre annonce`,
+    html: `
+  <div style="font-family:Arial,sans-serif;background:#f5f5f5;padding:40px 20px;">
+    <div style="max-width:500px;margin:auto;background:white;border-radius:16px;padding:40px;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+      <div style="text-align:center;margin-bottom:20px;">
+        <img src="https://i.postimg.cc/50S0yBCR/logo-jpg.jpg" alt="Madinatti" style="height:40px;" />
+      </div>
+      <h2 style="color:#111827;margin-bottom:8px;">Message de l&apos;équipe Madinatti</h2>
+      <p style="color:#4b5563;font-size:15px;line-height:1.7;">Bonjour <strong>${ownerName}</strong>,</p>
+      <p style="color:#4b5563;font-size:15px;line-height:1.7;">
+        Votre annonce <strong>"${listingTitle}"</strong> a été signalée. Notre équipe vous contacte :
+      </p>
+      <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:16px;border-radius:8px;margin:20px 0;color:#92400e;font-size:14px;line-height:1.6;">
+        ${adminMessage}
+      </div>
+      <p style="color:#6b7280;font-size:13px;">
+        Si vous pensez qu&apos;il s&apos;agit d&apos;une erreur, répondez directement à cet email.
+      </p>
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:28px 0;" />
+      <p style="text-align:center;color:#9ca3af;font-size:12px;">© 2026 Madinatti — Tous droits réservés</p>
+    </div>
+  </div>`,
+  })
 }
+
+module.exports = {
+  sendResetPasswordEmail,
+  sendReportContactEmail,
+}

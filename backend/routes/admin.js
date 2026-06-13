@@ -8,8 +8,6 @@ const {
   getListings,
   approveListing,
   rejectListing,
-  getReports,
-  handleReport,
   getUsers,
   toggleUser,
   getBusinesses,
@@ -20,6 +18,17 @@ const {
   toggleCategoryActive,
   deleteCategory,
 } = require('../controllers/adminController')
+
+const {
+  getReports    : getReportsList,
+  updateReport  : patchReport,
+  getReportStats,
+  getReportById,
+  dismissReport,
+  removeListingFromReport,
+  suspendOwner,
+  contactOwner,
+} = require('../controllers/reportController')
  
 // ── Middleware global sur toutes les routes admin ─────────────────────────────
 router.use(authMiddleware)
@@ -40,12 +49,30 @@ router.patch('/listings/:id/approve', approveListing)
 // PATCH /api/admin/listings/:id/reject   body: { adminNote }
 router.patch('/listings/:id/reject', rejectListing)
  
-// ── Reports ───────────────────────────────────────────────────────────────────
-// GET /api/admin/reports
-router.get('/reports', getReports)
- 
-// PATCH /api/admin/reports/:id   body: { action: 'dismiss' | 'delete' }
-router.patch('/reports/:id', handleReport)
+// ── Reports (signalements) ────────────────────────────────────────────────────
+// GET /api/admin/reports/stats  — doit être AVANT /reports/:id
+router.get('/reports/stats', getReportStats)
+
+// GET /api/admin/reports?status=&type=&page=&limit=
+router.get('/reports', getReportsList)
+
+// GET /api/admin/reports/:id  — détail complet
+router.get('/reports/:id', getReportById)
+
+// PATCH /api/admin/reports/:id   body: { status, adminNotes }
+router.patch('/reports/:id', patchReport)
+
+// POST /api/admin/reports/:id/dismiss   → innocenter
+router.post('/reports/:id/dismiss', dismissReport)
+
+// DELETE /api/admin/reports/:id/listing → retirer l'annonce
+router.delete('/reports/:id/listing', removeListingFromReport)
+
+// PATCH /api/admin/reports/:id/suspend  → suspendre le propriétaire
+router.patch('/reports/:id/suspend', suspendOwner)
+
+// POST /api/admin/reports/:id/contact   body: { message }
+router.post('/reports/:id/contact', contactOwner)
  
 // ── Users ─────────────────────────────────────────────────────────────────────
 // GET /api/admin/users?search=&role=&page=&limit=

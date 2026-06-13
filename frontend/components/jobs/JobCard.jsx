@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { jobsService } from '@/services/jobsService';
+import ReportModal from '@/components/shared/ReportModal';
 
 const CONTRACT_LABELS = {
   CDI:           { label: 'CDI' },
@@ -83,7 +84,6 @@ function FavoriteButton({ jobId, initialFavorited = false, onToggle }) {
   const [favorited, setFavorited] = useState(initialFavorited);
   const [loading, setLoading] = useState(false);
 
-  // ← AJOUTER CE useEffect
   useEffect(() => {
     setFavorited(initialFavorited);
   }, [initialFavorited]);
@@ -92,7 +92,6 @@ function FavoriteButton({ jobId, initialFavorited = false, onToggle }) {
     e.preventDefault();
     e.stopPropagation();
 
-    // Visiteur → scroll vers inscription
     if (!user) {
       const el = document.getElementById('inscription');
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -101,20 +100,18 @@ function FavoriteButton({ jobId, initialFavorited = false, onToggle }) {
 
     if (loading) return;
 
-    // Handler externe fourni (ex: page favoris) → on délègue
     if (onToggle) {
       onToggle();
       return;
     }
 
-    // Comportement standard : toggle + appel API
     const prev = favorited;
     setFavorited(!prev);
     setLoading(true);
     try {
       await jobsService.toggleFavorite(jobId, token);
     } catch {
-      setFavorited(prev); // rollback si erreur
+      setFavorited(prev);
     } finally {
       setLoading(false);
     }
@@ -153,6 +150,8 @@ function FavoriteButton({ jobId, initialFavorited = false, onToggle }) {
 
 // ─── JobCard ──────────────────────────────────────────────────────────────────
 export default function JobCard({ job, initialFavorited = false, onFavoriteToggle }) {
+  const [reportOpen, setReportOpen] = useState(false);
+
   const formatSalary = (min, max) => {
     const hasMin = min != null && Number(min) > 0;
     const hasMax = max != null && Number(max) > 0;
@@ -174,57 +173,89 @@ export default function JobCard({ job, initialFavorited = false, onFavoriteToggl
   const skills = Array.isArray(job.skills) ? job.skills.slice(0, 5).join(' - ') : null;
 
   return (
-    <Link href={`/jobs/${job.id}`} className="block group">
-      <div className="relative bg-[#E8F5D0] hover:bg-[#d8edbb] border border-[#A7D129]/50 rounded-2xl p-5 transition-all duration-200 hover:shadow-md hover:border-[#A7D129]">
+    <>
+      <div className="relative">
+        <Link href={`/jobs/${job.id}`} className="block group">
+          <div className="relative bg-[#E8F5D0] hover:bg-[#d8edbb] border border-[#A7D129]/50 rounded-2xl p-5 transition-all duration-200 hover:shadow-md hover:border-[#A7D129]">
 
-        {/* Bouton cœur — coin supérieur droit */}
-        <div className="absolute top-3 right-3 z-10">
-          <FavoriteButton
-            jobId={job.id}
-            initialFavorited={initialFavorited}
-            onToggle={onFavoriteToggle}
-          />
-        </div>
-
-        <div className="flex gap-5">
-          {/* Logo */}
-          <CompanyLogo logo={job.user?.companyLogo} name={job.companyName} />
-
-          {/* Content */}
-          <div className="flex-1 min-w-0 flex flex-col gap-3 pr-8">
-
-            {/* Title + company + date */}
-            <div>
-              <div className="flex items-start justify-between gap-2">
-                <h2 className="font-bold text-gray-900 text-lg leading-snug group-hover:text-[#2D5016] transition-colors line-clamp-2">
-                  {job.title}
-                </h2>
-                <span className="text-xs text-gray-400 shrink-0 mt-1">
-                  {formatDate(job.publishedAt)}
-                </span>
-              </div>
-              <span className="text-[#2D5016] font-semibold text-sm mt-0.5 block">
-                {job.companyName}
-              </span>
-            </div>
-
-            {/* Info rows */}
-            <div className="flex flex-col gap-1.5">
-              <InfoRow label="Niveau d'études requis" value={EDUCATION_LABELS[job.educationLevel]} />
-              <InfoRow label="Niveau d'expérience"    value={EXPERIENCE_LABELS[job.experienceLevel]} />
-              <InfoRow label="Contrat proposé"         value={contract?.label || job.contractType} />
-              <InfoRow label="Région de"               value={job.location} />
-              <InfoRow
-                label="Salaire"
-                value={formatSalary(job.salaryMin, job.salaryMax)}
-                valueClass="text-[#2D5016]"
+            {/* Bouton cœur — coin supérieur droit */}
+            <div className="absolute top-3 right-3 z-10">
+              <FavoriteButton
+                jobId={job.id}
+                initialFavorited={initialFavorited}
+                onToggle={onFavoriteToggle}
               />
-              <InfoRow label="Compétences clés" value={skills} />
             </div>
 
+            <div className="flex gap-5">
+              {/* Logo */}
+              <CompanyLogo logo={job.user?.companyLogo} name={job.companyName} />
+
+              {/* Content */}
+              <div className="flex-1 min-w-0 flex flex-col gap-3 pr-8">
+
+                {/* Title + company + date */}
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <h2 className="font-bold text-gray-900 text-lg leading-snug group-hover:text-[#2D5016] transition-colors line-clamp-2">
+                      {job.title}
+                    </h2>
+                    <span className="text-xs text-gray-400 shrink-0 mt-1">
+                      {formatDate(job.publishedAt)}
+                    </span>
+                  </div>
+                  <span className="text-[#2D5016] font-semibold text-sm mt-0.5 block">
+                    {job.companyName}
+                  </span>
+                </div>
+
+                {/* Info rows */}
+                <div className="flex flex-col gap-1.5">
+                  <InfoRow label="Niveau d'études requis" value={EDUCATION_LABELS[job.educationLevel]} />
+                  <InfoRow label="Niveau d'expérience"    value={EXPERIENCE_LABELS[job.experienceLevel]} />
+                  <InfoRow label="Contrat proposé"         value={contract?.label || job.contractType} />
+                  <InfoRow label="Région de"               value={job.location} />
+                  <InfoRow
+                    label="Salaire"
+                    value={formatSalary(job.salaryMin, job.salaryMax)}
+                    valueClass="text-[#2D5016]"
+                  />
+                  <InfoRow label="Compétences clés" value={skills} />
+                </div>
+
+              </div>
+            </div>
           </div>
+        </Link>
+
+        {/* Bouton Signaler — visible, hors du Link pour éviter la navigation */}
+        <div className="flex justify-end mt-1 pr-1">
+          <button
+            onClick={() => setReportOpen(true)}
+            className="
+              flex items-center gap-1 px-2.5 py-1 rounded-lg
+              text-[11px] text-gray-400 hover:text-red-500
+              hover:bg-red-50 transition-colors
+            "
+            title="Signaler cette offre"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+            </svg>
+            Signaler
+          </button>
         </div>
       </div>
-    </Link>
+
+      {/* Modale de signalement */}
+      <ReportModal
+        isOpen={reportOpen}
+        onClose={() => setReportOpen(false)}
+        targetType="JOB"
+        targetId={job.id}
+        targetTitle={job.title}
+      />
+    </>
   );
 }

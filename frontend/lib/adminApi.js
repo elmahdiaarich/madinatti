@@ -589,26 +589,38 @@ function _isRealId(id) {
 }
  
 // ─────────────────────────────────────────────────────────────────────────────
-// REPORTS  (mock)
+// REPORTS  (real API — /api/admin/reports)
 // ─────────────────────────────────────────────────────────────────────────────
- 
-export async function getReports() {
-  await sleep()
-  return [...mockReports].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-}
- 
-export async function handleReport(id, action) {
-  await sleep()
-  const report = mockReports.find((r) => r.id === id)
-  if (!report) throw new Error('Signalement introuvable')
-  if (action === 'dismiss') {
-    report.status = 'DISMISSED'
-  } else if (action === 'delete') {
-    const listing = mockListings.find((l) => l.id === report.listingId)
-    if (listing) listing.status = 'REJECTED'
-    report.status = 'DELETED'
+
+/**
+ * getReports({ status, type, page, limit, search, token })
+ * GET /api/admin/reports
+ */
+export async function getReports({ status = '', type = '', page = 1, limit = 20, search = '', token } = {}) {
+  const params = new URLSearchParams({ page, limit })
+  if (status) params.set('status', status)
+  if (type)   params.set('type',   type)
+  if (search) params.set('search', search)
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  const json = await apiFetch(`/api/admin/reports?${params}`, { headers })
+  return {
+    data:       json.data       ?? [],
+    pagination: json.pagination ?? { total: 0, page: 1, limit: 20, totalPages: 0 },
   }
-  return { success: true }
+}
+
+/**
+ * handleReport(id, body, token)
+ * PATCH /api/admin/reports/:id   body: { status?, adminNotes? }
+ */
+export async function handleReport(id, body, token) {
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  const json = await apiFetch(`/api/admin/reports/${id}`, {
+    method: 'PATCH',
+    body:   JSON.stringify(body),
+    headers,
+  })
+  return json
 }
  
 // ─────────────────────────────────────────────────────────────────────────────
@@ -652,14 +664,22 @@ export async function getBusinesses() {
 export async function getSidebarCounts(token) {
   try {
     const headers = token ? { Authorization: `Bearer ${token}` } : {}
-    const json = await apiFetch('/api/admin/overview', { headers })
-    const data = json.data ?? {}
+
+    // Fetch overview + report stats in parallel
+    const [overviewJson, statsJson] = await Promise.all([
+      apiFetch('/api/admin/overview', { headers }),
+      apiFetch('/api/admin/reports/stats', { headers }).catch(() => null),
+    ])
+
+    const data  = overviewJson.data ?? {}
+    const pending = statsJson?.data?.byStatus?.pending ?? data.openReports ?? 0
+
     return {
-      overview:     data.pending ?? 0,
-      emploi:       0, // refined by module below if needed
+      overview:     data.pending      ?? 0,
+      emploi:       0,
       immobilier:   0,
       vehicule:     mockListings.filter((l) => l.module === 'vehicule' && l.status === 'PENDING').length,
-      signalements: data.openReports ?? 0,
+      signalements: pending,
       entreprises:  0,
       utilisateurs: 0,
     }
@@ -667,10 +687,10 @@ export async function getSidebarCounts(token) {
     // Fallback to mock counts if API fails
     return {
       overview:     0,
-      emploi:       mockListings.filter((l) => l.module === 'emploi' && l.status === 'PENDING').length,
+      emploi:       mockListings.filter((l) => l.module === 'emploi'    && l.status === 'PENDING').length,
       immobilier:   0,
-      vehicule:     mockListings.filter((l) => l.module === 'vehicule' && l.status === 'PENDING').length,
-      signalements: mockReports.filter((r) => r.status === 'OPEN').length,
+      vehicule:     mockListings.filter((l) => l.module === 'vehicule'  && l.status === 'PENDING').length,
+      signalements: 0,
       entreprises:  mockBusinesses.filter((b) => !b.isActive).length,
       utilisateurs: mockUsers.filter((u) => !u.isActive).length,
     }
