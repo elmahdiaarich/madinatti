@@ -475,6 +475,7 @@ function normalizeRealEstateListings(listings) {
     // identity
     id:               l.id,
     module:           'immobilier',
+    
     // display fields
     title:            l.title,
     company:          l.user?.name  ?? '—',
@@ -482,6 +483,8 @@ function normalizeRealEstateListings(listings) {
     submittedByEmail: l.user?.email ?? '—',
     submittedById:    l.user?.id    ?? null,
     city:             l.city        ?? '—',
+    region:           l.region      ?? null, // Added
+    
     // real-estate specific (available for the detail modal)
     listingType:      l.listingType,
     propertyType:     l.propertyType,
@@ -489,15 +492,32 @@ function normalizeRealEstateListings(listings) {
     surface:          l.surface     ?? null,
     rooms:            l.rooms       ?? null,
     bathrooms:        l.bathrooms   ?? null,
+    floor:            l.floor       ?? null, // Added
+    contactPhone:     l.contactPhone ?? null, // Added
+    features:         l.features    ?? {},   // Added
     viewsCount:       l.viewsCount  ?? 0,
     inquiryCount:     l._count?.inquiries ?? 0,
     category:         l.category    ?? null,
     images:           l.images      ?? [],
-    // moderation
+    
+    // location details (Added)
+    location:         l.location    ?? null,
+    latitude:         l.latitude    ?? null,
+    longitude:        l.longitude   ?? null,
+    
+    // moderation & flags (Added)
     status:           l.status,
+    isActive:         l.isActive    ?? true,
+    isFeatured:       l.isFeatured  ?? false,
+    isSponsored:      l.isSponsored ?? false,
+    boostExpiresAt:   l.boostExpiresAt ?? null,
     adminNote:        l.adminNotes  ?? null,
     reviewedAt:       l.reviewedAt  ?? null,
+    reviewedBy:       l.reviewedBy  ?? null,
+    publishedAt:      l.publishedAt ?? null,
     createdAt:        l.createdAt,
+    updatedAt:        l.updatedAt   ?? l.createdAt,
+    
     // kept for companyHistory shape (not available from backend yet)
     companyHistory:   null,
   }))

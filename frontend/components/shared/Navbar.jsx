@@ -256,13 +256,12 @@ export default function Navbar() {
     setAddError("");
     setAddLoading(true);
     try {
-      console.log("email: ",addForm.email, "; pass: ",addForm.password)
       await addAccount(addForm.email, addForm.password);
       setShowAddAccount(false);
       setAddForm({ email: "", password: "" });
       setUserMenuOpen(false);
     } catch (error) {
-      setAddError(error?.message || "Email ou mot de passe incorrect");
+      setAddError(error?.response.data.message || "Email ou mot de passe incorrect");
     } finally {
       setAddLoading(false);
     }

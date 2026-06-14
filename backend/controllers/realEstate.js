@@ -308,6 +308,7 @@ async function updateInquiryStatus(req, res) {
 async function adminGetAllListings(req, res) {
   try {
     const result = await service.adminGetAllListings(req.query);
+    // console.log("listings: ",result);
     return res.json({ success: true, ...result });
   } catch (err) {
     console.error('[adminGetAllListings]', err);
