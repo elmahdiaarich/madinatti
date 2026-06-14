@@ -65,6 +65,7 @@ model User {
   realEstateListings RealEstateListing[]
   propertyInquiries PropertyInquiry[]
   reports           Report[]
+  messages          BusinessMessage[]
 }
 
 model Role {
@@ -148,7 +149,7 @@ model Category {
 enum JobStatus {
   DRAFT
   PENDING
-  PUBLISHED
+  APPROVED
   REJECTED
   EXPIRED
   CLOSED
@@ -364,5 +365,28 @@ model Report {
   @@index([targetId, targetType])
   @@index([status])
   @@index([ipAddress])
+  @@index([createdAt])
+}
+
+enum MessageType {
+  REJECTION
+  REPORT_CONTACT
+}
+
+model BusinessMessage {
+  id           String      @id @default(uuid())
+  userId       String
+  type         MessageType
+  targetType   String
+  targetId     String
+  targetTitle  String
+  adminMessage String
+  isRead       Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+
+  user         User        @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([isRead])
   @@index([createdAt])
 }

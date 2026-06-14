@@ -58,6 +58,23 @@ const IconBell = () => (
   </svg>
 );
 
+const IconMail = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <polyline points="3 7 12 13 21 7" />
+  </svg>
+);
+
 const IconBuilding = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -204,6 +221,12 @@ const COMMON_NAV = [
     href: "/my-space/notifications",
     icon: IconBell,
   },
+  {
+    key: "messages",
+    label: "Messages",
+    href: "/my-space/messages",
+    icon: IconMail,
+  },
 ];
 
 // ── Nav item ──────────────────────────────────────────────────────────────────
@@ -258,11 +281,11 @@ function NavItem({ href, icon: Icon, label, active, badge, collapsed }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function MySpaceLayout({ children }) {
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
   const pathname = usePathname();
   const [servicesOpen, setServicesOpen] = useState(false);
 
-  // NEW: sidebar open/closed state — persisted to localStorage so it survives navigation
+  // Sidebar open/closed state — persisted to localStorage
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("myspace-sidebar") !== "closed";
@@ -272,6 +295,26 @@ export default function MySpaceLayout({ children }) {
 
   const isBusiness = user?.role === "business";
   const isInServices = pathname?.startsWith("/my-space/services");
+
+  // Badge messages non lus (business seulement, refresh toutes les 60s)
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
+  useEffect(() => {
+    if (!isBusiness || !token) return;
+    const fetchUnread = async () => {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/messages?limit=1`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const json = await res.json();
+        if (json.success) setUnreadMessages(json.unreadCount || 0);
+      } catch {}
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 60_000);
+    return () => clearInterval(interval);
+  }, [isBusiness, token]);
 
   useEffect(() => {
     if (isInServices) setServicesOpen(true);
@@ -363,7 +406,8 @@ export default function MySpaceLayout({ children }) {
                 key={item.key}
                 {...item}
                 active={pathname === item.href}
-                collapsed={!sidebarOpen} // NEW: pass collapsed state
+                collapsed={!sidebarOpen}
+                badge={item.key === 'messages' && isBusiness ? unreadMessages : undefined}
               />
             ))}
 

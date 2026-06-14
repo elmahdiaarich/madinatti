@@ -11,6 +11,7 @@ import {
   User,
   Heart,
   Bell,
+  MessageSquare,
   LogOut,
   X,
 } from "lucide-react";
@@ -624,6 +625,13 @@ export default function Navbar() {
                       onClick={() => setUserMenuOpen(false)}
                     />
                     <DropdownItem
+                      href="/my-space/messages"
+                      icon={<MessageSquare size={16} />}
+                      label="Messages"
+                      active={pathname === "/my-space/messages"}
+                      onClick={() => setUserMenuOpen(false)}
+                    />
+                    <DropdownItem
                       href="/my-space/favorites"
                       icon={<Heart size={16} />}
                       label="Mes favoris"
@@ -774,6 +782,13 @@ export default function Navbar() {
                 >
                   <User size={16} className="text-gray-400" />
                   Mon espace
+                </a>
+                <a
+                  href="/my-space/messages"
+                  className="flex items-center gap-3 text-sm text-gray-700 px-2 py-2 rounded-lg hover:bg-gray-50"
+                >
+                  <MessageSquare size={16} className="text-gray-400" />
+                  Messages
                 </a>
                 <a
                   href="/my-space/favorites"

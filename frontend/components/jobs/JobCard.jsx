@@ -88,6 +88,8 @@ function FavoriteButton({ jobId, initialFavorited = false, onToggle }) {
     setFavorited(initialFavorited);
   }, [initialFavorited]);
 
+  if (!user) return null;
+
   const handleClick = async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -223,6 +225,14 @@ export default function JobCard({ job, initialFavorited = false, onFavoriteToggl
                   <InfoRow label="Compétences clés" value={skills} />
                 </div>
 
+                <div className="mt-2 text-right">
+                  <span className="text-[#2D5016] text-xs font-bold group-hover:underline flex items-center justify-end gap-1">
+                    Voir détail
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                  </span>
+                </div>
               </div>
             </div>
           </div>

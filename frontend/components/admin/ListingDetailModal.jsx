@@ -687,7 +687,7 @@ export default function ListingDetailModal({
         isOpen={rejectOpen}
         onClose={() => setRejectOpen(false)}
         onConfirm={handleReject}
-        listingTitle={listing.title}
+        listing={listing}
         loading={rejectLoading}
       />
     </>

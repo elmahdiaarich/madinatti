@@ -34,6 +34,10 @@ app.use('/api/admin', adminRoutes);
 const reportRoutes = require('./routes/reports');
 app.use('/api/reports', reportRoutes);
 
+const messageRoutes = require('./routes/messages');
+app.use('/api/messages', messageRoutes);
+
+
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)

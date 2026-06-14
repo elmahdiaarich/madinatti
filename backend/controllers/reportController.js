@@ -347,9 +347,9 @@ const dismissReport = async (req, res) => {
 
     // Remettre l'annonce en ligne
     if (report.targetType === 'JOB') {
-      await prisma.jobListing.updateMany({ where: { id: report.targetId }, data: { status: 'PUBLISHED' } })
+      await prisma.jobListing.updateMany({ where: { id: report.targetId }, data: { status: 'APPROVED' } })
     } else if (report.targetType === 'REAL_ESTATE') {
-      await prisma.realEstateListing.updateMany({ where: { id: report.targetId }, data: { status: 'PUBLISHED' } })
+      await prisma.realEstateListing.updateMany({ where: { id: report.targetId }, data: { status: 'APPROVED' } })
     }
 
     // Clôturer TOUS les rapports sur cette cible en REJECTED
@@ -447,35 +447,55 @@ const contactOwner = async (req, res) => {
     const report = await prisma.report.findUnique({ where: { id } })
     if (!report) return res.status(404).json({ success: false, message: 'Signalement introuvable' })
 
-    let owner = null
+    let owner       = null
+    let ownerId     = null
     let listingTitle = 'Votre annonce'
 
     if (report.targetType === 'JOB') {
       const job = await prisma.jobListing.findUnique({
-        where: { id: report.targetId },
-        select: { title: true, user: { select: { name: true, email: true } } },
+        where:  { id: report.targetId },
+        select: { userId: true, title: true, user: { select: { name: true, email: true } } },
       })
-      if (job) { owner = job.user; listingTitle = job.title }
+      if (job) { owner = job.user; ownerId = job.userId; listingTitle = job.title }
     } else if (report.targetType === 'REAL_ESTATE') {
       const re = await prisma.realEstateListing.findUnique({
-        where: { id: report.targetId },
-        select: { title: true, user: { select: { name: true, email: true } } },
+        where:  { id: report.targetId },
+        select: { userId: true, title: true, user: { select: { name: true, email: true } } },
       })
-      if (re) { owner = re.user; listingTitle = re.title }
+      if (re) { owner = re.user; ownerId = re.userId; listingTitle = re.title }
     }
 
     if (!owner?.email) {
       return res.status(404).json({ success: false, message: 'Email du propriétaire introuvable' })
     }
 
-    await sendReportContactEmail({
-      to:           owner.email,
-      ownerName:    owner.name || 'Utilisateur',
-      listingTitle,
-      adminMessage: message.trim(),
-    })
+    // Créer un message interne BusinessMessage (si le propriétaire a un compte)
+    if (ownerId) {
+      await prisma.businessMessage.create({
+        data: {
+          userId:       ownerId,
+          type:         'REPORT_CONTACT',
+          targetType:   report.targetType,
+          targetId:     report.targetId,
+          targetTitle:  listingTitle,
+          adminMessage: message.trim(),
+        },
+      })
+    }
 
-    res.json({ success: true, message: `Email envoyé à ${owner.email}` })
+    // Envoyer l'email (si échoue en local, on ne bloque pas le processus)
+    try {
+      await sendReportContactEmail({
+        to:           owner.email,
+        ownerName:    owner.name || 'Utilisateur',
+        listingTitle,
+        adminMessage: message.trim(),
+      })
+    } catch (mailErr) {
+      console.warn('Impossible d\'envoyer l\'email:', mailErr.message)
+    }
+
+    res.json({ success: true, message: `Message envoyé à ${owner.email}` })
   } catch (error) {
     console.error('contactOwner error:', error)
     res.status(500).json({ success: false, message: 'Erreur serveur' })

@@ -7,14 +7,14 @@
  *  isOpen      — boolean
  *  onClose     — () => void
  *  onConfirm   — (note: string) => Promise<void>
- *  listingTitle — string  (shown in header)
+ *  listing     — object  (the listing being rejected, contains title, id, submittedBy, company, etc.)
  *  loading     — boolean (disables buttons while API call is in flight)
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 // ── Predefined rejection reasons ──────────────────────────────────────────────
 const PRESET_REASONS = [
@@ -45,38 +45,43 @@ const IconAlertTriangle = () => (
 // COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function RejectModal({ isOpen, onClose, onConfirm, listingTitle = '', loading = false }) {
+export default function RejectModal({ isOpen, onClose, onConfirm, listing, loading = false }) {
   const [selected, setSelected] = useState([])
   const [customNote, setCustomNote] = useState('')
+
+  const currentReasonsRef = useRef('[Complétez le motif de refus ici]')
 
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
       setSelected([])
-      setCustomNote('')
+      const businessName = listing?.submittedBy || listing?.company || 'Propriétaire';
+      const title = listing?.title || 'votre annonce';
+      const template = `Bonjour ${businessName},\n\nVotre annonce "${title}" a été refusée pour la raison suivante :\n\n[Complétez le motif de refus ici]\n\nNous vous invitons à corriger votre annonce et à la soumettre à nouveau.\n\nCordialement,\n\nL'équipe Madinatti`;
+      setCustomNote(template)
+      currentReasonsRef.current = '[Complétez le motif de refus ici]'
     }
-  }, [isOpen])
+  }, [isOpen, listing])
 
-  if (!isOpen) return null
+  if (!isOpen || !listing) return null
 
   // ── Toggle a preset reason ────────────────────────────────────────────────
   const toggleReason = (id) => {
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
-    )
+    const next = selected.includes(id) ? selected.filter((r) => r !== id) : [...selected, id]
+    setSelected(next)
+      
+    const newReasonsStr = next.length > 0
+      ? PRESET_REASONS.filter((r) => next.includes(r.id)).map((r) => `• ${r.label}`).join('\n')
+      : '[Complétez le motif de refus ici]'
+
+    const oldReasonsStr = currentReasonsRef.current
+    setCustomNote((prevNote) => prevNote.replace(oldReasonsStr, newReasonsStr))
+    currentReasonsRef.current = newReasonsStr
   }
 
   // ── Build final note string ───────────────────────────────────────────────
   const buildNote = () => {
-    const presetLabels = PRESET_REASONS
-      .filter((r) => selected.includes(r.id))
-      .map((r) => `• ${r.label}`)
-
-    const parts = []
-    if (presetLabels.length > 0) parts.push(presetLabels.join('\n'))
-    if (customNote.trim()) parts.push(customNote.trim())
-
-    return parts.join('\n\n')
+    return customNote.trim()
   }
 
   const handleConfirm = async () => {
@@ -105,9 +110,9 @@ export default function RejectModal({ isOpen, onClose, onConfirm, listingTitle =
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-bold text-gray-900">Motif du refus</h2>
-              {listingTitle && (
+              {listing?.title && (
                 <p className="text-sm text-gray-500 truncate mt-0.5">
-                  {listingTitle}
+                  {listing.title}
                 </p>
               )}
             </div>
@@ -179,14 +184,15 @@ export default function RejectModal({ isOpen, onClose, onConfirm, listingTitle =
                 onChange={(e) => setCustomNote(e.target.value)}
                 disabled={loading}
                 placeholder="Précisez les éléments à corriger ou les raisons supplémentaires..."
-                rows={4}
+                rows={8}
                 className="w-full rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800
                   placeholder:text-gray-400 resize-none outline-none
                   focus:border-[#2D5016] focus:bg-white focus:ring-2 focus:ring-[#A7D129]/20
                   disabled:opacity-50 transition-all"
               />
-              <p className="text-xs text-gray-400 mt-1 text-right">
-                {customNote.length}/500 caractères
+
+              <p className="text-xs text-gray-400 mt-2 text-right">
+                {customNote.length} caractères
               </p>
             </div>
           </div>

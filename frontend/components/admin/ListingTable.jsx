@@ -348,7 +348,7 @@ export default function ListingTable({
         isOpen={!!rejectTarget}
         onClose={() => setRejectTarget(null)}
         onConfirm={handleConfirmReject}
-        listingTitle={rejectTarget?.title}
+        listing={rejectTarget}
         loading={rejectLoading}
       />
     </>

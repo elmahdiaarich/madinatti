@@ -52,7 +52,7 @@ const getOverview = async (req, res) => {
       // Approved today — jobs
       prisma.jobListing.count({
         where: {
-          status: 'PUBLISHED',
+          status: 'APPROVED',
           publishedAt: { gte: todayStart, lte: todayEnd },
         },
       }),
@@ -118,9 +118,8 @@ const getListings = async (req, res) => {
     }
  
     // ── Real Estate ─────────────────────────────────────────────────────────
-    // Map status: adminApi uses PUBLISHED/REJECTED, real estate uses APPROVED/REJECTED
-    const reStatusMap = { PUBLISHED: 'APPROVED', REJECTED: 'REJECTED', PENDING: 'PENDING' }
-    const reStatus = status ? (reStatusMap[status] || status) : undefined
+    // Statut unifié: l'API et la BDD utilisent APPROVED / REJECTED / PENDING
+    const reStatus = status;
  
     const reWhere = {
       ...(reStatus && { status: reStatus }),
@@ -191,8 +190,7 @@ const getListings = async (req, res) => {
     })
  
     const normalizeRE = (r) => {
-      // Map status back to unified format
-      const statusMap = { APPROVED: 'PUBLISHED', REJECTED: 'REJECTED', PENDING: 'PENDING' }
+      // Statut directement unifié (APPROVED, REJECTED, PENDING)
       return {
         id:              r.id,
         module:          'immobilier',
@@ -203,7 +201,7 @@ const getListings = async (req, res) => {
         submittedById:   r.user?.id || '',
         city:            r.city || r.location,
         contractType:    r.listingType,
-        status:          statusMap[r.status] || r.status,
+        status:          r.status,
         adminNote:       r.adminNotes || null,
         createdAt:       r.createdAt,
       }
@@ -253,7 +251,7 @@ const approveListing = async (req, res) => {
       await prisma.jobListing.update({
         where: { id },
         data: {
-          status:      'PUBLISHED',
+          status:      'APPROVED',
           publishedAt:  now,
           reviewedAt:   now,
           reviewedBy:   adminId,
@@ -336,6 +334,19 @@ const rejectListing = async (req, res) => {
           reviewedBy:  adminId,
         },
       })
+
+      // Créer un message business
+      await prisma.businessMessage.create({
+        data: {
+          userId:       job.userId,
+          type:         'REJECTION',
+          targetType:   'JOB',
+          targetId:     id,
+          targetTitle:  job.title,
+          adminMessage: adminNote || '',
+        },
+      })
+
       return res.json({ success: true, message: 'Offre d\'emploi refusée' })
     }
 
@@ -368,6 +379,19 @@ const rejectListing = async (req, res) => {
           reviewedBy:  adminId,
         },
       })
+
+      // Créer un message business
+      await prisma.businessMessage.create({
+        data: {
+          userId:       re.userId,
+          type:         'REJECTION',
+          targetType:   'REAL_ESTATE',
+          targetId:     id,
+          targetTitle:  re.title,
+          adminMessage: adminNote || '',
+        },
+      })
+
       return res.json({ success: true, message: 'Annonce immobilière refusée' })
     }
 
@@ -575,8 +599,7 @@ const getBusinesses = async (req, res) => {
       const allListings = [
         ...b.jobListings.map((l) => ({ status: l.status })),
         ...b.realEstateListings.map((l) => ({
-          // Normalize real estate status
-          status: l.status === 'APPROVED' ? 'PUBLISHED' : l.status,
+          status: l.status,
         })),
       ]
  
@@ -593,7 +616,7 @@ const getBusinesses = async (req, res) => {
         joinedAt:         b.createdAt,
         totalListings:    allListings.length,
         pendingListings:  allListings.filter((l) => l.status === 'PENDING').length,
-        publishedListings: allListings.filter((l) => l.status === 'PUBLISHED').length,
+        publishedListings: allListings.filter((l) => l.status === 'APPROVED').length,
         rejectedListings: allListings.filter((l) => l.status === 'REJECTED').length,
       }
     })

@@ -258,7 +258,7 @@ let mockListings = [
     city: 'Casablanca',
     contractType: 'CDI',
     description: 'Gestion comptable complète : saisie, rapprochement bancaire, déclarations fiscales (TVA, IS), bilan annuel. Maîtrise de Sage 100 exigée.',
-    status: 'PUBLISHED',
+    status: 'APPROVED',
     adminNote: null,
     createdAt: '2026-04-07T11:00:00Z',
     companyHistory: { totalSubmitted: 6, previousRejections: 0 },
@@ -542,7 +542,7 @@ export async function approveListing(id, token) {
   await sleep()
   const listing = mockListings.find((l) => l.id === id)
   if (!listing) throw new Error('Annonce introuvable')
-  listing.status = 'PUBLISHED'
+  listing.status = 'APPROVED'
   return { success: true, listing }
 }
 

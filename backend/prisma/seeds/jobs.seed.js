@@ -920,7 +920,7 @@ Profil :
         description:         job.description,
         skills:              job.skills,
         languages:           job.languages,
-        status:              'PUBLISHED',
+        status:              'APPROVED',
         isFeatured:          job.isFeatured ?? false,
         publishedAt:         new Date(),
         applicationDeadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),

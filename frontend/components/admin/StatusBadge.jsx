@@ -16,11 +16,7 @@ const STATUS_CONFIG = {
     className: 'bg-orange-100 text-orange-700 border border-orange-200',
     dot: 'bg-orange-500',
   },
-  PUBLISHED: {
-    label: 'Approuvé',
-    className: 'bg-green-100 text-green-700 border border-green-200',
-    dot: 'bg-green-500',
-  },
+
   APPROVED: {
     label: 'Approuvé',
     className: 'bg-green-100 text-green-700 border border-green-200',

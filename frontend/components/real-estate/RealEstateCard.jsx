@@ -68,6 +68,8 @@ function FavoriteButton({ listingId, initialFavorited = false, onToggle }) {
     setFavorited(initialFavorited);
   }, [initialFavorited]);
 
+  if (!user) return null;
+
   const handleClick = async (e) => {
     e.preventDefault();
     e.stopPropagation();
