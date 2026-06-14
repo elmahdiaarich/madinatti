@@ -586,7 +586,8 @@ const getMyJobs = async (req, res) => {
         include: {
           category: { select: { id: true, name: true } },
           _count:   { select: { applications: true } },
-        },
+          user:     { select: { companyLogo: true } },  // ← ADD THIS
+},
       }),
       prisma.jobListing.count({ where }),
     ]);
