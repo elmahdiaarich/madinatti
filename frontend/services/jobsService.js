@@ -98,4 +98,35 @@ export const jobsService = {
     if (!res.ok) throw new Error(json.message || 'Erreur suppression');
     return json;
   },
+  getJobApplications: async (jobId, token) => {
+  const res = await fetch(`${API_URL}/jobs/${jobId}/applications`, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.message || 'Erreur chargement candidatures')
+  return json // { success: true, data: [...applications] }
+},
+
+updateApplicationStatus: async (appId, status, token) => {
+  const res = await fetch(`${API_URL}/jobs/applications/${appId}/status`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ status })
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.message || 'Erreur mise à jour statut')
+  return json
+},
+
+getMyApplications: async (token) => {
+  const res = await fetch(`${API_URL}/jobs/applications/my`, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.message || 'Erreur chargement mes candidatures')
+  return json // { success: true, data: [...] }
+},
 };

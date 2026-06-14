@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../config/db');
+const { cloudinary } = require('../config/cloudinary');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/jobs
@@ -187,12 +187,12 @@ const getFiltersCount = async (req, res) => {
       data: {
         contractType:    toMap(contractCounts,   'contractType',   'contractType'),
         experienceLevel: toMap(experienceCounts, 'experienceLevel','experienceLevel'),
-       educationLevel: educationCounts.reduce((acc, job) => {
-  (job.educationLevel || []).forEach((lvl) => {
-    acc[lvl] = (acc[lvl] || 0) + 1;
-  });
-  return acc;
-}, {}),
+        educationLevel: educationCounts.reduce((acc, job) => {
+          (job.educationLevel || []).forEach((lvl) => {
+            acc[lvl] = (acc[lvl] || 0) + 1;
+          });
+          return acc;
+        }, {}),
         location:        toMap(locationCounts,   'location',       'location'),
         categories:      categoryCounts.map((c) => ({
           id:    c.id,
@@ -213,37 +213,23 @@ const getFiltersCount = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 const createJob = async (req, res) => {
   try {
-    const userId = req.user.userId; // injecté par authMiddleware
+    const userId = req.user.userId;
 
     const {
-      title,
-      categorySlug,
-      location,
-      region,
-      remote,
-      contractType,
-      salaryMin,
-      salaryMax,
-      applicationDeadline,
-      educationLevel,
-      experienceLevel,
-      skills,
-      languages,
-      description,
+      title, categorySlug, location, region, remote, contractType,
+      salaryMin, salaryMax, applicationDeadline,
+      educationLevel, experienceLevel, skills, languages, description,
     } = req.body;
 
-    // ── Validation minimale ────────────────────────────────
     if (!title?.trim())       return res.status(400).json({ success: false, message: 'Le titre est requis' });
     if (!contractType)        return res.status(400).json({ success: false, message: 'Le type de contrat est requis' });
     if (!categorySlug)        return res.status(400).json({ success: false, message: 'La catégorie est requise' });
     if (!location)            return res.status(400).json({ success: false, message: 'La ville est requise' });
     if (!description?.trim()) return res.status(400).json({ success: false, message: 'La description est requise' });
 
-    // ── Résoudre categoryId depuis le slug ─────────────────
     const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
     if (!category) return res.status(400).json({ success: false, message: 'Catégorie introuvable' });
 
-    // ── Récupérer le companyName de l'user ─────────────────
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { companyName: true },
@@ -264,11 +250,11 @@ const createJob = async (req, res) => {
         salaryMax:           salaryMax   ? Number(salaryMax)   : null,
         salaryPeriod:        salaryMin || salaryMax ? 'MONTHLY' : null,
         applicationDeadline: applicationDeadline ? new Date(applicationDeadline) : null,
-        educationLevel: Array.isArray(educationLevel) ? educationLevel : [],
+        educationLevel:      Array.isArray(educationLevel) ? educationLevel : [],
         experienceLevel:     experienceLevel || null,
         skills:              Array.isArray(skills) ? skills : [],
         languages:           Array.isArray(languages) ? languages : [],
-        status:              'PENDING', // validation admin requise
+        status:              'PENDING',
       },
     });
 
@@ -282,15 +268,226 @@ const createJob = async (req, res) => {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
+
 // ─────────────────────────────────────────────────────────────────────────────
-// POST /api/jobs/:id/favorite  — toggle favori (citoyen ou business)
+// POST /api/jobs/:id/apply  — citoyen only
+// ─────────────────────────────────────────────────────────────────────────────
+const applyToJob = async (req, res) => {
+  try {
+    const userId    = req.user.userId;
+    const { id: jobId } = req.params;
+    const { coverLetter, phone } = req.body;
+
+    // 1. Vérifier que l'offre existe et est APPROVED
+    const job = await prisma.jobListing.findUnique({ where: { id: jobId } });
+    if (!job)                      return res.status(404).json({ success: false, message: 'Offre introuvable' });
+    if (job.status !== 'APPROVED') return res.status(400).json({ success: false, message: 'Cette offre n\'est plus disponible' });
+
+    // 2. Empêcher l'employeur de postuler à sa propre offre
+    if (job.userId === userId) {
+      return res.status(400).json({ success: false, message: 'Vous ne pouvez pas postuler à votre propre offre' });
+    }
+
+    // 3. Vérifier qu'il n'a pas déjà postulé (double sécurité en plus du @@unique)
+    const existing = await prisma.jobApplication.findUnique({
+      where: { userId_jobListingId: { userId, jobListingId: jobId } },
+    });
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'Vous avez déjà postulé à cette offre' });
+    }
+
+    // 4. Vérifier que le fichier CV est présent
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Le CV est obligatoire' });
+    }
+
+    // 5. Valider le fichier (PDF, max 5 Mo)
+    if (req.file.mimetype !== 'application/pdf') {
+      return res.status(400).json({ success: false, message: 'Le CV doit être un fichier PDF' });
+    }
+    if (req.file.size > 5 * 1024 * 1024) {
+      return res.status(400).json({ success: false, message: 'Le CV ne doit pas dépasser 5 Mo' });
+    }
+
+    // 6. Upload CV vers Cloudinary (dossier cv/)
+    const cvUrl = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+  {
+    folder:        'cv',
+    resource_type: 'auto',
+    public_id:     `cv_${userId}_${jobId}_${Date.now()}`,
+    access_mode:   'public',
+  },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result.secure_url);
+        }
+      );
+      stream.end(req.file.buffer);
+    });
+
+    // 7. Sauvegarder la candidature en DB
+    const application = await prisma.jobApplication.create({
+      data: {
+        jobListingId: jobId,
+        userId,
+        cvPath:       cvUrl,
+        coverLetter:  coverLetter?.trim() || null,
+        status:       'pending',  // pending → viewed → accepted
+      },
+    });
+
+    // 8. Mettre à jour le téléphone du candidat si renseigné et différent
+    if (phone?.trim()) {
+      await prisma.user.update({
+        where: { id: userId },
+        data:  { phone: phone.trim() },
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Candidature envoyée avec succès',
+      data:    { id: application.id },
+    });
+  } catch (error) {
+    // Contrainte unique Prisma
+    if (error.code === 'P2002') {
+      return res.status(409).json({ success: false, message: 'Vous avez déjà postulé à cette offre' });
+    }
+    console.error('applyToJob error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/jobs/:id/applications  — business: voir les candidatures de son offre
+// ─────────────────────────────────────────────────────────────────────────────
+const getJobApplications = async (req, res) => {
+  try {
+    const userId    = req.user.userId;
+    const { id: jobId } = req.params;
+
+    // Vérifier que l'offre appartient à ce business
+    const job = await prisma.jobListing.findUnique({ where: { id: jobId } });
+    if (!job)                  return res.status(404).json({ success: false, message: 'Offre introuvable' });
+    if (job.userId !== userId) return res.status(403).json({ success: false, message: 'Accès refusé' });
+
+    const applications = await prisma.jobApplication.findMany({
+      where:   { jobListingId: jobId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            id:     true,
+            name:   true,
+            email:  true,
+            phone:  true,
+            avatar: true,
+            city:   true,
+          },
+        },
+      },
+    });
+
+    // Marquer les candidatures "pending" comme "viewed"
+    await prisma.jobApplication.updateMany({
+      where: { jobListingId: jobId, status: 'pending' },
+      data:  { status: 'viewed' },
+    });
+
+    res.json({ success: true, data: applications });
+  } catch (error) {
+    console.error('getJobApplications error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /api/jobs/applications/:appId/status  — business: accepter une candidature
+// Statuts possibles : viewed | accepted  (pas de rejected visible côté candidat)
+// ─────────────────────────────────────────────────────────────────────────────
+const updateApplicationStatus = async (req, res) => {
+  try {
+    const userId     = req.user.userId;
+    const { appId }  = req.params;
+    const { status } = req.body;
+
+    const ALLOWED = ['viewed', 'accepted'];
+    if (!ALLOWED.includes(status)) {
+      return res.status(400).json({ success: false, message: 'Statut invalide' });
+    }
+
+    // Vérifier que la candidature appartient à une offre de ce business
+    const application = await prisma.jobApplication.findUnique({
+      where:   { id: appId },
+      include: { jobListing: { select: { userId: true } } },
+    });
+    if (!application)                              return res.status(404).json({ success: false, message: 'Candidature introuvable' });
+    if (application.jobListing.userId !== userId)  return res.status(403).json({ success: false, message: 'Accès refusé' });
+
+    const updated = await prisma.jobApplication.update({
+      where: { id: appId },
+      data:  { status, reviewedAt: new Date() },
+    });
+
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('updateApplicationStatus error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/jobs/applications/my  — citoyen: voir ses propres candidatures
+// ─────────────────────────────────────────────────────────────────────────────
+const getMyApplications = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const applications = await prisma.jobApplication.findMany({
+      where:   { userId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        jobListing: {
+          select: {
+            id:          true,
+            title:       true,
+            companyName: true,
+            location:    true,
+            status:      true,
+            user:        { select: { companyLogo: true } },
+          },
+        },
+      },
+    });
+
+    // Le candidat voit seulement "pending/viewed" → "En cours"  |  "accepted" → "Retenu"
+    // On ne renvoie PAS de statut "rejected"
+    const mapped = applications.map((app) => ({
+      id:          app.id,
+      createdAt:   app.createdAt,
+      cvPath:      app.cvPath,
+      coverLetter: app.coverLetter,
+      status:      app.status === 'accepted' ? 'accepted' : 'pending', // simplifié pour le candidat
+      job:         app.jobListing,
+    }));
+
+    res.json({ success: true, data: mapped });
+  } catch (error) {
+    console.error('getMyApplications error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/jobs/:id/favorite  — toggle favori
 // ─────────────────────────────────────────────────────────────────────────────
 const toggleFavorite = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { id } = req.params;
 
-    // Vérifier que le job existe
     const job = await prisma.jobListing.findUnique({ where: { id } });
     if (!job) return res.status(404).json({ success: false, message: 'Offre introuvable' });
 
@@ -303,10 +500,7 @@ const toggleFavorite = async (req, res) => {
       return res.json({ success: true, favorited: false });
     }
 
-    await prisma.favorite.create({
-      data: { userId, itemId: id, itemType: 'JOB' },
-    });
-
+    await prisma.favorite.create({ data: { userId, itemId: id, itemType: 'JOB' } });
     res.json({ success: true, favorited: true });
   } catch (error) {
     console.error('toggleFavorite error:', error);
@@ -315,36 +509,26 @@ const toggleFavorite = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET /api/jobs/favorites/me  — mes jobs favoris
+// GET /api/jobs/favorites/me
 // ─────────────────────────────────────────────────────────────────────────────
 const getMyFavorites = async (req, res) => {
   try {
-    const userId = req.user.userId;
-
+    const userId   = req.user.userId;
     const favorites = await prisma.favorite.findMany({
-      where: { userId, itemType: 'JOB' },
+      where:   { userId, itemType: 'JOB' },
       orderBy: { createdAt: 'desc' },
     });
 
     const jobIds = favorites.map((f) => f.itemId);
-
-    const jobs = await prisma.jobListing.findMany({
+    const jobs   = await prisma.jobListing.findMany({
       where: { id: { in: jobIds }, status: 'APPROVED' },
       select: {
-        id: true,
-        title: true,
-        companyName: true,
-        location: true,
-        contractType: true,
-        educationLevel: true,
-        experienceLevel: true,
-        salaryMin: true,
-        salaryMax: true,
-        isFeatured: true,
-        publishedAt: true,
-        applicationDeadline: true,
+        id: true, title: true, companyName: true, location: true,
+        contractType: true, educationLevel: true, experienceLevel: true,
+        salaryMin: true, salaryMax: true, isFeatured: true,
+        publishedAt: true, applicationDeadline: true,
         category: { select: { id: true, name: true } },
-        user: { select: { companyLogo: true } },
+        user:     { select: { companyLogo: true } },
       },
     });
 
@@ -356,13 +540,13 @@ const getMyFavorites = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET /api/jobs/categories  — catégories emploi
+// GET /api/jobs/categories
 // ─────────────────────────────────────────────────────────────────────────────
 const getJobCategories = async (req, res) => {
   try {
     const categories = await prisma.category.findMany({
-      where: { module: 'emploi', isActive: true },
-      select: { id: true, name: true, slug: true },
+      where:   { module: 'emploi', isActive: true },
+      select:  { id: true, name: true, slug: true },
       orderBy: { name: 'asc' },
     });
     res.json({ success: true, data: categories });
@@ -371,6 +555,7 @@ const getJobCategories = async (req, res) => {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
+
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/jobs/my  — business: list own job postings
 // ─────────────────────────────────────────────────────────────────────────────
@@ -378,11 +563,11 @@ const getMyJobs = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { page = 1, limit = 10, status, search, contractType } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
- 
+    const skip   = (parseInt(page) - 1) * parseInt(limit);
+
     const where = {
       userId,
-      ...(status && { status }),
+      ...(status       && { status }),
       ...(contractType && { contractType }),
       ...(search && {
         OR: [
@@ -391,13 +576,13 @@ const getMyJobs = async (req, res) => {
         ],
       }),
     };
- 
+
     const [jobs, total] = await Promise.all([
       prisma.jobListing.findMany({
         where,
         skip,
-        take: parseInt(limit),
-        orderBy: { createdAt: 'desc' },
+        take:     parseInt(limit),
+        orderBy:  { createdAt: 'desc' },
         include: {
           category: { select: { id: true, name: true } },
           _count:   { select: { applications: true } },
@@ -405,7 +590,7 @@ const getMyJobs = async (req, res) => {
       }),
       prisma.jobListing.count({ where }),
     ]);
- 
+
     res.json({
       success: true,
       jobs,
@@ -421,33 +606,32 @@ const getMyJobs = async (req, res) => {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
- 
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PUT /api/jobs/:id  — owner only, resets to PENDING
 // ─────────────────────────────────────────────────────────────────────────────
 const updateJob = async (req, res) => {
   try {
-    const userId  = req.user.userId;
-    const { id }  = req.params;
- 
+    const userId = req.user.userId;
+    const { id } = req.params;
+
     const existing = await prisma.jobListing.findUnique({ where: { id } });
-    if (!existing)              return res.status(404).json({ success: false, message: 'Offre introuvable' });
+    if (!existing)                  return res.status(404).json({ success: false, message: 'Offre introuvable' });
     if (existing.userId !== userId) return res.status(403).json({ success: false, message: 'Accès refusé' });
- 
+
     const {
       title, categorySlug, location, region, remote, contractType,
       salaryMin, salaryMax, applicationDeadline,
       educationLevel, experienceLevel, skills, languages, description,
     } = req.body;
- 
-    // Resolve category if slug provided
+
     let categoryId = existing.categoryId;
     if (categorySlug) {
       const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
       if (!category) return res.status(400).json({ success: false, message: 'Catégorie introuvable' });
       categoryId = category.id;
     }
- 
+
     const updated = await prisma.jobListing.update({
       where: { id },
       data: {
@@ -455,7 +639,7 @@ const updateJob = async (req, res) => {
         ...(description  && { description: description.trim() }),
         ...(categoryId   && { categoryId }),
         ...(location     && { location }),
-        ...(region  !== undefined && { region: region || null }),
+        ...(region !== undefined && { region: region || null }),
         ...(remote       && { remote }),
         ...(contractType && { contractType }),
         salaryMin:           salaryMin   ? Number(salaryMin)   : null,
@@ -466,7 +650,6 @@ const updateJob = async (req, res) => {
         ...(experienceLevel !== undefined && { experienceLevel: experienceLevel || null }),
         ...(skills          && { skills: Array.isArray(skills) ? skills : [] }),
         ...(languages       && { languages: Array.isArray(languages) ? languages : [] }),
-        // Reset to pending after any edit
         status:      'PENDING',
         reviewedAt:  null,
         reviewedBy:  null,
@@ -474,14 +657,14 @@ const updateJob = async (req, res) => {
         adminNotes:  null,
       },
     });
- 
+
     res.json({ success: true, message: 'Offre mise à jour, en attente de validation', data: updated });
   } catch (error) {
     console.error('updateJob error:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
- 
+
 // ─────────────────────────────────────────────────────────────────────────────
 // DELETE /api/jobs/:id  — owner only
 // ─────────────────────────────────────────────────────────────────────────────
@@ -489,19 +672,34 @@ const deleteJob = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { id } = req.params;
- 
+
     const existing = await prisma.jobListing.findUnique({ where: { id } });
     if (!existing)                  return res.status(404).json({ success: false, message: 'Offre introuvable' });
     if (existing.userId !== userId) return res.status(403).json({ success: false, message: 'Accès refusé' });
- 
-    // Delete related applications first to avoid FK constraint
-    await prisma.jobApplication.deleteMany({ where: { jobId: id } });
+
+    await prisma.jobApplication.deleteMany({ where: { jobListingId: id } });
     await prisma.jobListing.delete({ where: { id } });
- 
+
     res.json({ success: true, message: 'Offre supprimée' });
   } catch (error) {
     console.error('deleteJob error:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
-module.exports = { getJobs, getJobById, getFiltersCount, getJobCategories, createJob, toggleFavorite, getMyFavorites,getMyJobs,updateJob,deleteJob };
+
+module.exports = {
+  getJobs,
+  getJobById,
+  getFiltersCount,
+  getJobCategories,
+  createJob,
+  applyToJob,
+  getJobApplications,
+  updateApplicationStatus,
+  getMyApplications,
+  toggleFavorite,
+  getMyFavorites,
+  getMyJobs,
+  updateJob,
+  deleteJob,
+};

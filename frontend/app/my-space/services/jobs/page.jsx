@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/shared/ProtectedRoute";
 import { jobsService } from "@/services/jobsService";
 import JobListingFilters from "@/components/jobs/JobListingFilters";
+import ApplicationsDrawer from "@/components/jobs/ApplicationsDrawer"; // ← AJOUT
 
 const fmtDate = (d) =>
   d
@@ -30,7 +31,7 @@ const CONTRACT_LABELS = {
 };
 
 // ─── Job card ─────────────────────────────────────────────────────────────────
-function JobCard({ job, onDelete }) {
+function JobCard({ job, onDelete, onViewApplications }) { // ← AJOUT prop
   const appCount = job._count?.applications ?? 0;
 
   const statusStyles = {
@@ -57,7 +58,7 @@ function JobCard({ job, onDelete }) {
           : "sm:h-32"
       }`}
     >
-      {/* Thumbnail (matching real-estate structure) */}
+      {/* Thumbnail */}
       <div className="relative h-32 sm:h-auto sm:w-44 sm:self-stretch shrink-0 bg-gray-50 flex items-center justify-center text-gray-300">
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -130,44 +131,32 @@ function JobCard({ job, onDelete }) {
           {/* Stats */}
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1 text-xs text-gray-400">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="13"
-                height="13"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                 <circle cx="12" cy="12" r="3" />
               </svg>
               {job.viewsCount || 0}
             </span>
-            <span className="flex items-center gap-1 text-xs text-gray-400">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="13"
-                height="13"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
+
+            {/* ← MODIFIÉ : compteur candidatures cliquable */}
+            <button
+              onClick={(e) => { e.stopPropagation(); onViewApplications({ id: job.id, title: job.title }) }}
+              className={`flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-lg transition ${
+                appCount > 0
+                  ? 'text-[#2D5016] bg-[#E8F5D0] hover:bg-[#A7D129]/30'
+                  : 'text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                 <circle cx="9" cy="7" r="4" />
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
-              {appCount}
-            </span>
-            <span className="text-xs text-gray-300">
-              {fmtDate(job.createdAt)}
-            </span>
+              {appCount} candidature{appCount !== 1 ? 's' : ''}
+            </button>
+
+            <span className="text-xs text-gray-300">{fmtDate(job.createdAt)}</span>
           </div>
 
           {/* Actions */}
@@ -181,16 +170,7 @@ function JobCard({ job, onDelete }) {
                 className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
               >
                 <span className="hidden sm:inline">Voir</span>
-                <svg
-                  className="sm:hidden"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
+                <svg className="sm:hidden" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                   <circle cx="12" cy="12" r="3" />
                 </svg>
@@ -201,16 +181,7 @@ function JobCard({ job, onDelete }) {
               className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition"
             >
               <span className="hidden sm:inline">Modifier</span>
-              <svg
-                className="sm:hidden"
-                xmlns="http://www.w3.org/2000/svg"
-                width="14"
-                height="14"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
+              <svg className="sm:hidden" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
@@ -220,16 +191,7 @@ function JobCard({ job, onDelete }) {
               className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-xl border border-red-100 bg-red-50 text-red-600 hover:bg-red-100 transition"
             >
               <span className="hidden sm:inline">Supprimer</span>
-              <svg
-                className="sm:hidden"
-                xmlns="http://www.w3.org/2000/svg"
-                width="14"
-                height="14"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
+              <svg className="sm:hidden" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <polyline points="3 6 5 6 21 6" />
                 <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
                 <path d="M10 11v6M14 11v6" />
@@ -261,6 +223,7 @@ function DashboardContent() {
   const [filters, setFilters] = useState({});
   const [page, setPage] = useState(1);
   const [justCreated] = useState(searchParams.get("created") === "1");
+  const [selectedJob, setSelectedJob] = useState(null); // ← AJOUT { id, title }
 
   useEffect(() => {
     load();
@@ -327,40 +290,29 @@ function DashboardContent() {
           <div className="bg-green-50 border border-green-200 rounded-2xl px-5 py-4 flex items-center gap-3">
             <span className="text-2xl">✅</span>
             <div>
-              <p className="font-bold text-green-700 text-sm">
-                Offre soumise avec succès !
-              </p>
-              <p className="text-xs text-green-600">
-                Elle sera visible après validation par l'administrateur.
-              </p>
+              <p className="font-bold text-green-700 text-sm">Offre soumise avec succès !</p>
+              <p className="text-xs text-green-600">Elle sera visible après validation par l'administrateur.</p>
             </div>
           </div>
         )}
 
-        {/* Filters */}
         <JobListingFilters
           onChange={handleFiltersChange}
           showStatus={true}
           jobs={jobs}
         />
-        
-        {/* Listings */}
+
         {loading ? (
           <div className="flex flex-col gap-3">
             {[...Array(3)].map((_, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-2xl border border-gray-100 h-32 animate-pulse"
-              />
+              <div key={i} className="bg-white rounded-2xl border border-gray-100 h-32 animate-pulse" />
             ))}
           </div>
         ) : jobs.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 text-center py-20 flex flex-col items-center gap-3">
             <span className="text-5xl">💼</span>
             <p className="font-bold text-gray-700">Aucune offre</p>
-            <p className="text-sm text-gray-400">
-              Publiez votre première offre d'emploi.
-            </p>
+            <p className="text-sm text-gray-400">Publiez votre première offre d'emploi.</p>
             <Link
               href="/my-space/services/jobs/create"
               className="mt-2 px-6 py-2.5 bg-primary text-white rounded-full text-sm font-bold hover:bg-primary-sage transition"
@@ -375,12 +327,12 @@ function DashboardContent() {
                 key={j.id}
                 job={j}
                 onDelete={handleDelete}
+                onViewApplications={setSelectedJob} // ← AJOUT
               />
             ))}
           </div>
         )}
 
-        {/* Pagination */}
         {pagination && pagination.totalPages > 1 && (
           <div className="flex justify-center gap-1.5">
             {[...Array(pagination.totalPages)].map((_, i) => (
@@ -399,6 +351,16 @@ function DashboardContent() {
           </div>
         )}
       </div>
+
+      {/* ← AJOUT : Drawer candidatures */}
+      {selectedJob && (
+        <ApplicationsDrawer
+          jobId={selectedJob.id}
+          jobTitle={selectedJob.title}
+          onClose={() => setSelectedJob(null)}
+          token={token}
+        />
+      )}
     </div>
   );
 }

@@ -7,7 +7,7 @@
 
 */
 -- CreateEnum
-CREATE TYPE "JobStatus" AS ENUM ('DRAFT', 'PENDING', 'PUBLISHED', 'REJECTED', 'EXPIRED', 'CLOSED');
+CREATE TYPE "JobStatus" AS ENUM ('DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'EXPIRED', 'CLOSED');
 
 -- AlterTable
 ALTER TABLE "JobListing" DROP COLUMN "images",
