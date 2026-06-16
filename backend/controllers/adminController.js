@@ -588,6 +588,68 @@ const updateListingStatus = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// DELETE /api/admin/listings/:id
+// Permanently deletes a listing (job or real estate) and its Cloudinary images.
+// ─────────────────────────────────────────────────────────────────────────────
+const deleteListing = async (req, res) => {
+  try {
+    const { id } = req.params
+
+    // ── Try job listing first ─────────────────────────────────────────────
+    const job = await prisma.jobListing.findUnique({ where: { id } })
+    if (job) {
+      // Delete company logo from Cloudinary if present
+      if (job.companyLogo) {
+        try {
+          const urlParts = job.companyLogo.split('/upload/')
+          if (urlParts.length === 2) {
+            const withoutVersion = urlParts[1].replace(/^v\d+\//, '')
+            const publicId = withoutVersion.replace(/\.[^/.]+$/, '')
+            await cloudinary.uploader.destroy(publicId)
+          }
+        } catch (err) {
+          console.error('Failed to delete job logo from Cloudinary:', err.message)
+        }
+      }
+
+      await prisma.jobListing.delete({ where: { id } })
+      return res.json({ success: true, message: "Offre d'emploi supprimée définitivement" })
+    }
+
+    // ── Try real estate listing ───────────────────────────────────────────
+    const re = await prisma.realEstateListing.findUnique({ where: { id } })
+    if (re) {
+      // Delete all images from Cloudinary
+      const images = re.images || []
+      await Promise.all(
+        images.map(async (img) => {
+          try {
+            const url = img?.url || img
+            if (!url) return
+            const urlParts = url.split('/upload/')
+            if (urlParts.length !== 2) return
+            const withoutVersion = urlParts[1].replace(/^v\d+\//, '')
+            const publicId = withoutVersion.replace(/\.[^/.]+$/, '')
+            await cloudinary.uploader.destroy(publicId)
+          } catch (err) {
+            console.error('Failed to delete image from Cloudinary:', err.message)
+            // don't block deletion if Cloudinary cleanup fails
+          }
+        })
+      )
+
+      await prisma.realEstateListing.delete({ where: { id } })
+      return res.json({ success: true, message: 'Annonce immobilière supprimée définitivement' })
+    }
+
+    return res.status(404).json({ success: false, message: 'Annonce introuvable' })
+  } catch (error) {
+    console.error('admin deleteListing error:', error)
+    return res.status(500).json({ success: false, message: 'Erreur serveur' })
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GET /api/admin/reports
 // NOTE: No Report model in schema.prisma yet — returns empty array.
 // When you add the model, replace the body below.
@@ -1109,6 +1171,7 @@ module.exports = {
   approveListing,
   rejectListing,
   updateListingStatus,
+  deleteListing,
   getReports,
   handleReport,
   getUsers,

@@ -17,7 +17,7 @@ export function ToastProvider({ children }) {
   const toast = useCallback(({
     message,
     type = 'success',   // 'success' | 'error' | 'warning' | 'info'
-    duration = 7000,    // ms, 0 = manual only
+    duration = 5000,    // ms, 0 = manual only
     title,
   }) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -32,7 +32,9 @@ export function ToastProvider({ children }) {
 
   // Convenience shorthands
   toast.success = (message, opts) => toast({ message, type: 'success', ...opts })
-  toast.error   = (message, opts) => toast({ message, type: 'error',   duration: 0, ...opts })
+  toast.error   = (message, opts) => toast({ message, type: 'error',   
+                    // duration: 0, 
+                    ...opts })
   toast.warning = (message, opts) => toast({ message, type: 'warning', ...opts })
   toast.info    = (message, opts) => toast({ message, type: 'info',    ...opts })
 

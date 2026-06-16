@@ -1,4 +1,3 @@
-// StatusPanel.jsx
 import { useState } from "react";
 import {
   ShieldCheck,
@@ -8,10 +7,11 @@ import {
   Clock,
   AlertTriangle,
   Loader2,
-  Trash2 
+  Trash2,
 } from "lucide-react";
-import { updateListingStatus } from "@/lib/adminApi";
+import { updateListingStatus, adminDeleteListing } from "@/lib/adminApi";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 
 const STATUS_CONFIG = {
   PENDING: {
@@ -130,6 +130,83 @@ const STATUS_CONFIG = {
   },
 };
 
+// ─── Delete confirm modal ─────────────────────────────────────────────────────
+
+function DeleteConfirmModal({ isOpen, onClose, onConfirm, loading }) {
+  if (!isOpen) return null
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm"
+        onClick={!loading ? onClose : undefined}
+      />
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden">
+
+          {/* Top accent */}
+          <div className="h-1 w-full bg-red-500 rounded-t-2xl" />
+
+          <div className="p-6 flex flex-col gap-4">
+            {/* Icon + heading */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-red-500" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900">Suppression définitive</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Cette action est irréversible</p>
+              </div>
+            </div>
+
+            {/* Body */}
+            <p className="text-sm text-gray-600 leading-relaxed">
+              L'annonce sera <span className="font-semibold text-red-600">supprimée définitivement</span> de
+              la base de données. Aucune restauration ne sera possible.
+            </p>
+
+            {/* Warning chip */}
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
+              <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+              <p className="text-xs text-red-600 font-medium">
+                Toutes les données associées seront perdues.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={onClose}
+                disabled={loading}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold
+                  text-gray-600 bg-gray-100 hover:bg-gray-200
+                  disabled:opacity-40 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={onConfirm}
+                disabled={loading}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold
+                  text-white bg-red-500 hover:bg-red-600
+                  disabled:opacity-40 disabled:cursor-not-allowed
+                  flex items-center justify-center gap-2 transition-colors"
+              >
+                {loading
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Suppression...</>
+                  : <><Trash2 className="w-4 h-4" /> Supprimer</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ─── StatusBadge ─────────────────────────────────────────────────────────────
+
 export function StatusBadge({ status }) {
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.PENDING;
   const Icon = cfg.icon;
@@ -143,16 +220,20 @@ export function StatusBadge({ status }) {
   );
 }
 
+// ─── StatusPanel ─────────────────────────────────────────────────────────────
+
 export function StatusPanel({
   listingId,
   currentStatus,
   onStatusChange,
-  onTransitionRequest, // ← new: return true to intercept, false to proceed
+  onTransitionRequest,
   deletedByOwner = false,
 }) {
   const [loading, setLoading] = useState(null)
   const [error, setError] = useState(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const { token } = useAuth()
+  const { toast } = useToast()
 
   const transitions = (STATUS_CONFIG[currentStatus]?.transitions ?? [])
     .filter(t => !(deletedByOwner && t.to === 'PENDING'))
@@ -160,7 +241,6 @@ export function StatusPanel({
   if (transitions.length === 0 && currentStatus !== 'ARCHIVED') return null
 
   const handleTransition = async (toStatus) => {
-    // Let parent intercept if it wants (e.g. open a modal)
     if (onTransitionRequest?.(toStatus, listingId)) return
 
     setLoading(toStatus)
@@ -170,65 +250,77 @@ export function StatusPanel({
       onStatusChange(toStatus)
     } catch (e) {
       setError(e.message)
+      toast.error(`Erreur : ${e.message}`)
     } finally {
       setLoading(null)
     }
   }
 
   const handlePermanentDelete = async () => {
-    if (!confirm('Cette action est irréversible. Confirmer la suppression définitive ?')) return
     setLoading('DELETE')
     setError(null)
     try {
-      await adminDeleteListing(listingId, token) // add this to adminApi.js
-      onStatusChange('DELETED') // parent can close modal on this
+      await adminDeleteListing(listingId, token)
+      setShowDeleteConfirm(false)
+      toast.success('Annonce supprimée définitivement.')
+      onStatusChange('DELETED')
     } catch (e) {
       setError(e.message)
+      toast.error(`Erreur lors de la suppression : ${e.message}`)
     } finally {
       setLoading(null)
     }
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <p className="text-[11px] uppercase tracking-wide text-gray-400 font-medium">
-        Actions disponibles
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {transitions.map(({ to, label, icon: Icon, style }) => (
-          <button
-            key={to}
-            onClick={() => handleTransition(to)}
-            disabled={!!loading}
-            className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${style}`}
-          >
-            {loading === to
-              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              : <Icon className="w-3.5 h-3.5" />
-            }
-            {label}
-          </button>
-        ))}
+    <>
+      <div className="flex flex-col gap-2">
+        <p className="text-[11px] uppercase tracking-wide text-gray-400 font-medium">
+          Actions disponibles
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {transitions.map(({ to, label, icon: Icon, style }) => (
+            <button
+              key={to}
+              onClick={() => handleTransition(to)}
+              disabled={!!loading}
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${style}`}
+            >
+              {loading === to
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                : <Icon className="w-3.5 h-3.5" />
+              }
+              {label}
+            </button>
+          ))}
 
-        {currentStatus === 'ARCHIVED' && (
-          <button
-            onClick={handlePermanentDelete}
-            disabled={!!loading}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-60"
-          >
-            {loading === 'DELETE'
-              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              : <Trash2 className="w-3.5 h-3.5" />
-            }
-            Supprimer définitivement
-          </button>
+          {currentStatus === 'ARCHIVED' && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={!!loading}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5
+                rounded-lg border border-red-300 text-red-600 hover:bg-red-50
+                transition-colors disabled:opacity-60"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Supprimer définitivement
+            </button>
+          )}
+        </div>
+
+        {error && (
+          <p className="text-xs text-red-500 flex items-center gap-1">
+            <AlertTriangle className="w-3.5 h-3.5" /> {error}
+          </p>
         )}
       </div>
-      {error && (
-        <p className="text-xs text-red-500 flex items-center gap-1">
-          <AlertTriangle className="w-3.5 h-3.5" /> {error}
-        </p>
-      )}
-    </div>
+
+      <DeleteConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handlePermanentDelete}
+        loading={loading === 'DELETE'}
+      />
+    </>
   )
 }
