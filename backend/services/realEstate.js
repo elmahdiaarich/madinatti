@@ -1,5 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const { cloudinary } = require("../config/cloudinary");
 
 // ─── Slug Generator ──────────────────────────────────────────────────────────
 function generateSlug(title) {
@@ -86,9 +87,28 @@ const BUSINESS_LISTING_SELECT = {
   },
 };
 
+const SLUG_TO_PROPERTY_TYPE = {
+  appartement: "APARTMENT",
+  villa: "VILLA",
+  maison: "HOUSE",
+  studio: "STUDIO",
+  terrain: "LAND",
+  bureau: "OFFICE",
+  commerce: "SHOP",
+};
+
 // ─── 1. CREATE LISTING ───────────────────────────────────────────────────────
 async function createListing(data, userId) {
   const slug = generateSlug(data.title);
+
+  // Derive propertyType from category slug
+  const category = await prisma.category.findUnique({
+    where: { id: data.categoryId },
+    select: { slug: true },
+  });
+  const propertyType = SLUG_TO_PROPERTY_TYPE[category?.slug];
+  if (!propertyType) throw new Error(`Unknown category slug: ${category?.slug}`);
+
   return prisma.realEstateListing.create({
     data: {
       userId,
@@ -97,7 +117,7 @@ async function createListing(data, userId) {
       slug,
       description: data.description.trim(),
       listingType: data.listingType,
-      propertyType: data.propertyType,
+      propertyType, // ← derived, not from client
       price: parseFloat(data.price),
       surface: data.surface ? parseFloat(data.surface) : null,
       rooms: data.rooms ? parseInt(data.rooms, 10) : null,
@@ -493,15 +513,21 @@ async function updateMyListing(id, userId, data) {
   return { listing: updated };
 }
 
-// B4. Soft-delete own listing
+// B4. Soft-delete own listing → ARCHIVED + deletedByOwner: true
 async function deleteMyListing(id, userId) {
   const listing = await prisma.realEstateListing.findUnique({ where: { id } });
   if (!listing) return { error: "Listing not found.", status: 404 };
   if (listing.userId !== userId) return { error: "Forbidden.", status: 403 };
+  if (listing.deletedByOwner) return { error: "Listing already deleted.", status: 400 };
 
   await prisma.realEstateListing.update({
     where: { id },
-    data: { isActive: false },
+    data: {
+      status: "ARCHIVED",
+      isActive: false,
+      deletedByOwner: true,
+      deletedAt: new Date(),
+    },
   });
   return { success: true };
 }
@@ -736,12 +762,29 @@ async function adminUpdateListing(id, data) {
   return { listing: updated };
 }
 
-// A4. Hard-delete any listing (also cascades to inquiries via Prisma cascade or manual delete)
+// A4. Hard-delete any listing — only allowed if ARCHIVED
 async function adminDeleteListing(id) {
   const listing = await prisma.realEstateListing.findUnique({ where: { id } });
   if (!listing) return { error: "Listing not found.", status: 404 };
+  if (listing.status !== "ARCHIVED")
+    return { error: "Only ARCHIVED listings can be permanently deleted.", status: 400 };
 
-  // Delete inquiries first (if no cascade defined in schema)
+  // Clean up Cloudinary images
+  const images = listing.images || [];
+  await Promise.all(
+    images.map(async (img) => {
+      try {
+        const urlParts = img.url.split("/upload/");
+        const withVersion = urlParts[1];
+        const withoutVersion = withVersion.replace(/^v\d+\//, "");
+        const publicId = withoutVersion.replace(/\.[^/.]+$/, "");
+        await cloudinary.uploader.destroy(publicId);
+      } catch (err) {
+        console.error("Failed to delete image from Cloudinary:", img.url, err.message);
+      }
+    })
+  );
+
   await prisma.propertyInquiry.deleteMany({ where: { listingId: id } });
   await prisma.realEstateListing.delete({ where: { id } });
   return { success: true };

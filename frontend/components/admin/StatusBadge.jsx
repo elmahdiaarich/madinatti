@@ -1,15 +1,16 @@
+'use client'
+
 /**
  * components/admin/StatusBadge.jsx
  * ─────────────────────────────────────────────────────────────────────────────
  * Two badge variants:
  *  <StatusBadge status="PENDING" />   → statut de l'annonce
  *  <StatusBadge module="emploi" />    → type/module de l'annonce
+ *  <StatusBadge role="business" />    → rôle utilisateur
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-'use client'
-
-// ── Status configs ────────────────────────────────────────────────────────────
+// ─── Status configs ───────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
   PENDING: {
     label: 'En attente',
@@ -31,6 +32,16 @@ const STATUS_CONFIG = {
     className: 'bg-red-100 text-red-700 border border-red-200',
     dot: 'bg-red-500',
   },
+  SUSPENDED: {
+    label: 'Suspendu',
+    className: 'bg-amber-100 text-amber-700 border border-amber-200',
+    dot: 'bg-amber-500',
+  },
+  ARCHIVED: {
+    label: 'Archivé',
+    className: 'bg-gray-100 text-gray-400 border border-gray-200',
+    dot: 'bg-gray-300',
+  },
   DRAFT: {
     label: 'Brouillon',
     className: 'bg-gray-100 text-gray-600 border border-gray-200',
@@ -41,6 +52,13 @@ const STATUS_CONFIG = {
     className: 'bg-gray-100 text-gray-500 border border-gray-200',
     dot: 'bg-gray-400',
   },
+  // Job-specific
+  CLOSED: {
+    label: 'Fermé',
+    className: 'bg-slate-100 text-slate-600 border border-slate-200',
+    dot: 'bg-slate-400',
+  },
+  // Report statuses
   OPEN: {
     label: 'Ouvert',
     className: 'bg-red-100 text-red-700 border border-red-200',
@@ -58,7 +76,7 @@ const STATUS_CONFIG = {
   },
 }
 
-// ── Module configs ────────────────────────────────────────────────────────────
+// ─── Module configs ───────────────────────────────────────────────────────────
 const MODULE_CONFIG = {
   emploi: {
     label: 'Emploi',
@@ -78,7 +96,7 @@ const MODULE_CONFIG = {
   },
 }
 
-// ── Role configs ──────────────────────────────────────────────────────────────
+// ─── Role configs ─────────────────────────────────────────────────────────────
 const ROLE_CONFIG = {
   admin: {
     label: 'Admin',
@@ -104,7 +122,7 @@ const ROLE_CONFIG = {
 
 /**
  * Props:
- *  status  — listing/report status key (PENDING, PUBLISHED, REJECTED, ...)
+ *  status  — listing/report status key
  *  module  — listing module key (emploi, immobilier, vehicule, signalement)
  *  role    — user role key (admin, business, citizen, visiteur)
  *  showDot — show animated dot indicator (status badges only, default false)
@@ -113,7 +131,7 @@ const ROLE_CONFIG = {
 export default function StatusBadge({ status, module: mod, role, showDot = false, size = 'md' }) {
   const sizeClass = size === 'sm' ? 'text-xs px-2 py-0.5' : 'text-xs px-2.5 py-1'
 
-  // ── Module badge ──────────────────────────────────────────────────────────
+  // Module badge
   if (mod) {
     const config = MODULE_CONFIG[mod] || {
       label: mod,
@@ -126,7 +144,7 @@ export default function StatusBadge({ status, module: mod, role, showDot = false
     )
   }
 
-  // ── Role badge ────────────────────────────────────────────────────────────
+  // Role badge
   if (role) {
     const config = ROLE_CONFIG[role] || {
       label: role,
@@ -139,7 +157,7 @@ export default function StatusBadge({ status, module: mod, role, showDot = false
     )
   }
 
-  // ── Status badge ──────────────────────────────────────────────────────────
+  // Status badge
   if (status) {
     const config = STATUS_CONFIG[status] || {
       label: status,

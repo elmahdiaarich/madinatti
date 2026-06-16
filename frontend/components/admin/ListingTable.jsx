@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * components/admin/ListingTable.jsx
  * ─────────────────────────────────────────────────────────────────────────────
@@ -5,26 +7,25 @@
  * Columns: Type badge | Titre | Soumis par | Date | Statut | Actions
  *
  * Props:
- *  listings       — array of listing objects
- *  pagination     — { total, page, limit, totalPages }
- *  onPageChange   — (page: number) => void
- *  onApprove      — (id) => Promise<void>
- *  onReject       — (id, note) => Promise<void>
- *  onView         — (listing) => void  (opens ListingDetailModal)
- *  loading        — boolean (shows skeleton rows)
- *  showModuleCol  — boolean (show Type column — hide on module-specific pages)
- *  actionLoading  — string | null  (id of listing currently being actioned)
+ *  listings        — array of listing objects
+ *  pagination      — { total, page, limit, totalPages }
+ *  onPageChange    — (page: number) => void
+ *  onApprove       — (id) => Promise<void>
+ *  onReject        — (id, note) => Promise<void>
+ *  onUpdateStatus  — (id, status, adminNotes?) => Promise<void>  ← NEW
+ *  onView          — (listing) => void  (opens ListingDetailModal)
+ *  loading         — boolean (shows skeleton rows)
+ *  showModuleCol   — boolean (show Type column — hide on module-specific pages)
+ *  actionLoading   — string | null  (id of listing currently being actioned)
  * ─────────────────────────────────────────────────────────────────────────────
  */
-
-'use client'
 
 import { useState } from 'react'
 import StatusBadge from './StatusBadge'
 import ListingDetailModal from './ListingDetailModal'
 import RejectModal from './RejectModal'
 
-// ── Icons ─────────────────────────────────────────────────────────────────────
+// ─── Icons ────────────────────────────────────────────────────────────────────
 const IconCheck = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
     fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -64,7 +65,7 @@ const IconInbox = () => (
   </svg>
 )
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 const formatDate = (iso) => {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('fr-FR', {
@@ -72,7 +73,6 @@ const formatDate = (iso) => {
   })
 }
 
-// ── Skeleton row ──────────────────────────────────────────────────────────────
 const SkeletonRow = ({ cols }) => (
   <tr className="animate-pulse">
     {Array.from({ length: cols }).map((_, i) => (
@@ -93,6 +93,7 @@ export default function ListingTable({
   onPageChange,
   onApprove,
   onReject,
+  onUpdateStatus,    // NEW — full status control from detail modal
   onView,
   loading = false,
   showModuleCol = true,
@@ -104,25 +105,21 @@ export default function ListingTable({
 
   const colCount = showModuleCol ? 6 : 5
 
-  // ── Open detail modal ─────────────────────────────────────────────────────
   const handleRowClick = (listing) => {
     if (onView) onView(listing)
     else setDetailListing(listing)
   }
 
-  // ── Approve ───────────────────────────────────────────────────────────────
   const handleApprove = async (e, id) => {
     e.stopPropagation()
     await onApprove?.(id)
   }
 
-  // ── Open reject modal ─────────────────────────────────────────────────────
   const handleOpenReject = (e, listing) => {
     e.stopPropagation()
     setRejectTarget(listing)
   }
 
-  // ── Confirm reject ────────────────────────────────────────────────────────
   const handleConfirmReject = async (note) => {
     if (!rejectTarget) return
     setRejectLoading(true)
@@ -134,13 +131,49 @@ export default function ListingTable({
     }
   }
 
+  // After modal actions, refresh via parent callback
+  const handleModalApprove = async (id) => {
+    await onApprove?.(id)
+    setDetailListing(null)
+  }
+
+  const handleModalReject = async (id, note) => {
+    await onReject?.(id, note)
+    setDetailListing(null)
+  }
+
+  const handleModalUpdateStatus = async (id, status, adminNotes) => {
+    if (onUpdateStatus) {
+      await onUpdateStatus(id, status, adminNotes)
+    } else if (status === 'APPROVED') {
+      await onApprove?.(id)
+    } else {
+      await onReject?.(id, adminNotes)
+    }
+    setDetailListing(null)
+  }
+
   const { page = 1, totalPages = 1, total = 0 } = pagination
+
+  // Smart page range (show max 7 page buttons)
+  const pageRange = () => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
+    const left  = Math.max(1, page - 2)
+    const right = Math.min(totalPages, page + 2)
+    const pages = []
+    if (left > 1) pages.push(1)
+    if (left > 2) pages.push('...')
+    for (let i = left; i <= right; i++) pages.push(i)
+    if (right < totalPages - 1) pages.push('...')
+    if (right < totalPages) pages.push(totalPages)
+    return pages
+  }
 
   return (
     <>
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
-        {/* ── Table ─────────────────────────────────────────────────────── */}
+        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -169,7 +202,7 @@ export default function ListingTable({
             </thead>
 
             <tbody className="divide-y divide-gray-50">
-              {/* Loading skeleton */}
+              {/* Skeleton */}
               {loading && Array.from({ length: 6 }).map((_, i) => (
                 <SkeletonRow key={i} cols={colCount} />
               ))}
@@ -188,8 +221,8 @@ export default function ListingTable({
 
               {/* Data rows */}
               {!loading && listings.map((listing) => {
-                const isPending    = listing.status === 'PENDING'
-                const isActioning  = actionLoading === listing.id
+                const isPending   = listing.status === 'PENDING'
+                const isActioning = actionLoading === listing.id
 
                 return (
                   <tr
@@ -219,6 +252,11 @@ export default function ListingTable({
                       <p className="text-gray-700 font-medium truncate max-w-[140px]">
                         {listing.submittedBy || listing.company}
                       </p>
+                      {listing.submittedByEmail && (
+                        <p className="text-xs text-gray-400 truncate max-w-[140px] mt-0.5">
+                          {listing.submittedByEmail}
+                        </p>
+                      )}
                     </td>
 
                     {/* Date */}
@@ -290,7 +328,7 @@ export default function ListingTable({
           </table>
         </div>
 
-        {/* ── Pagination ────────────────────────────────────────────────── */}
+        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/50">
             <p className="text-xs text-gray-400">
@@ -307,19 +345,25 @@ export default function ListingTable({
                 <IconChevronLeft />
               </button>
 
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => onPageChange?.(p)}
-                  className={`w-8 h-8 rounded-lg text-xs font-semibold transition-colors
-                    ${p === page
-                      ? 'bg-[#2D5016] text-white'
-                      : 'text-gray-500 hover:bg-gray-200'
-                    }`}
-                >
-                  {p}
-                </button>
-              ))}
+              {pageRange().map((p, i) =>
+                p === '...' ? (
+                  <span key={`ellipsis-${i}`} className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => onPageChange?.(p)}
+                    className={`w-8 h-8 rounded-lg text-xs font-semibold transition-colors
+                      ${p === page
+                        ? 'bg-[#2D5016] text-white'
+                        : 'text-gray-500 hover:bg-gray-200'
+                      }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
 
               <button
                 onClick={() => onPageChange?.(page + 1)}
@@ -334,16 +378,17 @@ export default function ListingTable({
         )}
       </div>
 
-      {/* ── Detail modal (internal) ──────────────────────────────────────── */}
+      {/* Detail modal (internal — opened by row click when no onView prop) */}
       <ListingDetailModal
         isOpen={!!detailListing}
         onClose={() => setDetailListing(null)}
         listing={detailListing}
-        onApprove={async (id) => { await onApprove?.(id); setDetailListing(null) }}
-        onReject={async (id, note) => { await onReject?.(id, note); setDetailListing(null) }}
+        onApprove={handleModalApprove}
+        onReject={handleModalReject}
+        onUpdateStatus={handleModalUpdateStatus}
       />
 
-      {/* ── Reject modal (row action) ────────────────────────────────────── */}
+      {/* Reject modal (row action quick-reject) */}
       <RejectModal
         isOpen={!!rejectTarget}
         onClose={() => setRejectTarget(null)}

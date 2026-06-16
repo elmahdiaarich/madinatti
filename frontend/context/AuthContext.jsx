@@ -47,12 +47,12 @@ export const AuthProvider = ({ children }) => {
           const freshUser = res.data.user;
           setUser(freshUser);
 
-          // Re-sync accounts array instantly with fresh fields from /me
+          // ✅ FIX: Upsert without duplicating — replace existing entry for this user
           setAccounts((prev) => {
-            const clean = prev.filter(
+            const others = prev.filter(
               (a) => a.user?.id && a.user.id !== freshUser.id,
             );
-            return [...clean, { token: storedToken, user: freshUser }];
+            return [...others, { token: storedToken, user: freshUser }];
           });
         }
       } catch (err) {
@@ -61,6 +61,11 @@ export const AuthProvider = ({ children }) => {
         delete axios.defaults.headers.common["Authorization"];
         setUser(null);
         setToken(null);
+        // ✅ FIX: Also clear corrupt accounts on failed token
+        setAccounts((prev) => {
+          const clean = prev.filter((a) => a.token !== storedToken);
+          return clean;
+        });
       } finally {
         setLoading(false);
       }
@@ -69,10 +74,18 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
-  // ✅ 2. SECURE WRITING TO STORAGE
+  // ✅ 2. SECURE WRITING TO STORAGE — deduplicate before saving
   useEffect(() => {
     if (!loading) {
-      localStorage.setItem("accounts", JSON.stringify(accounts));
+      // Deduplicate by user.id before persisting
+      const seen = new Set();
+      const deduped = accounts.filter((a) => {
+        if (!a.user?.id) return false; // Drop corrupt entries
+        if (seen.has(a.user.id)) return false;
+        seen.add(a.user.id);
+        return true;
+      });
+      localStorage.setItem("accounts", JSON.stringify(deduped));
     }
   }, [accounts, loading]);
 
@@ -86,7 +99,7 @@ export const AuthProvider = ({ children }) => {
   const _upsertAccount = (newToken, newUser) => {
     if (!newUser || !newUser.id) return;
     setAccounts((prev) => {
-      // Eliminate duplicates or corrupt empty configurations cleanly
+      // Remove any existing entry for this user, then add fresh one
       const filtered = prev.filter(
         (a) => a.user?.id && a.user.id !== newUser.id,
       );
@@ -164,6 +177,11 @@ export const AuthProvider = ({ children }) => {
     _setActiveAccount(googleToken, googleUser);
   };
 
+  const addGoogleAccount = (googleToken, googleUser) => {
+    if (!googleUser || !googleToken) return;
+    _upsertAccount(googleToken, googleUser);
+  };
+
   const updateUser = (updatedUser) => {
     if (!updatedUser) return;
     setUser(updatedUser);
@@ -176,17 +194,22 @@ export const AuthProvider = ({ children }) => {
     _setActiveAccount(account.token, account.user);
   };
 
-  // ✅ FIX: Change this to accept credentials, call the API, and handle the response!
   const addAccount = async (email, password) => {
-    // 1. Hit the backend login endpoint with the credentials
-    const response = await loginService({ email, password });
+    // ✅ FIX: Check if this account is already in the list before logging in
+    const alreadyAdded = accounts.find(
+      (a) => a.user?.email?.toLowerCase() === email.toLowerCase(),
+    );
+    if (alreadyAdded) {
+      // Just switch to it instead of re-logging in
+      _setActiveAccount(alreadyAdded.token, alreadyAdded.user);
+      return { token: alreadyAdded.token, user: alreadyAdded.user };
+    }
 
-    // 2. If the backend returns a successful session, save and activate it
+    const response = await loginService({ email, password });
     if (response?.token && response?.user) {
       _upsertAccount(response.token, response.user);
       _setActiveAccount(response.token, response.user);
     }
-
     return response;
   };
 
@@ -218,6 +241,7 @@ export const AuthProvider = ({ children }) => {
         logoutAll,
         register,
         loginWithGoogle,
+        addGoogleAccount,
         updateUser,
         switchAccount,
         addAccount,

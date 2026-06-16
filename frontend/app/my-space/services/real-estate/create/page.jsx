@@ -7,6 +7,7 @@ import ProtectedRoute from "@/components/shared/ProtectedRoute";
 import { realEstateService } from "@/services/realEstateService";
 import axios from "axios";
 import moroccoCities from "morocco-cities";
+import LoadingSpinner from "@/components/shared/LoadingSpinner";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -15,33 +16,11 @@ const LISTING_TYPES = [
   { label: "Location", value: "RENT" },
 ];
 
-const PROPERTY_TYPES = [
-  { label: "Appartement", value: "APARTMENT" },
-  { label: "Villa", value: "VILLA" },
-  { label: "Maison", value: "HOUSE" },
-  { label: "Studio", value: "STUDIO" },
-  { label: "Terrain", value: "LAND" },
-  { label: "Bureau", value: "OFFICE" },
-  { label: "Commerce", value: "SHOP" },
-];
-
-// Maps PropertyType enum → category slug produced by the seed
-const PROPERTY_TYPE_TO_SLUG = {
-  APARTMENT: "immobilier-appartement",
-  VILLA:     "immobilier-villa",
-  HOUSE:     "immobilier-maison",
-  STUDIO:    "immobilier-studio",
-  LAND:      "immobilier-terrain",
-  OFFICE:    "immobilier-bureau",
-  SHOP:      "immobilier-commerce",
-};
-
 const EMPTY = {
   title: "",
   description: "",
   categoryId: "",
   listingType: "SALE",
-  propertyType: "APARTMENT",
   price: "",
   surface: "",
   rooms: "",
@@ -288,8 +267,8 @@ function ImageUploader({ images, onChange, token, error }) {
           uploading
             ? "border-primary bg-primary/5 cursor-wait"
             : error
-            ? "border-red-300 bg-red-50 hover:border-red-400"
-            : "border-gray-200 hover:border-primary hover:bg-primary/5"
+              ? "border-red-300 bg-red-50 hover:border-red-400"
+              : "border-gray-200 hover:border-primary hover:bg-primary/5"
         }`}
       >
         <input
@@ -463,17 +442,30 @@ function CreateListingForm() {
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState(null);
   const [subcategories, setSubcategories] = useState([]);
+  const [catsLoading, setCatsLoading] = useState(true);
 
   const sectionRefs = {
-    title:       useRef(null),
+    title: useRef(null),
     description: useRef(null),
-    price:       useRef(null),
-    city:        useRef(null),
-    location:    useRef(null),
-    images:      useRef(null),
+    price: useRef(null),
+    city: useRef(null),
+    location: useRef(null),
+    images: useRef(null),
   };
 
-  const ERROR_ORDER = ["title", "description", "price", "city", "location", "images"];
+  const set = (field, value) => {
+    setForm((p) => ({ ...p, [field]: value }));
+    if (errors[field]) setErrors((p) => ({ ...p, [field]: null }));
+  };
+
+  const ERROR_ORDER = [
+    "title",
+    "description",
+    "price",
+    "city",
+    "location",
+    "images",
+  ];
 
   const cities = moroccoCities.cities
     .map((c) => c.label || c.name || c.city)
@@ -482,27 +474,25 @@ function CreateListingForm() {
 
   // ── Fetch immobilier subcategories ────────────────────────────────────────
   useEffect(() => {
-    axios.get(`${API}/api/categories`).then((r) => {
-      const data = r.data.data || [];
-      const immobilier = data.find((p) =>
-        p.name.toLowerCase().includes("immobilier"),
-      );
-      setSubcategories(immobilier?.children || []);
-    });
+    axios
+      .get(`${API}/api/categories`)
+      .then((r) => {
+        const data = r.data.data || [];
+        const immobilierCats = data.filter((c) => c.module === "immobilier");
+        setSubcategories(immobilierCats);
+        setForm((p) => ({ ...p, categoryId: immobilierCats[0]?.id ?? "" }));
+      })
+      .finally(() => setCatsLoading(false));
   }, []);
 
-  // ── Auto-set categoryId based on propertyType ─────────────────────────────
-  useEffect(() => {
-    if (!subcategories.length) return;
-    const slug = PROPERTY_TYPE_TO_SLUG[form.propertyType];
-    const match = subcategories.find((c) => c.slug === slug);
-    if (match) set("categoryId", match.id);
-  }, [form.propertyType, subcategories]);
+  if (catsLoading) return <LoadingSpinner message="Chargement..." />;
 
-  const set = (field, value) => {
-    setForm((p) => ({ ...p, [field]: value }));
-    if (errors[field]) setErrors((p) => ({ ...p, [field]: null }));
-  };
+  // After fetching subcategories:
+  const propertyTypeOptions = subcategories.map((c) => ({
+    label: c.name, // "Appartement"
+    value: c.id, // the actual categoryId
+    slug: c.slug,
+  }));
 
   const validate = () => {
     const e = {};
@@ -510,14 +500,10 @@ function CreateListingForm() {
       e.title = "Min 5 caractères";
     if (!form.description.trim() || form.description.trim().length < 10)
       e.description = "Min 10 caractères";
-    if (!form.price || Number(form.price) <= 0)
-      e.price = "Prix invalide";
-    if (!form.city)
-      e.city = "Veuillez sélectionner une ville";
-    if (!form.location.trim())
-      e.location = "Requis";
-    if (form.images.length === 0)
-      e.images = "Ajoutez au moins une photo";
+    if (!form.price || Number(form.price) <= 0) e.price = "Prix invalide";
+    if (!form.city) e.city = "Veuillez sélectionner une ville";
+    if (!form.location.trim()) e.location = "Requis";
+    if (form.images.length === 0) e.images = "Ajoutez au moins une photo";
     return e;
   };
 
@@ -602,10 +588,10 @@ function CreateListingForm() {
             </Field>
             <Field label="Type de bien *">
               <Select
-                value={form.propertyType}
-                onChange={(e) => set("propertyType", e.target.value)}
+                value={form.categoryId}
+                onChange={(e) => set("categoryId", e.target.value)}
               >
-                {PROPERTY_TYPES.map((t) => (
+                {propertyTypeOptions.map((t) => (
                   <option key={t.value} value={t.value}>
                     {t.label}
                   </option>
@@ -729,32 +715,32 @@ function CreateListingForm() {
               latitude={form.latitude}
               longitude={form.longitude}
               onChange={(lat, lng) => {
+                const lat_n = parseFloat(lat);
+                const lng_n = parseFloat(lng);
+                // Morocco bounds: lat 27.6–35.9, lng -13.2–-1.0
+                if (
+                  lat_n < 27.6 ||
+                  lat_n > 35.9 ||
+                  lng_n < -13.2 ||
+                  lng_n > -1.0
+                ) {
+                  setErrors((p) => ({
+                    ...p,
+                    map: "Position hors du Maroc. Veuillez sélectionner un emplacement au Maroc.",
+                  }));
+                  return;
+                }
+                setErrors((p) => ({ ...p, map: null }));
                 set("latitude", lat);
                 set("longitude", lng);
               }}
             />
+            {errors.map && (
+              <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                <span>⚠</span> {errors.map}
+              </p>
+            )}
           </Field>
-
-          {(form.latitude || form.longitude) && (
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Latitude">
-                <Input
-                  type="number"
-                  step="any"
-                  value={form.latitude}
-                  onChange={(e) => set("latitude", e.target.value)}
-                />
-              </Field>
-              <Field label="Longitude">
-                <Input
-                  type="number"
-                  step="any"
-                  value={form.longitude}
-                  onChange={(e) => set("longitude", e.target.value)}
-                />
-              </Field>
-            </div>
-          )}
         </div>
 
         {/* ── CONTACT ── */}

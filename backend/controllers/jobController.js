@@ -22,7 +22,7 @@ const getJobs = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const where = {
-      status: 'PUBLISHED',
+      status: 'APPROVED',
       ...(search && {
         OR: [
           { title:       { contains: search, mode: 'insensitive' } },
@@ -113,7 +113,7 @@ const getJobById = async (req, res) => {
     if (!job) {
       return res.status(404).json({ success: false, message: 'Offre introuvable' });
     }
-    if (job.status !== 'PUBLISHED') {
+    if (job.status !== 'APPROVED') {
       return res.status(403).json({ success: false, message: 'Offre non disponible' });
     }
 
@@ -134,7 +134,7 @@ const getJobById = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 const getFiltersCount = async (req, res) => {
   try {
-    const baseWhere = { status: 'PUBLISHED' };
+    const baseWhere = { status: 'APPROVED' };
 
     const [contractCounts, experienceCounts, educationCounts, locationCounts, categoryCounts] =
       await Promise.all([
@@ -162,14 +162,14 @@ const getFiltersCount = async (req, res) => {
         prisma.category.findMany({
           where: {
             isActive: true,
-            jobListings: { some: { status: 'PUBLISHED' } },
+            jobListings: { some: { status: 'APPROVED' } },
           },
           select: {
             id: true,
             name: true,
             slug: true,
             _count: {
-              select: { jobListings: { where: { status: 'PUBLISHED' } } },
+              select: { jobListings: { where: { status: 'APPROVED' } } },
             },
           },
           orderBy: { name: 'asc' },
@@ -329,7 +329,7 @@ const getMyFavorites = async (req, res) => {
     const jobIds = favorites.map((f) => f.itemId);
 
     const jobs = await prisma.jobListing.findMany({
-      where: { id: { in: jobIds }, status: 'PUBLISHED' },
+      where: { id: { in: jobIds }, status: 'APPROVED' },
       select: {
         id: true,
         title: true,

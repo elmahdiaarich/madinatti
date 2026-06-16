@@ -6,9 +6,6 @@
   - You are about to drop the column `requirements` on the `JobListing` table. All the data in the column will be lost.
 
 */
--- CreateEnum
-CREATE TYPE "JobStatus" AS ENUM ('DRAFT', 'PENDING', 'PUBLISHED', 'REJECTED', 'EXPIRED', 'CLOSED');
-
 -- AlterTable
 ALTER TABLE "JobListing" DROP COLUMN "images",
 DROP COLUMN "isActive",
@@ -17,7 +14,7 @@ ADD COLUMN     "adminNotes" TEXT,
 ADD COLUMN     "publishedAt" TIMESTAMP(3),
 ADD COLUMN     "reviewedAt" TIMESTAMP(3),
 ADD COLUMN     "reviewedBy" TEXT,
-ADD COLUMN     "status" "JobStatus" NOT NULL DEFAULT 'DRAFT';
+ADD COLUMN     "status" "ListingStatus" NOT NULL DEFAULT 'PENDING';
 
 -- AlterTable
 ALTER TABLE "User" ADD COLUMN     "companyLogo" TEXT,

@@ -8,6 +8,7 @@ const {
   getListings,
   approveListing,
   rejectListing,
+  updateListingStatus,
   getReports,
   handleReport,
   getUsers,
@@ -39,6 +40,9 @@ router.patch('/listings/:id/approve', approveListing)
  
 // PATCH /api/admin/listings/:id/reject   body: { adminNote }
 router.patch('/listings/:id/reject', rejectListing)
+
+// PATCH /api/admin/listings/:id/status   body: { status, adminNotes }
+router.patch('/listings/:id/status', updateListingStatus)
  
 // ── Reports ───────────────────────────────────────────────────────────────────
 // GET /api/admin/reports
@@ -74,4 +78,4 @@ router.patch('/categories/:id/toggle', toggleCategoryActive)
 // DELETE /api/admin/categories/:id
 router.delete('/categories/:id', deleteCategory)
  
-module.exports = router
+module.exports = router

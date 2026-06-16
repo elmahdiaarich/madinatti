@@ -1,7 +1,7 @@
+
 const service = require('../services/realEstate');
 
 const VALID_LISTING_TYPES = ['SALE', 'RENT'];
-const VALID_PROPERTY_TYPES = ['APARTMENT', 'VILLA', 'HOUSE', 'STUDIO', 'LAND', 'OFFICE', 'SHOP'];
 
 // ─── Validators ──────────────────────────────────────────────────────────────
 function validateCreate(body) {
@@ -14,8 +14,7 @@ function validateCreate(body) {
     errors.push('categoryId: required');
   if (!VALID_LISTING_TYPES.includes(body.listingType))
     errors.push('listingType: must be SALE or RENT');
-  if (!VALID_PROPERTY_TYPES.includes(body.propertyType))
-    errors.push(`propertyType: must be one of ${VALID_PROPERTY_TYPES.join(', ')}`);
+  // propertyType removed — derived from categoryId in service
   if (!body.price || isNaN(Number(body.price)) || Number(body.price) <= 0)
     errors.push('price: must be a positive number');
   if (!body.location || body.location.trim().length < 2)
@@ -352,7 +351,7 @@ async function adminDeleteListing(req, res) {
     const result = await service.adminDeleteListing(req.params.id);
     if (result.error)
       return res.status(result.status).json({ success: false, message: result.error });
-    return res.json({ success: true, message: 'Listing permanently deleted.' });
+    return res.json({ success: true, message: "Listing permanently deleted." });
   } catch (err) {
     console.error('[adminDeleteListing]', err);
     return res.status(500).json({ success: false, message: 'Internal server error' });
