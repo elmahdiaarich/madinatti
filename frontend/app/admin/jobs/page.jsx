@@ -43,11 +43,7 @@ const IconX = () => (
 const STATUS_FILTERS = [
   { key: '',          label: 'Tous statuts' },
   { key: 'PENDING',   label: 'En attente' },
-<<<<<<< HEAD
-  { key: 'APPROVED', label: 'Approuvés' },
-=======
   { key: 'APPROVED',  label: 'Approuvés' },
->>>>>>> featuer/adminListings
   { key: 'REJECTED',  label: 'Refusés' },
   { key: 'SUSPENDED', label: 'Suspendus' },
   { key: 'EXPIRED',   label: 'Expirés' },
