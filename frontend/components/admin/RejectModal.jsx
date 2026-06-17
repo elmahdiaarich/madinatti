@@ -4,11 +4,11 @@
  * Modal "Motif du refus" — opens when admin clicks "Refuser" on a listing.
  *
  * Props:
- *  isOpen      — boolean
- *  onClose     — () => void
- *  onConfirm   — (note: string) => Promise<void>
+ *  isOpen       — boolean
+ *  onClose      — () => void
+ *  onConfirm    — (newStatus: string) => void   called after successful API call
+ *  listingId    — string
  *  listingTitle — string  (shown in header)
- *  loading     — boolean (disables buttons while API call is in flight)
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -16,6 +16,8 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
+import { updateListingStatus } from '@/lib/adminApi';
 
 // ── Predefined rejection reasons ──────────────────────────────────────────────
 const PRESET_REASONS = [
@@ -66,16 +68,19 @@ const IconAlertTriangle = () => (
 // COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function RejectModal({ isOpen, onClose, onConfirm, listingId, listingTitle }) {
+export default function RejectModal({ isOpen, onClose, onConfirm, listingId, listingTitle , module }) {
   const [selected, setSelected] = useState([]);
   const [customNote, setCustomNote] = useState("");
+  const [loading, setLoading] = useState(false);
   const { token } = useAuth()
+  const { toast } = useToast()
 
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
       setSelected([]);
       setCustomNote("");
+      setLoading(false);
     }
   }, [isOpen]);
 
@@ -102,13 +107,14 @@ export default function RejectModal({ isOpen, onClose, onConfirm, listingId, lis
   };
 
   const handleConfirm = async () => {
-    setLoading(true); // add loading state
+    setLoading(true);
     try {
       const note = buildNote() || "Annonce refusée par l'administrateur.";
-      await updateListingStatus(listingId, "REJECTED", note, token);
+      await updateListingStatus(listingId, "REJECTED", note, token, module );
       onConfirm("REJECTED");
     } catch (e) {
       console.error(e);
+      toast.error(`Erreur : ${e.message}`);
     } finally {
       setLoading(false);
     }

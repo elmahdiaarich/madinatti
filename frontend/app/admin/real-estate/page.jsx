@@ -134,18 +134,23 @@ export default function AdminRealEstatePage() {
     }
   }
 
-  const handleUpdateStatus = async (id, newStatus, adminNotes) => {
-    setActionLoading(id)
-    try {
-      await updateListingStatus(id, newStatus, adminNotes, token)
-      await loadListings()
-      toast.success(`Statut mis à jour → ${STATUS_LABELS[newStatus] ?? newStatus}`)
-    } catch (e) {
-      toast.error(`Erreur : ${e.message}`)
-    } finally {
-      setActionLoading(null)
-    }
+const handleUpdateStatus = async (id, newStatus, adminNotes) => {
+  setActionLoading(id)
+  try {
+    await updateListingStatus(id, newStatus, adminNotes, token)
+    await loadListings()
+    toast.success(`Statut mis à jour → ${STATUS_LABELS[newStatus] ?? newStatus}`)
+  } catch (e) {
+    toast.error(`Erreur : ${e.message}`)
+  } finally {
+    setActionLoading(null)
   }
+}
+
+// New — just refreshes, no API call
+const handleRefresh = async () => {
+  await loadListings()
+}
 
   // ── Status change from inside the detail modal ───────────────────────────
   // Called by ListingDetailModal after any transition (approve, reject, suspend…)
@@ -279,10 +284,12 @@ export default function AdminRealEstatePage() {
           onApprove={handleApprove}
           onReject={handleReject}
           onUpdateStatus={handleUpdateStatus}
+          onRefresh={handleRefresh}
           onRowClick={(listing) => setSelectedListing(listing)}
           loading={tableLoading}
           showModuleCol={false}
           actionLoading={actionLoading}
+          onStatusSuccess={(newStatus) => toast.success(`Statut mis à jour → ${STATUS_LABELS[newStatus] ?? newStatus}`)}
         />
       </div>
 

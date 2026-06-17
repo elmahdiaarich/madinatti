@@ -114,6 +114,7 @@ export default function RealEstateBody({
         </div>
         <StatusPanel
           listingId={listing.id}
+          module={listing.module}
           currentStatus={listing.status}
           onStatusChange={handleStatusChange}
           onTransitionRequest={onTransitionRequest}

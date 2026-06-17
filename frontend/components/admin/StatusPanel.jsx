@@ -224,6 +224,7 @@ export function StatusBadge({ status }) {
 
 export function StatusPanel({
   listingId,
+  module,
   currentStatus,
   onStatusChange,
   onTransitionRequest,
@@ -246,7 +247,7 @@ export function StatusPanel({
     setLoading(toStatus)
     setError(null)
     try {
-      await updateListingStatus(listingId, toStatus, null, token)
+      await updateListingStatus(listingId, toStatus, null, token, module)
       onStatusChange(toStatus)
     } catch (e) {
       setError(e.message)

@@ -445,142 +445,166 @@ const rejectListing = async (req, res) => {
 // PATCH /api/admin/listings/:id/status
 // Body: { status, adminNotes }
 // ─────────────────────────────────────────────────────────────────────────────
-const updateListingStatus = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status, adminNotes } = req.body;
-    const adminId = req.user.userId;
-    const now = new Date();
+// ─── handlers ────────────────────────────────────────────────────────────────
 
-    // 1. Try job listing first
-    const job = await prisma.jobListing.findUnique({ where: { id } });
-    if (job) {
-      const validJobStatuses = [
-        "DRAFT",
-        "PENDING",
-        "APPROVED",
-        "REJECTED",
-        "EXPIRED",
-        "CLOSED",
-      ];
-      if (!validJobStatuses.includes(status)) {
-        return res.status(400).json({
-          success: false,
-          message: `Statut invalide pour une offre d'emploi`,
-        });
-      }
-
-      const updated = await prisma.jobListing.update({
-        where: { id },
-        data: {
-          status,
-          adminNotes: adminNotes || null,
-          reviewedAt: now,
-          reviewedBy: adminId,
-          ...(status === "APPROVED" && !job.publishedAt
-            ? { publishedAt: now }
-            : {}),
-        },
+async function handleJob(req, res, { id, status, adminNotes, adminId, now }) {
+  const validStatuses = [
+    "PENDING",
+    "APPROVED",
+    "REJECTED",
+    "SUSPENDED",
+    "EXPIRED",
+    "ARCHIVED",
+  ];
+  if (!validStatuses.includes(status)) {
+    return res
+      .status(400)
+      .json({
+        success: false,
+        message: "Statut invalide pour une offre d'emploi",
       });
-      return res.json({
-        success: true,
-        message: "Offre d'emploi mise à jour",
-        data: updated,
-      });
-    }
+  }
 
-    // 2. Try real estate listing
-    const re = await prisma.realEstateListing.findUnique({ where: { id } });
-    if (re) {
-      const validReStatuses = [
-        "PENDING",
-        "APPROVED",
-        "REJECTED",
-        "SUSPENDED",
-        "EXPIRED",
-        "ARCHIVED",
-      ];
-      if (!validReStatuses.includes(status)) {
-        return res.status(400).json({
-          success: false,
-          message: "Statut invalide pour une annonce immobilière",
-        });
-      }
-
-      let images = re.images || [];
-      // If status is transitioning to APPROVED and current status is PENDING, move images from temp to real-estate on Cloudinary
-      if (status === "APPROVED" && re.status === "PENDING") {
-        const movedImages = await Promise.all(
-          images.map(async (img) => {
-            try {
-              if (img.url && img.url.includes("madinatti/temp")) {
-                const urlParts = img.url.split("/upload/");
-                const withVersion = urlParts[1];
-                const withoutVersion = withVersion.replace(/^v\d+\//, "");
-                const oldPublicId = withoutVersion.replace(/\.[^/.]+$/, "");
-                const newPublicId = oldPublicId.replace(
-                  "madinatti/temp",
-                  "madinatti/real-estate",
-                );
-
-                const result = await cloudinary.uploader.rename(
-                  oldPublicId,
-                  newPublicId,
-                );
-                return { ...img, url: result.secure_url };
-              }
-              return img;
-            } catch (err) {
-              console.error("Failed to move image:", img.url, err.message);
-              return img;
-            }
-          }),
-        );
-        images = movedImages;
-      }
-
-      // If status is transitioning to REJECTED, delete images from Cloudinary if they are in temp
-      if (status === "REJECTED" && re.status === "PENDING") {
-        await Promise.all(
-          images.map(async (img) => {
-            try {
-              if (img.url && img.url.includes("madinatti/temp")) {
-                const urlParts = img.url.split("/upload/");
-                const withVersion = urlParts[1];
-                const withoutVersion = withVersion.replace(/^v\d+\//, "");
-                const publicId = withoutVersion.replace(/\.[^/.]+$/, "");
-                await cloudinary.uploader.destroy(publicId);
-              }
-            } catch (err) {
-              console.error("Failed to delete image:", img.url, err.message);
-            }
-          }),
-        );
-      }
-
-      const updated = await prisma.realEstateListing.update({
-        where: { id },
-        data: {
-          status,
-          adminNotes: adminNotes || null,
-          reviewedAt: now,
-          reviewedBy: adminId,
-          images,
-          ...(status === "APPROVED" && !re.publishedAt
-            ? { publishedAt: now }
-            : {}),
-        },
-      });
-      return res.json({
-        success: true,
-        message: "Annonce immobilière mise à jour",
-        data: updated,
-      });
-    }
-
+  const job = await prisma.jobListing.findUnique({ where: { id } });
+  if (!job)
     return res
       .status(404)
       .json({ success: false, message: "Annonce introuvable" });
+
+  const updated = await prisma.jobListing.update({
+    where: { id },
+    data: {
+      status,
+      adminNotes: adminNotes || null,
+      reviewedAt: now,
+      reviewedBy: adminId,
+      ...(status === "APPROVED" && !job.publishedAt
+        ? { publishedAt: now }
+        : {}),
+    },
+  });
+  return res.json({
+    success: true,
+    message: "Offre d'emploi mise à jour",
+    data: updated,
+  });
+}
+
+async function handleRealEstate(
+  req,
+  res,
+  { id, status, adminNotes, adminId, now },
+) {
+  const validStatuses = [
+    "PENDING",
+    "APPROVED",
+    "REJECTED",
+    "SUSPENDED",
+    "EXPIRED",
+    "ARCHIVED",
+  ];
+  if (!validStatuses.includes(status)) {
+    return res
+      .status(400)
+      .json({
+        success: false,
+        message: "Statut invalide pour une annonce immobilière",
+      });
+  }
+
+  const re = await prisma.realEstateListing.findUnique({ where: { id } });
+  if (!re)
+    return res
+      .status(404)
+      .json({ success: false, message: "Annonce introuvable" });
+
+  let images = re.images || [];
+
+  if (status === "APPROVED" && re.status === "PENDING") {
+    images = await Promise.all(
+      images.map(async (img) => {
+        try {
+          if (!img.url?.includes("madinatti/temp")) return img;
+          const urlParts = img.url.split("/upload/");
+          const withoutVersion = urlParts[1].replace(/^v\d+\//, "");
+          const oldPublicId = withoutVersion.replace(/\.[^/.]+$/, "");
+          const newPublicId = oldPublicId.replace(
+            "madinatti/temp",
+            "madinatti/real-estate",
+          );
+          const result = await cloudinary.uploader.rename(
+            oldPublicId,
+            newPublicId,
+          );
+          return { ...img, url: result.secure_url };
+        } catch (err) {
+          console.error("Failed to move image:", img.url, err.message);
+          return img;
+        }
+      }),
+    );
+  }
+
+  if (status === "REJECTED" && re.status === "PENDING") {
+    await Promise.all(
+      images.map(async (img) => {
+        try {
+          if (!img.url?.includes("madinatti/temp")) return;
+          const urlParts = img.url.split("/upload/");
+          const withoutVersion = urlParts[1].replace(/^v\d+\//, "");
+          const publicId = withoutVersion.replace(/\.[^/.]+$/, "");
+          await cloudinary.uploader.destroy(publicId);
+        } catch (err) {
+          console.error("Failed to delete image:", img.url, err.message);
+        }
+      }),
+    );
+  }
+
+  const updated = await prisma.realEstateListing.update({
+    where: { id },
+    data: {
+      status,
+      adminNotes: adminNotes || null,
+      reviewedAt: now,
+      reviewedBy: adminId,
+      images,
+      ...(status === "APPROVED" && !re.publishedAt ? { publishedAt: now } : {}),
+    },
+  });
+  return res.json({
+    success: true,
+    message: "Annonce immobilière mise à jour",
+    data: updated,
+  });
+}
+
+// ─── module map ───────────────────────────────────────────────────────────────
+// To add a module: one line here + one handler function above. Nothing else changes.
+
+const MODULE_HANDLERS = {
+  emploi: handleJob,
+  immobilier: handleRealEstate,
+  // vehicules: handleVehicle,
+};
+
+// ─── controller ───────────────────────────────────────────────────────────────
+
+const updateListingStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, adminNotes, module } = req.body;
+    const adminId = req.user.userId;
+    const now = new Date();
+
+    const handler = MODULE_HANDLERS[module];
+    if (!handler) {
+      return res
+        .status(400)
+        .json({ success: false, message: `Module inconnu : ${module}` });
+    }
+
+    return await handler(req, res, { id, status, adminNotes, adminId, now });
   } catch (error) {
     console.error("admin updateListingStatus error:", error);
     return res.status(500).json({ success: false, message: "Erreur serveur" });
@@ -593,61 +617,75 @@ const updateListingStatus = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 const deleteListing = async (req, res) => {
   try {
-    const { id } = req.params
+    const { id } = req.params;
 
     // ── Try job listing first ─────────────────────────────────────────────
-    const job = await prisma.jobListing.findUnique({ where: { id } })
+    const job = await prisma.jobListing.findUnique({ where: { id } });
     if (job) {
       // Delete company logo from Cloudinary if present
       if (job.companyLogo) {
         try {
-          const urlParts = job.companyLogo.split('/upload/')
+          const urlParts = job.companyLogo.split("/upload/");
           if (urlParts.length === 2) {
-            const withoutVersion = urlParts[1].replace(/^v\d+\//, '')
-            const publicId = withoutVersion.replace(/\.[^/.]+$/, '')
-            await cloudinary.uploader.destroy(publicId)
+            const withoutVersion = urlParts[1].replace(/^v\d+\//, "");
+            const publicId = withoutVersion.replace(/\.[^/.]+$/, "");
+            await cloudinary.uploader.destroy(publicId);
           }
         } catch (err) {
-          console.error('Failed to delete job logo from Cloudinary:', err.message)
+          console.error(
+            "Failed to delete job logo from Cloudinary:",
+            err.message,
+          );
         }
       }
 
-      await prisma.jobListing.delete({ where: { id } })
-      return res.json({ success: true, message: "Offre d'emploi supprimée définitivement" })
+      await prisma.jobListing.delete({ where: { id } });
+      return res.json({
+        success: true,
+        message: "Offre d'emploi supprimée définitivement",
+      });
     }
 
     // ── Try real estate listing ───────────────────────────────────────────
-    const re = await prisma.realEstateListing.findUnique({ where: { id } })
+    const re = await prisma.realEstateListing.findUnique({ where: { id } });
     if (re) {
       // Delete all images from Cloudinary
-      const images = re.images || []
+      const images = re.images || [];
       await Promise.all(
         images.map(async (img) => {
           try {
-            const url = img?.url || img
-            if (!url) return
-            const urlParts = url.split('/upload/')
-            if (urlParts.length !== 2) return
-            const withoutVersion = urlParts[1].replace(/^v\d+\//, '')
-            const publicId = withoutVersion.replace(/\.[^/.]+$/, '')
-            await cloudinary.uploader.destroy(publicId)
+            const url = img?.url || img;
+            if (!url) return;
+            const urlParts = url.split("/upload/");
+            if (urlParts.length !== 2) return;
+            const withoutVersion = urlParts[1].replace(/^v\d+\//, "");
+            const publicId = withoutVersion.replace(/\.[^/.]+$/, "");
+            await cloudinary.uploader.destroy(publicId);
           } catch (err) {
-            console.error('Failed to delete image from Cloudinary:', err.message)
+            console.error(
+              "Failed to delete image from Cloudinary:",
+              err.message,
+            );
             // don't block deletion if Cloudinary cleanup fails
           }
-        })
-      )
+        }),
+      );
 
-      await prisma.realEstateListing.delete({ where: { id } })
-      return res.json({ success: true, message: 'Annonce immobilière supprimée définitivement' })
+      await prisma.realEstateListing.delete({ where: { id } });
+      return res.json({
+        success: true,
+        message: "Annonce immobilière supprimée définitivement",
+      });
     }
 
-    return res.status(404).json({ success: false, message: 'Annonce introuvable' })
+    return res
+      .status(404)
+      .json({ success: false, message: "Annonce introuvable" });
   } catch (error) {
-    console.error('admin deleteListing error:', error)
-    return res.status(500).json({ success: false, message: 'Erreur serveur' })
+    console.error("admin deleteListing error:", error);
+    return res.status(500).json({ success: false, message: "Erreur serveur" });
   }
-}
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/admin/reports

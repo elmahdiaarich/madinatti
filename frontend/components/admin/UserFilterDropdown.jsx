@@ -1,12 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import {
-  getOverview,
-  getListings,
-  approveListing,
-  rejectListing,
-  updateListingStatus,
-  searchUsers,
-} from '@/lib/adminApi'
+import { searchUsers } from '@/lib/adminApi'
 
 const IconUser = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
@@ -22,14 +15,31 @@ const IconX = () => (
     <path d="M18 6l-12 12" /><path d="M6 6l12 12" />
   </svg>
 )
+
 // ─── User filter autocomplete ─────────────────────────────────────────────────
+//
+// `value` is the source of truth — when the parent clears it (e.g. "Tout effacer"
+// resets selectedUser to null), this component now reacts and clears its own
+// input text instead of silently keeping the old name displayed.
 export default function UserFilterDropdown({ value, onChange }) {
-  const [inputVal, setInputVal]   = useState('')
+  const [inputVal, setInputVal]   = useState(value ? `${value.name} (${value.email})` : '')
   const [results, setResults]     = useState([])
   const [open, setOpen]           = useState(false)
   const [loading, setLoading]     = useState(false)
   const debounceRef               = useRef(null)
   const wrapperRef                = useRef(null)
+
+  // Sync displayed text whenever the external value changes.
+  // Covers: parent resets to null ("Tout effacer"), or sets a user programmatically.
+  useEffect(() => {
+    if (value) {
+      setInputVal(`${value.name} (${value.email})`)
+    } else {
+      setInputVal('')
+    }
+    setResults([])
+    setOpen(false)
+  }, [value])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -45,6 +55,10 @@ export default function UserFilterDropdown({ value, onChange }) {
   const handleInput = (e) => {
     const q = e.target.value
     setInputVal(q)
+
+    // If the user starts typing again after a selection, clear the active filter
+    if (value) onChange(null)
+
     clearTimeout(debounceRef.current)
     if (!q.trim()) { setResults([]); setOpen(false); return }
     debounceRef.current = setTimeout(async () => {

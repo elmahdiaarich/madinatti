@@ -10,19 +10,30 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import StatCard from '../../components/admin/StatCard'
 import ListingTable from '../../components/admin/ListingTable'
 import UserFilterDropdown from "@/components/admin/UserFilterDropdown"
+import ListingDetailModal from '@/components/admin/ListingDetailModal'
 import {
   getOverview,
   getListings,
   approveListing,
   rejectListing,
   updateListingStatus,
-  searchUsers,
 } from '../../lib/adminApi'
 import { useAuth } from '../../context/AuthContext'
+import { useToast } from '@/context/ToastContext'
+
+const STATUS_LABELS = {
+  PENDING:   'En attente',
+  APPROVED:  'Approuvée',
+  REJECTED:  'Refusée',
+  SUSPENDED: 'Suspendue',
+  ARCHIVED:  'Archivée',
+  DELETED:   'Supprimée',
+  EXPIRED:   'Expirée',
+}
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 const IconClock = () => (
@@ -106,6 +117,7 @@ const STATUS_FILTERS = [
 
 export default function AdminOverviewPage() {
   const { token } = useAuth()
+  const { toast } = useToast()
 
   // Stats
   const [overview, setOverview]               = useState(null)
@@ -116,6 +128,9 @@ export default function AdminOverviewPage() {
   const [pagination, setPagination]       = useState({})
   const [tableLoading, setTableLoading]   = useState(true)
   const [actionLoading, setActionLoading] = useState(null)
+
+  // Modal state
+  const [selectedListing, setSelectedListing] = useState(null)
 
   // Filters
   const [module, setModule]           = useState('tous')
@@ -169,12 +184,15 @@ export default function AdminOverviewPage() {
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  // ── Actions ────────────────────────────────────────────────────────────────
+  // ── Actions (table row quick-actions) ────────────────────────────────────
   const handleApprove = async (id) => {
     setActionLoading(id)
     try {
       await approveListing(id, token)
       await Promise.all([loadListings(), loadOverview()])
+      toast.success('Annonce approuvée avec succès.')
+    } catch (e) {
+      toast.error(`Erreur : ${e.message}`)
     } finally {
       setActionLoading(null)
     }
@@ -185,6 +203,9 @@ export default function AdminOverviewPage() {
     try {
       await rejectListing(id, note, token)
       await Promise.all([loadListings(), loadOverview()])
+      toast.success('Annonce refusée.')
+    } catch (e) {
+      toast.error(`Erreur : ${e.message}`)
     } finally {
       setActionLoading(null)
     }
@@ -193,12 +214,41 @@ export default function AdminOverviewPage() {
   const handleUpdateStatus = async (id, newStatus, adminNotes) => {
     setActionLoading(id)
     try {
-      await updateListingStatus(id, newStatus, adminNotes)
+      await updateListingStatus(id, newStatus, adminNotes, token)
       await Promise.all([loadListings(), loadOverview()])
+      toast.success(`Statut mis à jour → ${STATUS_LABELS[newStatus] ?? newStatus}`)
+    } catch (e) {
+      toast.error(`Erreur : ${e.message}`)
     } finally {
       setActionLoading(null)
     }
   }
+
+  // Just refreshes both stats and table, no API mutation
+  const handleRefresh = async () => {
+    await Promise.all([loadListings(), loadOverview()])
+  }
+
+  // ── Status change from inside the detail modal ───────────────────────────
+  // Called by ListingDetailModal after any transition (approve, reject, suspend…)
+  // newStatus === 'DELETED' means the listing was permanently deleted
+  const handleModalStatusChanged = useCallback(async (listingId, newStatus) => {
+    await Promise.all([loadListings(), loadOverview()])
+
+    if (newStatus === 'DELETED') {
+      setSelectedListing(null)
+      toast.success('Annonce supprimée définitivement.')
+      return
+    }
+
+    setSelectedListing(prev =>
+      prev?.id === listingId ? { ...prev, status: newStatus } : prev
+    )
+
+    const label = STATUS_LABELS[newStatus] ?? newStatus
+    const toastType = newStatus === 'REJECTED' || newStatus === 'SUSPENDED' ? 'warning' : 'success'
+    toast({ message: `Statut mis à jour → ${label}`, type: toastType })
+  }, [loadListings, loadOverview, toast])
 
   // ── Active filter count ────────────────────────────────────────────────────
   const hasActiveFilters = search || module !== 'tous' || status !== 'PENDING' || selectedUser
@@ -215,7 +265,7 @@ export default function AdminOverviewPage() {
           </p>
         </div>
         <button
-          onClick={() => { loadOverview(); loadListings() }}
+          onClick={handleRefresh}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
             text-gray-600 bg-white border border-gray-200 hover:border-[#A7D129]
             hover:text-[#2D5016] transition-colors shadow-sm"
@@ -350,7 +400,7 @@ export default function AdminOverviewPage() {
             )}
             {selectedUser && (
               <FilterChip
-                label={selectedUser.name}
+                label={selectedUser.name || selectedUser.email}
                 icon={<IconUser />}
                 onRemove={() => setSelectedUser(null)}
               />
@@ -393,11 +443,22 @@ export default function AdminOverviewPage() {
           onApprove={handleApprove}
           onReject={handleReject}
           onUpdateStatus={handleUpdateStatus}
+          onRefresh={handleRefresh}
+          onRowClick={(listing) => setSelectedListing(listing)}
           loading={tableLoading}
           showModuleCol={true}
           actionLoading={actionLoading}
+          onStatusSuccess={(newStatus) => toast.success(`Statut mis à jour → ${STATUS_LABELS[newStatus] ?? newStatus}`)}
         />
       </div>
+
+      {/* ── Detail modal ───────────────────────────────────────────────── */}
+      <ListingDetailModal
+        isOpen={!!selectedListing}
+        onClose={() => setSelectedListing(null)}
+        listing={selectedListing}
+        onStatusChanged={handleModalStatusChanged}
+      />
 
     </div>
   )

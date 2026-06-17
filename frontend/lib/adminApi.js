@@ -157,10 +157,12 @@ export async function rejectListing(id, note, token = null) {
   return { success: true, listing: json.data }
 }
 
-export async function updateListingStatus(id, status, adminNotes = null, token = null) {
+export async function updateListingStatus(id, status, adminNotes = null, token = null, module) {
+  console.log("status apiadmin: ", status )
+  console.log("notes in apiadmin: ", adminNotes )
   const json = await apiFetch(
     `/api/admin/listings/${id}/status`,
-    { method: 'PATCH', body: JSON.stringify({ status, adminNotes }) },
+    { method: 'PATCH', body: JSON.stringify({ status, adminNotes, module }) },
     token
   )
   return { success: true, listing: json.data }

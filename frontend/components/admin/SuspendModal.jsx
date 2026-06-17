@@ -12,7 +12,7 @@ const SUSPEND_REASONS = [
   { id: 'tos',         label: "Violation des conditions d'utilisation" },
 ]
 
-export default function SuspendModal({ isOpen, onClose, onConfirm, listingId, listingTitle }) {
+export default function SuspendModal({ isOpen, onClose, onConfirm, listingId, listingTitle, module }) {
   const [selected, setSelected] = useState([])
   const [customNote, setCustomNote] = useState('')
   const [loading, setLoading] = useState(false)
@@ -39,7 +39,7 @@ export default function SuspendModal({ isOpen, onClose, onConfirm, listingId, li
     setLoading(true)
     try {
       const note = buildNote() || 'Annonce suspendue par l\'administrateur.'
-      await updateListingStatus(listingId, 'SUSPENDED', note, token)
+      await updateListingStatus(listingId, 'SUSPENDED', note, token, module )
       onConfirm('SUSPENDED')
     } catch (e) {
       console.error(e)

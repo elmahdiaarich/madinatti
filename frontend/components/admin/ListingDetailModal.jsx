@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import RealEstateBody from "@/components/admin/real-estate/RealEstateBody"
+import JobBody from "@/components/admin/jobs/JobBody"
 import RejectModal from './RejectModal'
 import SuspendModal from './SuspendModal'
 import ArchiveModal from './ArchiveModal'
@@ -9,7 +10,7 @@ import ArchiveModal from './ArchiveModal'
 // ── Module registry — add new modules here ────────────────────────────────
 const MODULE_BODIES = {
   immobilier: RealEstateBody,
-  // emploi: JobBody,       ← future
+  emploi: JobBody,
   // vehicules: VehicleBody, ← future
 }
 
@@ -26,6 +27,8 @@ export default function ListingDetailModal({ isOpen, onClose, listing, onStatusC
   if (!isOpen || !listing) return null
 
   const BodyComponent = MODULE_BODIES[listing.module]
+
+  console.log(listing);
 
   // Called by StatusPanel instead of directly hitting the API
   // for transitions that need a modal (REJECTED, SUSPENDED, ARCHIVED)
@@ -108,6 +111,7 @@ export default function ListingDetailModal({ isOpen, onClose, listing, onStatusC
         onConfirm={handleModalConfirm}
         listingId={pendingTransition?.listingId}
         listingTitle={listing.title}
+        module={listing.module}
       />
       <SuspendModal
         isOpen={pendingTransition?.to === 'SUSPENDED'}
@@ -115,6 +119,7 @@ export default function ListingDetailModal({ isOpen, onClose, listing, onStatusC
         onConfirm={handleModalConfirm}
         listingId={pendingTransition?.listingId}
         listingTitle={listing.title}
+        module={listing.module}
       />
       <ArchiveModal
         isOpen={pendingTransition?.to === 'ARCHIVED'}
@@ -122,6 +127,7 @@ export default function ListingDetailModal({ isOpen, onClose, listing, onStatusC
         onConfirm={handleModalConfirm}
         listingId={pendingTransition?.listingId}
         listingTitle={listing.title}
+        module={listing.module}
       />
     </>
   )

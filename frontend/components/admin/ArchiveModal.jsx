@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { updateListingStatus } from '@/lib/adminApi'
 import { useAuth } from '@/context/AuthContext'
 
-export default function ArchiveModal({ isOpen, onClose, onConfirm, listingId, listingTitle }) {
+export default function ArchiveModal({ isOpen, onClose, onConfirm, listingId, listingTitle , module }) {
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
   const { token } = useAuth()
@@ -16,7 +16,8 @@ export default function ArchiveModal({ isOpen, onClose, onConfirm, listingId, li
   const handleConfirm = async () => {
     setLoading(true)
     try {
-      await updateListingStatus(listingId, 'ARCHIVED', note.trim() || 'Archivée par l\'administrateur.', token)
+      // console.log("notes" ,note.trim());
+      await updateListingStatus(listingId, 'ARCHIVED', note.trim() || 'Archivée par l\'administrateur.', token, module)
       onConfirm('ARCHIVED')
     } catch (e) {
       console.error(e)

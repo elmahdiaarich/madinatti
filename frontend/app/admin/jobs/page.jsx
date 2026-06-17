@@ -3,8 +3,20 @@
 import { useState, useEffect, useCallback } from 'react'
 import ListingTable from '../../../components/admin/ListingTable'
 import UserFilterDropdown from "@/components/admin/UserFilterDropdown"
+import ListingDetailModal from '@/components/admin/ListingDetailModal'
 import { getListings, approveListing, rejectListing, updateListingStatus } from '../../../lib/adminApi'
 import { useAuth } from '../../../context/AuthContext'
+import { useToast } from '@/context/ToastContext'
+
+const STATUS_LABELS = {
+  PENDING:   'En attente',
+  APPROVED:  'Approuvée',
+  REJECTED:  'Refusée',
+  SUSPENDED: 'Suspendue',
+  ARCHIVED:  'Archivée',
+  DELETED:   'Supprimée',
+  EXPIRED:   'Expirée',
+}
 
 const IconSearch = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
@@ -52,61 +64,126 @@ function FilterChip({ label, onRemove }) {
 
 export default function AdminJobsPage() {
   const { token } = useAuth()
+  const { toast } = useToast()
 
   const [listings, setListings]           = useState([])
   const [pagination, setPagination]       = useState({})
   const [tableLoading, setTableLoading]   = useState(true)
   const [actionLoading, setActionLoading] = useState(null)
 
-  const [status, setStatus]           = useState('PENDING')
-  const [searchInput, setSearchInput] = useState('')
-  const [search, setSearch]           = useState('')
-  const [selectedUser, setSelectedUser] = useState(null)  // { id, name, email }
-  const [page, setPage]               = useState(1)
+  // Modal state
+  const [selectedListing, setSelectedListing] = useState(null)
+
+  const [status, setStatus]             = useState('PENDING')
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [searchInput, setSearchInput]   = useState('')
+  const [search, setSearch]             = useState('')
+  const [page, setPage]                 = useState(1)
 
   const loadListings = useCallback(async () => {
     if (!token) return
     setTableLoading(true)
     try {
-      const result = await getListings({ module: 'emploi', status, search, page, token, userId: selectedUser?.id || ''})
+      const result = await getListings({
+        module: 'emploi',
+        status,
+        search,
+        page,
+        token,
+        userId: selectedUser?.id || '',
+      })
       setListings(result.data)
       setPagination(result.pagination)
     } finally {
       setTableLoading(false)
     }
-  }, [status, search, page, token])
+  }, [status, search, page, token, selectedUser])
 
   useEffect(() => { loadListings() }, [loadListings])
-  useEffect(() => { setPage(1) }, [status, search])
+  useEffect(() => { setPage(1) }, [status, search, selectedUser])
 
   useEffect(() => {
     const t = setTimeout(() => setSearch(searchInput), 400)
     return () => clearTimeout(t)
   }, [searchInput])
 
+  // ── Action handlers (table row quick-actions) ────────────────────────────
+
   const handleApprove = async (id) => {
     setActionLoading(id)
-    try { await approveListing(id, token); await loadListings() }
-    finally { setActionLoading(null) }
+    try {
+      await approveListing(id, token)
+      await loadListings()
+      toast.success('Offre approuvée avec succès.')
+    } catch (e) {
+      toast.error(`Erreur : ${e.message}`)
+    } finally {
+      setActionLoading(null)
+    }
   }
 
   const handleReject = async (id, note) => {
     setActionLoading(id)
-    try { await rejectListing(id, note, token); await loadListings() }
-    finally { setActionLoading(null) }
+    try {
+      await rejectListing(id, note, token)
+      await loadListings()
+      toast.success('Offre refusée.')
+    } catch (e) {
+      toast.error(`Erreur : ${e.message}`)
+    } finally {
+      setActionLoading(null)
+    }
   }
 
   const handleUpdateStatus = async (id, newStatus, adminNotes) => {
     setActionLoading(id)
-    try { await updateListingStatus(id, newStatus, adminNotes, token); await loadListings() }
-    finally { setActionLoading(null) }
+    try {
+      await updateListingStatus(id, newStatus, adminNotes, token)
+      await loadListings()
+      toast.success(`Statut mis à jour → ${STATUS_LABELS[newStatus] ?? newStatus}`)
+    } catch (e) {
+      toast.error(`Erreur : ${e.message}`)
+    } finally {
+      setActionLoading(null)
+    }
   }
 
-  const hasActiveFilters = search || status !== 'PENDING'
+  // New — just refreshes, no API call
+  const handleRefresh = async () => {
+    await loadListings()
+  }
+
+  // ── Status change from inside the detail modal ───────────────────────────
+  // Called by ListingDetailModal after any transition (approve, reject, suspend…)
+  // newStatus === 'DELETED' means the listing was permanently deleted
+
+  const handleModalStatusChanged = useCallback(async (listingId, newStatus) => {
+    // Reload the table so the row reflects the change immediately
+    await loadListings()
+
+    // Update the selectedListing in-place so the modal stays open with fresh status
+    // (unless the listing was deleted — then close the modal)
+    if (newStatus === 'DELETED') {
+      setSelectedListing(null)
+      toast.success('Offre supprimée définitivement.')
+      return
+    }
+
+    setSelectedListing(prev =>
+      prev?.id === listingId ? { ...prev, status: newStatus } : prev
+    )
+
+    const label = STATUS_LABELS[newStatus] ?? newStatus
+    const toastType = newStatus === 'REJECTED' || newStatus === 'SUSPENDED' ? 'warning' : 'success'
+    toast({ message: `Statut mis à jour → ${label}`, type: toastType })
+  }, [loadListings, toast])
+
+  const hasActiveFilters = search || status !== 'PENDING' || selectedUser
 
   return (
     <div className="flex flex-col gap-6">
 
+      {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-green-600">
           <IconBriefcase />
@@ -119,10 +196,9 @@ export default function AdminJobsPage() {
         </div>
       </div>
 
+      {/* ── Filters ────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col gap-3">
-        {/*Search title + User filter */}
         <div className="flex flex-col sm:flex-row gap-2">
-          {/* Title search */}
           <div className="relative flex-1">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
               <IconSearch />
@@ -138,8 +214,6 @@ export default function AdminJobsPage() {
                 transition-all"
             />
           </div>
-
-          {/* User filter autocomplete */}
           <UserFilterDropdown
             value={selectedUser}
             onChange={(user) => setSelectedUser(user)}
@@ -175,8 +249,14 @@ export default function AdminJobsPage() {
                 onRemove={() => setStatus('PENDING')}
               />
             )}
+            {selectedUser && (
+              <FilterChip
+                label={selectedUser.name || selectedUser.email}
+                onRemove={() => setSelectedUser(null)}
+              />
+            )}
             <button
-              onClick={() => { setStatus('PENDING'); setSearch(''); setSearchInput('') }}
+              onClick={() => { setStatus('PENDING'); setSearch(''); setSearchInput(''); setSelectedUser(null) }}
               className="text-xs text-gray-400 hover:text-red-500 underline underline-offset-2 ml-1 transition-colors"
             >
               Tout effacer
@@ -185,6 +265,7 @@ export default function AdminJobsPage() {
         )}
       </div>
 
+      {/* ── Table ──────────────────────────────────────────────────────── */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold text-gray-700">
@@ -204,11 +285,22 @@ export default function AdminJobsPage() {
           onApprove={handleApprove}
           onReject={handleReject}
           onUpdateStatus={handleUpdateStatus}
+          onRefresh={handleRefresh}
+          onRowClick={(listing) => setSelectedListing(listing)}
           loading={tableLoading}
           showModuleCol={false}
           actionLoading={actionLoading}
+          onStatusSuccess={(newStatus) => toast.success(`Statut mis à jour → ${STATUS_LABELS[newStatus] ?? newStatus}`)}
         />
       </div>
+
+      {/* ── Detail modal ───────────────────────────────────────────────── */}
+      <ListingDetailModal
+        isOpen={!!selectedListing}
+        onClose={() => setSelectedListing(null)}
+        listing={selectedListing}
+        onStatusChanged={handleModalStatusChanged}
+      />
     </div>
   )
 }
