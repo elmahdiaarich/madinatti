@@ -150,14 +150,6 @@ model Category {
   realEstateListings RealEstateListing[]
 }
 
-enum JobStatus {
-  DRAFT
-  PENDING
-  APPROVED
-  REJECTED
-  EXPIRED
-  CLOSED
-}
 enum EducationLevel {
   BEFORE_BAC
   BAC
@@ -208,7 +200,7 @@ model JobListing {
   salaryMax           Decimal?
   salaryPeriod        String?
   applicationDeadline DateTime?
-  status              JobStatus     @default(DRAFT)
+  status              ListingStatus     @default(PENDING)
   isFeatured          Boolean       @default(false)
   isSponsored         Boolean       @default(false)
   boostExpiresAt      DateTime?
@@ -226,6 +218,8 @@ model JobListing {
   region              String?
   remote              RemoteType    @default(ON_SITE)
   languages           Json?
+  deletedByOwner  Boolean  @default(false)
+  deletedAt       DateTime?
 
   user                User          @relation(fields: [userId], references: [id])
   category            Category      @relation(fields: [categoryId], references: [id])
@@ -301,13 +295,15 @@ model RealEstateListing {
   category      Category       @relation(fields: [categoryId], references: [id])
   inquiries     PropertyInquiry[]
   region        String?
+  deletedByOwner  Boolean  @default(false)
+  deletedAt       DateTime?
 
   @@index([categoryId])
   @@index([status])
   @@index([price])
   @@index([city])
   @@index([createdAt])
-}
+} 
 
 model PropertyInquiry {
   id           String            @id @default(uuid())

@@ -4,92 +4,128 @@
  * Modal "Motif du refus" — opens when admin clicks "Refuser" on a listing.
  *
  * Props:
- *  isOpen      — boolean
- *  onClose     — () => void
- *  onConfirm   — (note: string) => Promise<void>
- *  listing     — object  (the listing being rejected, contains title, id, submittedBy, company, etc.)
- *  loading     — boolean (disables buttons while API call is in flight)
+ *  isOpen       — boolean
+ *  onClose      — () => void
+ *  onConfirm    — (newStatus: string) => void   called after successful API call
+ *  listingId    — string
+ *  listingTitle — string  (shown in header)
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-'use client'
+"use client";
 
-import { useState, useEffect, useRef } from 'react'
+
+import { useState, useEffect } from "react";
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
+import { updateListingStatus } from '@/lib/adminApi';
 
 // ── Predefined rejection reasons ──────────────────────────────────────────────
 const PRESET_REASONS = [
-  { id: 'inappropriate',  label: 'Contenu inapproprié ou offensant' },
-  { id: 'incomplete',     label: 'Informations manquantes ou incomplètes' },
-  { id: 'misleading',     label: 'Description fausse ou trompeuse' },
-  { id: 'duplicate',      label: 'Annonce en double' },
-  { id: 'tos',            label: "Non conforme aux conditions d'utilisation" },
-]
+  { id: "inappropriate", label: "Contenu inapproprié ou offensant" },
+  { id: "incomplete", label: "Informations manquantes ou incomplètes" },
+  { id: "misleading", label: "Description fausse ou trompeuse" },
+  { id: "duplicate", label: "Annonce en double" },
+  { id: "tos", label: "Non conforme aux conditions d'utilisation" },
+];
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 const IconX = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 6l-12 12" /><path d="M6 6l12 12" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M18 6l-12 12" />
+    <path d="M6 6l12 12" />
   </svg>
-)
+);
 
 const IconAlertTriangle = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 9v4" />
+    <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" />
     <path d="M12 16h.01" />
   </svg>
-)
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function RejectModal({ isOpen, onClose, onConfirm, listing, loading = false }) {
-  const [selected, setSelected] = useState([])
-  const [customNote, setCustomNote] = useState('')
+export default function RejectModal({ isOpen, onClose, onConfirm, listingId, listingTitle , module }) {
+  const [selected, setSelected] = useState([]);
+  const [customNote, setCustomNote] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { token } = useAuth()
+  const { toast } = useToast()
 
   const currentReasonsRef = useRef('[Complétez le motif de refus ici]')
 
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
-      setSelected([])
-      const businessName = listing?.submittedBy || listing?.company || 'Propriétaire';
-      const title = listing?.title || 'votre annonce';
-      const template = `Bonjour ${businessName},\n\nVotre annonce "${title}" a été refusée pour la raison suivante :\n\n[Complétez le motif de refus ici]\n\nNous vous invitons à corriger votre annonce et à la soumettre à nouveau.\n\nCordialement,\n\nL'équipe Madinatti`;
-      setCustomNote(template)
-      currentReasonsRef.current = '[Complétez le motif de refus ici]'
-    }
-  }, [isOpen, listing])
 
-  if (!isOpen || !listing) return null
+      setSelected([]);
+      setCustomNote("");
+      setLoading(false);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
 
   // ── Toggle a preset reason ────────────────────────────────────────────────
   const toggleReason = (id) => {
-    const next = selected.includes(id) ? selected.filter((r) => r !== id) : [...selected, id]
-    setSelected(next)
-      
-    const newReasonsStr = next.length > 0
-      ? PRESET_REASONS.filter((r) => next.includes(r.id)).map((r) => `• ${r.label}`).join('\n')
-      : '[Complétez le motif de refus ici]'
-
-    const oldReasonsStr = currentReasonsRef.current
-    setCustomNote((prevNote) => prevNote.replace(oldReasonsStr, newReasonsStr))
-    currentReasonsRef.current = newReasonsStr
-  }
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id],
+    );
+  };
 
   // ── Build final note string ───────────────────────────────────────────────
   const buildNote = () => {
-    return customNote.trim()
-  }
+    const presetLabels = PRESET_REASONS.filter((r) =>
+      selected.includes(r.id),
+    ).map((r) => `• ${r.label}`);
+
+    const parts = [];
+    if (presetLabels.length > 0) parts.push(presetLabels.join("\n"));
+    if (customNote.trim()) parts.push(customNote.trim());
+
+    return parts.join("\n\n");
+  };
+>>>>>>> featuer/adminListings
 
   const handleConfirm = async () => {
-    const note = buildNote()
-    await onConfirm(note || 'Annonce refusée par l\'administrateur.')
-  }
+    setLoading(true);
+    try {
+      const note = buildNote() || "Annonce refusée par l'administrateur.";
+      await updateListingStatus(listingId, "REJECTED", note, token, module );
+      onConfirm("REJECTED");
+    } catch (e) {
+      console.error(e);
+      toast.error(`Erreur : ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const hasSelection = selected.length > 0 || customNote.trim().length > 0
+  const hasSelection = selected.length > 0 || customNote.trim().length > 0;
 
   return (
     <>
@@ -102,15 +138,21 @@ export default function RejectModal({ isOpen, onClose, onConfirm, listing, loadi
       {/* ── Modal panel ─────────────────────────────────────────────────── */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
-
           {/* Header */}
           <div className="flex items-start gap-3 px-6 pt-6 pb-4 border-b border-gray-100">
             <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0 text-red-600">
               <IconAlertTriangle />
             </div>
             <div className="flex-1 min-w-0">
+<<<<<<< HEAD
               <h2 className="text-lg font-bold text-gray-900">Motif du refus</h2>
               {listing?.title && (
+=======
+              <h2 className="text-lg font-bold text-gray-900">
+                Motif du refus
+              </h2>
+              {listingTitle && (
+>>>>>>> featuer/adminListings
                 <p className="text-sm text-gray-500 truncate mt-0.5">
                   {listing.title}
                 </p>
@@ -127,7 +169,6 @@ export default function RejectModal({ isOpen, onClose, onConfirm, listing, loadi
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
-
             {/* Preset reasons */}
             <div>
               <p className="text-sm font-semibold text-gray-700 mb-3">
@@ -135,27 +176,41 @@ export default function RejectModal({ isOpen, onClose, onConfirm, listing, loadi
               </p>
               <div className="flex flex-col gap-2">
                 {PRESET_REASONS.map((reason) => {
-                  const checked = selected.includes(reason.id)
+                  const checked = selected.includes(reason.id);
                   return (
                     <label
                       key={reason.id}
                       className={`
                         flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer
                         transition-all duration-150 select-none
-                        ${checked
-                          ? 'border-red-300 bg-red-50 text-red-800'
-                          : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300 hover:bg-gray-100'
+                        ${
+                          checked
+                            ? "border-red-300 bg-red-50 text-red-800"
+                            : "border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300 hover:bg-gray-100"
                         }
                       `}
                     >
                       {/* Custom checkbox */}
-                      <span className={`
+                      <span
+                        className={`
                         shrink-0 w-4 h-4 rounded border-2 flex items-center justify-center transition-colors
-                        ${checked ? 'border-red-500 bg-red-500' : 'border-gray-300 bg-white'}
-                      `}>
+                        ${checked ? "border-red-500 bg-red-500" : "border-gray-300 bg-white"}
+                      `}
+                      >
                         {checked && (
-                          <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                            <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          <svg
+                            width="9"
+                            height="7"
+                            viewBox="0 0 9 7"
+                            fill="none"
+                          >
+                            <path
+                              d="M1 3.5L3.5 6L8 1"
+                              stroke="white"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
                           </svg>
                         )}
                       </span>
@@ -166,9 +221,11 @@ export default function RejectModal({ isOpen, onClose, onConfirm, listing, loadi
                         onChange={() => toggleReason(reason.id)}
                         disabled={loading}
                       />
-                      <span className="text-sm font-medium">{reason.label}</span>
+                      <span className="text-sm font-medium">
+                        {reason.label}
+                      </span>
                     </label>
-                  )
+                  );
                 })}
               </div>
             </div>
@@ -177,7 +234,9 @@ export default function RejectModal({ isOpen, onClose, onConfirm, listing, loadi
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Note personnalisée
-                <span className="font-normal text-gray-400 ml-1">(envoyée à l'entreprise)</span>
+                <span className="font-normal text-gray-400 ml-1">
+                  (envoyée à l'entreprise)
+                </span>
               </label>
               <textarea
                 value={customNote}
@@ -216,20 +275,34 @@ export default function RejectModal({ isOpen, onClose, onConfirm, listing, loadi
             >
               {loading ? (
                 <>
-                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  <svg
+                    className="animate-spin w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8z"
+                    />
                   </svg>
                   Traitement...
                 </>
               ) : (
-                'Confirmer le refus'
+                "Confirmer le refus"
               )}
             </button>
           </div>
-
         </div>
       </div>
     </>
-  )
+  );
 }

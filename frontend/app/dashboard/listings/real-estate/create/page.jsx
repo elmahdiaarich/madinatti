@@ -7,6 +7,7 @@ import ProtectedRoute from "@/components/shared/ProtectedRoute";
 import { realEstateService } from "@/services/realEstateService";
 import axios from "axios";
 import moroccoCities from "morocco-cities";
+import LoadingSpinner from "@/components/shared/LoadingSpinner";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -15,6 +16,7 @@ const LISTING_TYPES = [
   { label: "Location", value: "RENT" },
 ];
 
+<<<<<<< HEAD:frontend/app/dashboard/listings/real-estate/create/page.jsx
 const PROPERTY_TYPES = [
   { label: "Appartement", value: "APARTMENT" },
   { label: "Villa", value: "VILLA" },
@@ -36,12 +38,13 @@ const PROPERTY_TYPE_TO_SLUG = {
   SHOP:      "commerce",
 };
 
+=======
+>>>>>>> featuer/adminListings:frontend/app/my-space/services/real-estate/create/page.jsx
 const EMPTY = {
   title: "",
   description: "",
   categoryId: "",
   listingType: "SALE",
-  propertyType: "APARTMENT",
   price: "",
   surface: "",
   rooms: "",
@@ -288,8 +291,8 @@ function ImageUploader({ images, onChange, token, error }) {
           uploading
             ? "border-primary bg-primary/5 cursor-wait"
             : error
-            ? "border-red-300 bg-red-50 hover:border-red-400"
-            : "border-gray-200 hover:border-primary hover:bg-primary/5"
+              ? "border-red-300 bg-red-50 hover:border-red-400"
+              : "border-gray-200 hover:border-primary hover:bg-primary/5"
         }`}
       >
         <input
@@ -463,17 +466,30 @@ function CreateListingForm() {
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState(null);
   const [subcategories, setSubcategories] = useState([]);
+  const [catsLoading, setCatsLoading] = useState(true);
 
   const sectionRefs = {
-    title:       useRef(null),
+    title: useRef(null),
     description: useRef(null),
-    price:       useRef(null),
-    city:        useRef(null),
-    location:    useRef(null),
-    images:      useRef(null),
+    price: useRef(null),
+    city: useRef(null),
+    location: useRef(null),
+    images: useRef(null),
   };
 
-  const ERROR_ORDER = ["title", "description", "price", "city", "location", "images"];
+  const set = (field, value) => {
+    setForm((p) => ({ ...p, [field]: value }));
+    if (errors[field]) setErrors((p) => ({ ...p, [field]: null }));
+  };
+
+  const ERROR_ORDER = [
+    "title",
+    "description",
+    "price",
+    "city",
+    "location",
+    "images",
+  ];
 
   const cities = moroccoCities.cities
     .map((c) => c.label || c.name || c.city)
@@ -481,6 +497,7 @@ function CreateListingForm() {
     .sort();
 
   // ── Fetch immobilier subcategories ────────────────────────────────────────
+<<<<<<< HEAD:frontend/app/dashboard/listings/real-estate/create/page.jsx
 useEffect(() => {
   axios.get(`${API}/api/categories`).then((r) => {
     const data = r.data.data || [];
@@ -496,11 +513,28 @@ useEffect(() => {
   const match = subcategories.find((c) => c.slug === slug);
   if (match) set("categoryId", match.id);
 }, [form.propertyType, subcategories]);
+=======
+  useEffect(() => {
+    axios
+      .get(`${API}/api/categories`)
+      .then((r) => {
+        const data = r.data.data || [];
+        const immobilierCats = data.filter((c) => c.module === "immobilier");
+        setSubcategories(immobilierCats);
+        setForm((p) => ({ ...p, categoryId: immobilierCats[0]?.id ?? "" }));
+      })
+      .finally(() => setCatsLoading(false));
+  }, []);
 
-  const set = (field, value) => {
-    setForm((p) => ({ ...p, [field]: value }));
-    if (errors[field]) setErrors((p) => ({ ...p, [field]: null }));
-  };
+  if (catsLoading) return <LoadingSpinner message="Chargement..." />;
+>>>>>>> featuer/adminListings:frontend/app/my-space/services/real-estate/create/page.jsx
+
+  // After fetching subcategories:
+  const propertyTypeOptions = subcategories.map((c) => ({
+    label: c.name, // "Appartement"
+    value: c.id, // the actual categoryId
+    slug: c.slug,
+  }));
 
   const validate = () => {
     const e = {};
@@ -508,14 +542,10 @@ useEffect(() => {
       e.title = "Min 5 caractères";
     if (!form.description.trim() || form.description.trim().length < 10)
       e.description = "Min 10 caractères";
-    if (!form.price || Number(form.price) <= 0)
-      e.price = "Prix invalide";
-    if (!form.city)
-      e.city = "Veuillez sélectionner une ville";
-    if (!form.location.trim())
-      e.location = "Requis";
-    if (form.images.length === 0)
-      e.images = "Ajoutez au moins une photo";
+    if (!form.price || Number(form.price) <= 0) e.price = "Prix invalide";
+    if (!form.city) e.city = "Veuillez sélectionner une ville";
+    if (!form.location.trim()) e.location = "Requis";
+    if (form.images.length === 0) e.images = "Ajoutez au moins une photo";
     return e;
   };
 
@@ -600,10 +630,10 @@ useEffect(() => {
             </Field>
             <Field label="Type de bien *">
               <Select
-                value={form.propertyType}
-                onChange={(e) => set("propertyType", e.target.value)}
+                value={form.categoryId}
+                onChange={(e) => set("categoryId", e.target.value)}
               >
-                {PROPERTY_TYPES.map((t) => (
+                {propertyTypeOptions.map((t) => (
                   <option key={t.value} value={t.value}>
                     {t.label}
                   </option>
@@ -727,32 +757,32 @@ useEffect(() => {
               latitude={form.latitude}
               longitude={form.longitude}
               onChange={(lat, lng) => {
+                const lat_n = parseFloat(lat);
+                const lng_n = parseFloat(lng);
+                // Morocco bounds: lat 27.6–35.9, lng -13.2–-1.0
+                if (
+                  lat_n < 27.6 ||
+                  lat_n > 35.9 ||
+                  lng_n < -13.2 ||
+                  lng_n > -1.0
+                ) {
+                  setErrors((p) => ({
+                    ...p,
+                    map: "Position hors du Maroc. Veuillez sélectionner un emplacement au Maroc.",
+                  }));
+                  return;
+                }
+                setErrors((p) => ({ ...p, map: null }));
                 set("latitude", lat);
                 set("longitude", lng);
               }}
             />
+            {errors.map && (
+              <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                <span>⚠</span> {errors.map}
+              </p>
+            )}
           </Field>
-
-          {(form.latitude || form.longitude) && (
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Latitude">
-                <Input
-                  type="number"
-                  step="any"
-                  value={form.latitude}
-                  onChange={(e) => set("latitude", e.target.value)}
-                />
-              </Field>
-              <Field label="Longitude">
-                <Input
-                  type="number"
-                  step="any"
-                  value={form.longitude}
-                  onChange={(e) => set("longitude", e.target.value)}
-                />
-              </Field>
-            </div>
-          )}
         </div>
 
         {/* ── CONTACT ── */}

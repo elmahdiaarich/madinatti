@@ -1,4 +1,3 @@
-
 const express    = require('express')
 const router     = express.Router()
 const authMiddleware = require('../middlewares/authMiddleware')
@@ -101,4 +100,4 @@ router.patch('/categories/:id/toggle', toggleCategoryActive)
 // DELETE /api/admin/categories/:id
 router.delete('/categories/:id', deleteCategory)
  
-module.exports = router
+module.exports = router
