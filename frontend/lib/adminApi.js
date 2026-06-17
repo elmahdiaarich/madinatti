@@ -245,14 +245,6 @@ let mockBusinesses = [
   { id: 'b5', name: 'Fiduciaire Atlas', email: 'contact@fidatlas.ma', city: 'Casablanca', isActive: false, plan: 'Standard', totalListings: 6, pendingListings: 0, rejectedListings: 0, publishedListings: 6, joinedAt: '2025-08-01T09:00:00Z' },
 ]
 
-// ─────────────────────────────────────────────────────────────────────────────
-// OVERVIEW  — real API
-// ─────────────────────────────────────────────────────────────────────────────
-
-export async function getOverview(token = null) {
-  const json = await apiFetch('/api/admin/overview', {}, token)
-  return json.data ?? json
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LISTINGS — real API for all modules
@@ -328,19 +320,19 @@ export async function updateListingStatus(id, status, adminNotes = null, token =
 // REPORTS  (mock — no Report model yet)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export async function getReports() {
-  return [...mockReports].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-}
+// export async function getReports() {
+//   return [...mockReports].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+// }
 
-export async function handleReport(id, action) {
-  const report = mockReports.find((r) => r.id === id)
-  if (!report) throw new Error('Signalement introuvable')
-  if (action === 'dismiss') {
-    report.status = 'DISMISSED'
-  } else if (action === 'delete') {
-    report.status = 'DELETED'
-  }
-}
+// export async function handleReport(id, action) {
+//   const report = mockReports.find((r) => r.id === id)
+//   if (!report) throw new Error('Signalement introuvable')
+//   if (action === 'dismiss') {
+//     report.status = 'DISMISSED'
+//   } else if (action === 'delete') {
+//     report.status = 'DELETED'
+//   }
+// }
 
 /**
  * handleReport(id, body, token)

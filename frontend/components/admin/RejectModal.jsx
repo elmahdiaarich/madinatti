@@ -15,7 +15,7 @@
 "use client";
 
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { updateListingStatus } from '@/lib/adminApi';
@@ -109,7 +109,6 @@ export default function RejectModal({ isOpen, onClose, onConfirm, listingId, lis
 
     return parts.join("\n\n");
   };
->>>>>>> featuer/adminListings
 
   const handleConfirm = async () => {
     setLoading(true);
@@ -144,15 +143,11 @@ export default function RejectModal({ isOpen, onClose, onConfirm, listingId, lis
               <IconAlertTriangle />
             </div>
             <div className="flex-1 min-w-0">
-<<<<<<< HEAD
-              <h2 className="text-lg font-bold text-gray-900">Motif du refus</h2>
-              {listing?.title && (
-=======
+
               <h2 className="text-lg font-bold text-gray-900">
                 Motif du refus
               </h2>
               {listingTitle && (
->>>>>>> featuer/adminListings
                 <p className="text-sm text-gray-500 truncate mt-0.5">
                   {listing.title}
                 </p>
