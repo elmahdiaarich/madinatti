@@ -241,6 +241,7 @@ const approveListing = async (req, res) => {
     const { id } = req.params
     const adminId = req.user.userId
     const now = new Date()
+    const { createNotification } = require('./notificationController');
 
     // Essai job d'abord
     const job = await prisma.jobListing.findUnique({ where: { id } })
@@ -248,17 +249,60 @@ const approveListing = async (req, res) => {
       if (job.status !== 'PENDING') {
         return res.status(400).json({ success: false, message: 'Cette annonce n\'est pas en attente' })
       }
-      await prisma.jobListing.update({
-        where: { id },
-        data: {
-          status:      'APPROVED',
-          publishedAt:  now,
-          reviewedAt:   now,
-          reviewedBy:   adminId,
-          adminNotes:   null,
-        },
-      })
-      return res.json({ success: true, message: 'Offre d\'emploi approuvée' })
+     const approvedJob = await prisma.jobListing.update({
+  where: { id },
+  data: { status: 'APPROVED', publishedAt: now, reviewedAt: now, reviewedBy: adminId, adminNotes: null },
+  include: { category: { select: { slug: true } } }, // ← add this
+});
+
+// Trigger job alerts
+const matchingAlerts = await prisma.alert.findMany({
+  where: {
+    module:   'emploi',
+    isActive: true,
+    NOT: [{ userId: job.userId }],
+  },
+});
+
+console.log(`Found ${matchingAlerts.length} active emploi alerts for job ${approvedJob.id}`);
+console.log('Alerts:', JSON.stringify(matchingAlerts, null, 2));
+
+const notifiedUserIds = new Set();
+notifiedUserIds.add(job.userId); // already excluded business owner
+
+for (const alert of matchingAlerts) {
+  if (notifiedUserIds.has(alert.userId)) continue; // skip if already notified
+
+  const filters = alert.filters || {};
+  const categoryMatch = !filters.categorySlug || filters.categorySlug === approvedJob.category?.slug;
+  const regionMatch   = !filters.region       || filters.region === approvedJob.region;
+  const cityMatch     = !filters.city         || filters.city === approvedJob.location;
+  const contractMatch = !filters.contractType || filters.contractType === approvedJob.contractType;
+  const keywordMatch  = !filters.keyword      || approvedJob.title.toLowerCase().includes(filters.keyword.toLowerCase());
+
+if (categoryMatch && regionMatch && cityMatch && contractMatch && keywordMatch) {
+    await createNotification(
+      alert.userId,
+      'JOB_ALERT',
+      'Nouvelle offre qui vous correspond 🔔',
+      `Une nouvelle offre "${approvedJob.title}" correspond à votre alerte.`,
+      `/jobs/${approvedJob.id}`
+    );
+    notifiedUserIds.add(alert.userId);
+  }
+}
+// Notify business that their job was approved
+
+await createNotification(
+  job.userId,
+  'LISTING_APPROVED',
+  'Votre annonce a été approuvée ✅',
+  `Votre offre d'emploi "${job.title}" est maintenant en ligne.`,
+  `/jobs/${job.id}`
+);
+
+return res.json({ success: true, message: 'Offre d\'emploi approuvée' });
+
     }
 
     // Essai immobilier
@@ -301,6 +345,15 @@ const approveListing = async (req, res) => {
           images:       movedImages,
         },
       })
+      
+await createNotification(
+  re.userId,
+  'LISTING_APPROVED',
+  'Votre annonce a été approuvée ✅',
+  `Votre annonce immobilière "${re.title}" est maintenant en ligne.`,
+  `/real-estate/${re.id}`
+);
+
       return res.json({ success: true, message: 'Annonce immobilière approuvée' })
     }
 

@@ -15,6 +15,7 @@ const {
   getMyJobs,
   updateJob,
   deleteJob,
+  getBusinessApplications
 } = require('../controllers/jobController');
 const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
@@ -28,7 +29,6 @@ router.get('/categories',    getJobCategories);
 // ⚠️ Routes fixes AVANT /:id pour éviter les conflits Express
 router.get('/favorites/me',      authMiddleware, getMyFavorites);
 router.get('/my',                authMiddleware, roleMiddleware('business'), getMyJobs);
-router.get('/applications/my',   authMiddleware, roleMiddleware('citizen'),  getMyApplications);
 
 // ── CV download proxy (AVANT /:id) ───────────────────────────────────────────
 router.get('/cv/download', async (req, res) => {
@@ -50,6 +50,7 @@ router.get('/cv/download', async (req, res) => {
     res.status(500).json({ message: 'Erreur: ' + e.message })
   }
 })
+router.get('/my-applications', authMiddleware, roleMiddleware('business'), getBusinessApplications);
 
 // ── Candidature (citoyen) ────────────────────────────────────────────────────
 router.post('/:id/apply',        authMiddleware, roleMiddleware('citizen'), upload.single('cv'), applyToJob);

@@ -23,12 +23,219 @@ const CATEGORIES = [
   { label: 'Logistique', categoryId: 'logistique' },
 ];
 
-// ─── Villes par région ────────────────────────────────────────────────────────
+// ─── CONTRACT TYPE OPTIONS ────────────────────────────────────────────────────
+const CONTRACT_TYPES = [
+  { value: 'CDI',           label: 'CDI' },
+  { value: 'CDD',           label: 'CDD' },
+  { value: 'STAGE',         label: 'Stage' },
+  { value: 'FREELANCE',     label: 'Freelance' },
+  { value: 'INTERIM',       label: 'Intérim' },
+  { value: 'ANAPEC',        label: 'ANAPEC' },
+  { value: 'TEMPS_PARTIEL', label: 'Temps partiel' },
+  { value: 'ALTERNANCE',    label: 'Alternance' },
+  { value: 'STATUTAIRE',    label: 'Statutaire' },
+];
+
+// ─── Villes par région (morocco-cities) ───────────────────────────────────────
+// Built once at module load from the `morocco-cities` package — used as the
+// single source of truth for region/city selects (AlertModal + page below).
 const citiesByRegion = cities.reduce((acc, city) => {
   if (!acc[city.region_name]) acc[city.region_name] = [];
   acc[city.region_name].push(city.name);
   return acc;
 }, {});
+
+// Sorted list of all region names, derived from the same data.
+const ALL_REGIONS = Object.keys(citiesByRegion).sort();
+
+// ─── ALERT MODAL COMPONENT ────────────────────────────────────────────────────
+function AlertModal({ token, initialFilters, onClose, apiUrl }) {
+  const [form, setForm] = useState({
+    keyword:      initialFilters.search       || '',
+    categorySlug: initialFilters.categorySlug || '',
+    region:       initialFilters.region       || '',
+    city:         initialFilters.location     || '',
+    contractType: initialFilters.contractType || '',
+  });
+  const [categories, setCategories]     = useState([]);
+  const [saving, setSaving]             = useState(false);
+  const [saved, setSaved]               = useState(false);
+  const [error, setError]               = useState('');
+
+  // Regions & cities now come straight from the morocco-cities package,
+  // no network round-trip needed.
+  const regions = ALL_REGIONS;
+  const citiesInRegion = form.region
+    ? [...(citiesByRegion[form.region] || [])].sort()
+    : [];
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetch(`${apiUrl}/api/jobs/categories`)
+      .then(r => r.json())
+      .then(d => { if (d.success) setCategories(d.data); })
+      .catch(() => {});
+  }, []);
+
+  const handleRegionChange = (region) => {
+    setForm(f => ({ ...f, region, city: '' }));
+  };
+
+  const handleSave = async () => {
+    setError('');
+    setSaving(true);
+    try {
+      const filters = {
+        ...(form.keyword      && { keyword:      form.keyword }),
+        ...(form.categorySlug && { categorySlug: form.categorySlug }),
+        ...(form.region       && { region:       form.region }),
+        ...(form.city         && { city:         form.city }),
+        ...(form.contractType && { contractType: form.contractType }),
+      };
+
+      const res = await fetch(`${apiUrl}/api/alerts`, {
+        method:  'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ filters }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.message || 'Erreur'); return; }
+      setSaved(true);
+      setTimeout(() => onClose(), 2000);
+    } catch {
+      setError('Erreur réseau');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 animate-slide-up">
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">🔔 Créer une alerte</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Soyez notifié dès qu'une offre correspond</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+        </div>
+
+        {saved ? (
+          <div className="flex flex-col items-center gap-2 py-8 text-green-700">
+            <div className="text-4xl">✅</div>
+            <p className="font-semibold">Alerte créée avec succès !</p>
+            <p className="text-xs text-gray-400 text-center">
+              Vous recevrez une notification pour chaque nouvelle offre correspondante.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-col gap-3 mb-5">
+
+              {/* Keyword */}
+              <div>
+                <label className="text-xs font-semibold text-gray-500 mb-1 block">
+                  Mot-clé / Titre du poste
+                </label>
+                <input
+                  type="text"
+                  placeholder="ex: Développeur React, Comptable..."
+                  value={form.keyword}
+                  onChange={e => setForm(f => ({ ...f, keyword: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#A7D129] focus:ring-1 focus:ring-[#A7D129] transition"
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="text-xs font-semibold text-gray-500 mb-1 block">Catégorie</label>
+                <select
+                  value={form.categorySlug}
+                  onChange={e => setForm(f => ({ ...f, categorySlug: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#A7D129] focus:ring-1 focus:ring-[#A7D129] transition bg-white"
+                >
+                  <option value="">Toutes les catégories</option>
+                  {categories.map(c => (
+                    <option key={c.id} value={c.slug}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Contract type */}
+              <div>
+                <label className="text-xs font-semibold text-gray-500 mb-1 block">Type de contrat</label>
+                <select
+                  value={form.contractType}
+                  onChange={e => setForm(f => ({ ...f, contractType: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#A7D129] focus:ring-1 focus:ring-[#A7D129] transition bg-white"
+                >
+                  <option value="">Tous les contrats</option>
+                  {CONTRACT_TYPES.map(c => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Region (morocco-cities) */}
+              <div>
+                <label className="text-xs font-semibold text-gray-500 mb-1 block">Région</label>
+                <select
+                  value={form.region}
+                  onChange={e => handleRegionChange(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#A7D129] focus:ring-1 focus:ring-[#A7D129] transition bg-white"
+                >
+                  <option value="">Toutes les régions</option>
+                  {regions.map(r => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* City — only shown if region selected and has cities (morocco-cities) */}
+              {form.region && citiesInRegion.length > 0 && (
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 mb-1 block">Ville</label>
+                  <select
+                    value={form.city}
+                    onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#A7D129] focus:ring-1 focus:ring-[#A7D129] transition bg-white"
+                  >
+                    <option value="">Toutes les villes</option>
+                    {citiesInRegion.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {error && (
+              <p className="text-red-500 text-xs mb-3 text-center">{error}</p>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-gray-600 font-semibold text-sm hover:bg-gray-50 transition"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 py-2.5 bg-[#2D5016] text-white rounded-xl font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition disabled:opacity-60"
+              >
+                {saving ? 'Enregistrement...' : "Créer l'alerte"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // ─── Scroll helper ────────────────────────────────────────────────────────────
 const scrollToInscription = () => {
@@ -41,48 +248,52 @@ export default function JobsPage() {
   const { user, token } = useAuth();
   const router = useRouter();
 
-  const [jobs, setJobs] = useState([]);
-  const [pagination, setPagination] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ page: 1, limit: 9 });
+  const [jobs, setJobs]               = useState([]);
+  const [pagination, setPagination]   = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const [filters, setFilters]         = useState({ page: 1, limit: 9 });
   const [activeCategory, setActiveCategory] = useState(null);
   const [searchInput, setSearchInput] = useState('');
   const [favoritedIds, setFavoritedIds] = useState(new Set());
+  const [showAlertModal, setShowAlertModal] = useState(false);
 
   const isVisitor = !user;
-  const userRole = user?.role; // 'citizen' | 'business' | 'admin'
-
-  // Bouton "Publier une annonce" : visible si visiteur ou citoyen
-  const showPublishBtn = true;
+  const userRole  = user?.role;
 
   const handlePublishClick = () => {
     if (userRole === 'business') {
-      router.push('/my-space/services/jobs/create');
+      router.push('/dashboard/listings/jobs/create');
     } else {
-      // visiteur ou citoyen → scroll vers le formulaire d'inscription
       scrollToInscription();
     }
   };
 
-useEffect(() => {
-  const fetchJobs = async () => {
-    setLoading(true);
-    try {
-      const [res, favRes] = await Promise.all([
-        jobsService.getJobs(filters),
-        token ? jobsService.getMyFavorites(token).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
-      ]);
-      setJobs(res.data);
-      setPagination(res.pagination);
-      setFavoritedIds(new Set((favRes.data ?? []).map((j) => j.id)));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+  const hasActiveFilters = () => {
+    const { page, limit, ...rest } = filters;
+    return Object.values(rest).some(v => v);
   };
-  fetchJobs();
-}, [filters, token]);
+
+  useEffect(() => {
+    const fetchJobs = async () => {
+      setLoading(true);
+      try {
+        const [res, favRes] = await Promise.all([
+          jobsService.getJobs(filters),
+          token
+            ? jobsService.getMyFavorites(token).catch(() => ({ data: [] }))
+            : Promise.resolve({ data: [] }),
+        ]);
+        setJobs(res.data);
+        setPagination(res.pagination);
+        setFavoritedIds(new Set((favRes.data ?? []).map((j) => j.id)));
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchJobs();
+  }, [filters, token]);
 
   const handleFilter = (newFilters) => {
     if (Object.keys(newFilters).length === 0) {
@@ -149,8 +360,6 @@ useEffect(() => {
               Rechercher
             </button>
           </div>
-
-
         </div>
       </div>
 
@@ -170,18 +379,27 @@ useEffect(() => {
               {cat.label}
             </button>
           ))}
-          {/* Bouton publier — poussé à droite */}
-          {showPublishBtn && (
+
+          {/* Right-side action buttons: alert (citizens only) + publish */}
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            {userRole === 'citizen' && (
+              <button
+                onClick={() => setShowAlertModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#A7D129] text-[#2D5016] font-semibold text-sm hover:bg-[#E8F5D0] transition-all duration-150"
+              >
+                🔔 Créer une alerte
+              </button>
+            )}
             <button
               onClick={handlePublishClick}
-              className="ml-auto inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-[#2D5016] text-white font-bold text-sm shadow-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-150 hover:scale-105 active:scale-100 group shrink-0 cursor-pointer"
+              className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-[#2D5016] text-white font-bold text-sm shadow-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-150 hover:scale-105 active:scale-100 cursor-pointer"
             >
               <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current shrink-0">
                 <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
               </svg>
               Publier une annonce
             </button>
-          )}
+          </div>
         </div>
       </div>
 
@@ -189,7 +407,7 @@ useEffect(() => {
       <div className="max-w-[1200px] mx-auto px-4 py-6 flex gap-6">
 
         {/* SIDEBAR */}
-        <aside className="w-[260px] shrink-0">
+        <aside className="w-[280px] shrink-0">
           <div className="sticky top-[52px] overflow-y-auto max-h-[calc(100vh-52px)]">
             <JobFilter onFilter={handleFilter} />
           </div>
@@ -197,7 +415,6 @@ useEffect(() => {
 
         {/* JOBS LIST */}
         <main className="flex-1 min-w-0">
-          {/* Results count */}
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-gray-500">
               {pagination
@@ -234,9 +451,9 @@ useEffect(() => {
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-             {jobs.map((job) => (
-              <JobCard key={job.id} job={job} initialFavorited={favoritedIds.has(job.id)} />
-            ))}
+              {jobs.map((job) => (
+                <JobCard key={job.id} job={job} initialFavorited={favoritedIds.has(job.id)} />
+              ))}
             </div>
           )}
 
@@ -275,13 +492,9 @@ useEffect(() => {
         </main>
       </div>
 
-      {/* FORMULAIRE D'INSCRIPTION — visiteurs et citoyens uniquement */}
+      {/* FORMULAIRE D'INSCRIPTION */}
       {(isVisitor || userRole === 'citizen') && (
-        <div
-          id="inscription"
-          className="max-w-[1000px] mx-auto px-4 py-12"
-        >
-          {/* Séparateur décoratif */}
+        <div id="inscription" className="max-w-[1000px] mx-auto px-4 py-12">
           <div className="flex items-center gap-4 mb-8">
             <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#A7D129]/40 to-[#A7D129]/40" />
             <span className="text-xs font-bold uppercase tracking-widest text-[#7BA428]">
@@ -291,9 +504,18 @@ useEffect(() => {
             </span>
             <div className="flex-1 h-px bg-gradient-to-l from-transparent via-[#A7D129]/40 to-[#A7D129]/40" />
           </div>
-
           <InlineRegisterSection />
         </div>
+      )}
+
+      {/* ALERT MODAL */}
+      {showAlertModal && (
+        <AlertModal
+          token={token}
+          initialFilters={filters}
+          onClose={() => setShowAlertModal(false)}
+          apiUrl={process.env.NEXT_PUBLIC_API_URL}
+        />
       )}
 
     </div>

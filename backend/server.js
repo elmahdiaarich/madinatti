@@ -37,6 +37,9 @@ app.use('/api/reports', reportRoutes);
 const messageRoutes = require('./routes/messages');
 app.use('/api/messages', messageRoutes);
 
+app.use('/api/notifications', require('./routes/notifications'));
+
+app.use('/api/alerts', require('./routes/alerts'));
 
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {

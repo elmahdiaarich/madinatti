@@ -159,7 +159,26 @@ async function createInquiry(req, res) {
     const result = await service.createInquiry(req.body, userId);
     if (result.error)
       return res.status(result.status).json({ success: false, message: result.error });
-    return res.status(201).json({ success: true, data: result.inquiry });
+    // Notify business of new inquiry
+if (result.inquiry) {
+  const { createNotification } = require('./notificationController');
+  const prisma = require('../config/db');
+  const listing = await prisma.realEstateListing.findUnique({
+    where: { id: listingId },
+    select: { userId: true, title: true, id: true }
+  });
+  if (listing) {
+    await createNotification(
+      listing.userId,
+      'NEW_INQUIRY',
+      'Nouveau message reçu',
+      `Nouveau message pour votre annonce "${listing.title}".`,
+      '/dashboard/messages'
+    );
+  }
+}
+
+return res.status(201).json({ success: true, data: result.inquiry });
   } catch (err) {
     console.error('[createInquiry]', err);
     return res.status(500).json({ success: false, message: 'Internal server error' });

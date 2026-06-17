@@ -365,7 +365,7 @@ const handleCityChange = (city) => {
         languages:           form.languages,
         description:         form.descMode === 'paste' ? form.description : buildDescription(),
       }, token);
-      router.push('/my-space/services/jobs');
+      router.push('/dashboard/listings/jobs');
     } catch (err) {
       setSubmitError(err.message || 'Une erreur est survenue');
     } finally {
@@ -388,7 +388,7 @@ const handleCityChange = (city) => {
         <div className="max-w-3xl mx-auto">
           <div className="flex items-center justify-between gap-3 mb-1">
             <button
-              onClick={() => router.push('/my-space/services/jobs')}
+              onClick={() => router.push('/dashboard/listings/jobs')}
               className="text-white/60 hover:text-white transition text-xs flex items-center gap-1"
             >
               ← Retour à mes annonces
@@ -1051,7 +1051,7 @@ const handleCityChange = (city) => {
             </p>
             <div className="flex gap-3 justify-center">
               <button
-                onClick={() => router.push('/my-space/services/jobs')}
+                onClick={() => router.push('/dashboard/listings/jobs')}
                 className="px-6 py-3 rounded-xl border-2 border-[#2D5016] text-[#2D5016] font-bold text-sm hover:bg-[#E8F5D0] transition"
               >
                 Suivre mon annonce

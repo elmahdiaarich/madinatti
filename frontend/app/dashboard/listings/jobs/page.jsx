@@ -42,7 +42,7 @@ function StatsBar({ jobs }) {
       label: "Offres actives",
       value: active,
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
         </svg>
       ),
@@ -52,7 +52,7 @@ function StatsBar({ jobs }) {
       label: "En attente",
       value: pending,
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10" />
           <path d="M12 6v6l4 2" />
         </svg>
@@ -63,7 +63,7 @@ function StatsBar({ jobs }) {
       label: "Candidatures",
       value: totalApps,
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
           <circle cx="9" cy="7" r="4" />
           <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -76,22 +76,24 @@ function StatsBar({ jobs }) {
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="grid grid-cols-3 gap-2">
       {stats.map((s) => (
         <div
           key={s.label}
-          className={`flex flex-col gap-1.5 rounded-2xl border px-4 py-3 ${s.color}`}
+          className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 ${s.color}`}
         >
-          <div className="flex items-center justify-between">
-            <span className="opacity-60">{s.icon}</span>
-            {s.badge && (
-              <span className="text-[10px] font-bold bg-white/70 border border-current/20 px-1.5 py-0.5 rounded-full opacity-80">
-                {s.badge}
-              </span>
-            )}
+          <span className="opacity-60 shrink-0">{s.icon}</span>
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-1.5">
+              <p className="text-xl font-extrabold leading-none">{s.value}</p>
+              {s.badge && (
+                <span className="text-[9px] font-bold bg-white/70 border border-current/20 px-1.5 py-0.5 rounded-full opacity-80 leading-none">
+                  {s.badge}
+                </span>
+              )}
+            </div>
+            <p className="text-[10px] font-medium opacity-70 mt-0.5 truncate">{s.label}</p>
           </div>
-          <p className="text-2xl font-extrabold leading-none">{s.value}</p>
-          <p className="text-[11px] font-medium opacity-70">{s.label}</p>
         </div>
       ))}
     </div>
@@ -131,20 +133,8 @@ function JobCard({ job, onDelete, onViewApplications }) {
           />
         ) : (
           <div className="w-14 h-14 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-300">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="28"
-              height="28"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="1.2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
-              />
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
             </svg>
           </div>
         )}
@@ -156,25 +146,13 @@ function JobCard({ job, onDelete, onViewApplications }) {
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col gap-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-semibold text-gray-900 text-sm leading-snug">
-                {job.title}
-              </p>
+              <p className="font-semibold text-gray-900 text-sm leading-snug">{job.title}</p>
               <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${statusStyle.className}`}>
                 {statusStyle.label}
               </span>
             </div>
             <p className="text-xs text-gray-400 flex items-center gap-1 flex-wrap">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="11"
-                height="11"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
                 <circle cx="12" cy="9" r="2.5" />
               </svg>
@@ -203,7 +181,6 @@ function JobCard({ job, onDelete, onViewApplications }) {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           {/* Stats */}
           <div className="flex items-center gap-3">
-            {/* Views */}
             <span className="flex items-center gap-1 text-xs text-gray-400" title="Vues">
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -212,7 +189,6 @@ function JobCard({ job, onDelete, onViewApplications }) {
               {job.viewsCount || 0}
             </span>
 
-            {/* Applications button */}
             <button
               onClick={(e) => { e.stopPropagation(); onViewApplications({ id: job.id, title: job.title }); }}
               title="Voir les candidatures"
@@ -229,7 +205,6 @@ function JobCard({ job, onDelete, onViewApplications }) {
                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
               {appCount} candidature{appCount !== 1 ? "s" : ""}
-              {/* New applications dot */}
               {newCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
                   {newCount}
@@ -241,10 +216,7 @@ function JobCard({ job, onDelete, onViewApplications }) {
           </div>
 
           {/* Actions */}
-          <div
-            className="flex items-center gap-1.5"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
             {job.status === "APPROVED" && (
               <Link
                 href={`/jobs/${job.id}`}
@@ -259,7 +231,7 @@ function JobCard({ job, onDelete, onViewApplications }) {
               </Link>
             )}
             <Link
-              href={`/my-space/services/jobs/edit/${job.id}`}
+              href={`/dashboard/listings/jobs/edit/${job.id}`}
               title="Modifier l'annonce"
               className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition"
             >
@@ -302,7 +274,7 @@ function DashboardContent() {
   const { token } = useAuth();
   const searchParams = useSearchParams();
   const [jobs, setJobs] = useState([]);
-  const [allJobs, setAllJobs] = useState([]); // unfiltered, for stats
+  const [allJobs, setAllJobs] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({});
@@ -310,22 +282,14 @@ function DashboardContent() {
   const [justCreated] = useState(searchParams.get("created") === "1");
   const [selectedJob, setSelectedJob] = useState(null);
 
-  // Load unfiltered jobs once for stats
-  useEffect(() => {
-    loadAll();
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [page, filters]);
+  useEffect(() => { loadAll(); }, []);
+  useEffect(() => { load(); }, [page, filters]);
 
   const loadAll = async () => {
     try {
       const res = await jobsService.getMyJobs({ page: 1, limit: 100 }, token);
       setAllJobs(res.jobs || []);
-    } catch (e) {
-      // silent — stats are non-critical
-    }
+    } catch (e) {}
   };
 
   const load = async () => {
@@ -369,21 +333,6 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <h1 className="font-extrabold text-primary-dark text-lg">
-            Mes annonces d'emploi
-          </h1>
-          <Link
-            href="/my-space/services/jobs/create"
-            className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-sage transition"
-          >
-            + Nouvelle offre
-          </Link>
-        </div>
-      </div>
-
       <div className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-5">
         {/* Success toast */}
         {justCreated && (
@@ -396,15 +345,27 @@ function DashboardContent() {
           </div>
         )}
 
-        {/* Stats bar — only show when we have data */}
+        {/* Stats bar */}
         {allJobs.length > 0 && <StatsBar jobs={allJobs} />}
 
-        <JobListingFilters
-          onChange={handleFiltersChange}
-          showStatus={true}
-          jobs={jobs}
-        />
+        {/* Filters + Publish button */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <JobListingFilters onChange={handleFiltersChange} showStatus={true} jobs={jobs} />
+          </div>
+          <Link
+            href="/dashboard/listings/jobs/create"
+            className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-sage transition whitespace-nowrap"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            <span className="hidden sm:inline">Publier une offre</span>
+            <span className="sm:hidden">Publier</span>
+          </Link>
+        </div>
 
+        {/* Job list */}
         {loading ? (
           <div className="flex flex-col gap-3">
             {[...Array(3)].map((_, i) => (
@@ -419,7 +380,7 @@ function DashboardContent() {
               <p className="text-sm text-gray-400 mt-1">Publiez votre première offre d'emploi.</p>
             </div>
             <Link
-              href="/my-space/services/jobs/create"
+              href="/dashboard/listings/jobs/create"
               className="px-6 py-2.5 bg-primary text-white rounded-full text-sm font-bold hover:bg-primary-sage transition"
             >
               Publier une offre
@@ -428,12 +389,7 @@ function DashboardContent() {
         ) : (
           <div className="flex flex-col gap-3">
             {jobs.map((j) => (
-              <JobCard
-                key={j.id}
-                job={j}
-                onDelete={handleDelete}
-                onViewApplications={setSelectedJob}
-              />
+              <JobCard key={j.id} job={j} onDelete={handleDelete} onViewApplications={setSelectedJob} />
             ))}
           </div>
         )}
@@ -457,7 +413,6 @@ function DashboardContent() {
         )}
       </div>
 
-      {/* Drawer candidatures */}
       {selectedJob && (
         <ApplicationsDrawer
           jobId={selectedJob.id}

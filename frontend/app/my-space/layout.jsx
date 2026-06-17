@@ -75,81 +75,7 @@ const IconMail = () => (
   </svg>
 );
 
-const IconBuilding = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.75"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <line x1="3" y1="21" x2="21" y2="21" />
-    <path d="M9 8h1" />
-    <path d="M9 12h1" />
-    <path d="M9 16h1" />
-    <path d="M14 8h1" />
-    <path d="M14 12h1" />
-    <path d="M14 16h1" />
-    <path d="M5 21v-16a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
-  </svg>
-);
 
-const IconHome = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.75"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M5 12l-2 0l9-9l9 9l-2 0" />
-    <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
-    <path d="M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6" />
-  </svg>
-);
-
-const IconBriefcase = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.75"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="3" y="7" width="18" height="13" rx="2" />
-    <path d="M8 7v-2a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-    <line x1="12" y1="12" x2="12" y2="12.01" />
-    <path d="M3 13a20 20 0 0 0 18 0" />
-  </svg>
-);
-
-const IconChevron = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M6 9l6 6l6-6" />
-  </svg>
-);
 
 const IconLogout = () => (
   <svg
@@ -187,20 +113,6 @@ const IconSidebarToggle = () => (
 
 // ── Services registry ─────────────────────────────────────────────────────────
 
-const BUSINESS_SERVICES = [
-  {
-    key: "real-estate",
-    label: "Immobilier",
-    href: "/my-space/services/real-estate",
-    icon: IconHome,
-  },
-  {
-    key: "jobs",
-    label: "Emploi",
-    href: "/my-space/services/jobs",
-    icon: IconBriefcase,
-  },
-];
 
 const COMMON_NAV = [
   {
@@ -293,28 +205,7 @@ export default function MySpaceLayout({ children }) {
     return true;
   });
 
-  const isBusiness = user?.role === "business";
   const isInServices = pathname?.startsWith("/my-space/services");
-
-  // Badge messages non lus (business seulement, refresh toutes les 60s)
-  const [unreadMessages, setUnreadMessages] = useState(0);
-
-  useEffect(() => {
-    if (!isBusiness || !token) return;
-    const fetchUnread = async () => {
-      try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/messages?limit=1`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        const json = await res.json();
-        if (json.success) setUnreadMessages(json.unreadCount || 0);
-      } catch {}
-    };
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 60_000);
-    return () => clearInterval(interval);
-  }, [isBusiness, token]);
 
   useEffect(() => {
     if (isInServices) setServicesOpen(true);
@@ -371,7 +262,7 @@ export default function MySpaceLayout({ children }) {
                 Mon espace
               </p>
               <p className="text-xs text-gray-400 mt-1 font-medium tracking-wide uppercase whitespace-nowrap">
-                {isBusiness ? "Compte Business" : "Citoyen"}
+                Citoyen
               </p>
             </div>
 
@@ -401,98 +292,16 @@ export default function MySpaceLayout({ children }) {
 
           {/* Nav */}
           <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 flex flex-col gap-0.5">
-            {COMMON_NAV.map((item) => (
+            {COMMON_NAV.map(({ key, ...item }) => (
               <NavItem
-                key={item.key}
+                key={key}
                 {...item}
                 active={pathname === item.href}
                 collapsed={!sidebarOpen}
-                badge={item.key === 'messages' && isBusiness ? unreadMessages : undefined}
               />
             ))}
 
-            {/* My Services — business only */}
-            {isBusiness && (
-              <div className="mt-2">
-                {/* Section label fades out when collapsed */}
-                <p
-                  className={`
-                  text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 mb-1.5 mt-1
-                  transition-opacity duration-150 whitespace-nowrap
-                  ${sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"}
-                `}
-                >
-                  Mes services
-                </p>
 
-                {/* Toggle button — shows tooltip when sidebar is collapsed */}
-                <button
-                  onClick={() => sidebarOpen && setServicesOpen((p) => !p)}
-                  title={!sidebarOpen ? "Mes annonces" : undefined}
-                  className={`
-                    w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
-                    transition-all duration-150 group
-                    ${
-                      isInServices
-                        ? "bg-[#2D5016]/10 text-[#2D5016]"
-                        : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-                    }
-                  `}
-                >
-                  {isInServices && (
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#A7D129] rounded-r-full" />
-                  )}
-                  <span
-                    className={`shrink-0 ${isInServices ? "text-[#2D5016]" : "text-gray-400 group-hover:text-gray-600"}`}
-                  >
-                    <IconBuilding />
-                  </span>
-
-                  {/* Label + chevron fade out when collapsed */}
-                  <span
-                    className={`flex-1 text-left truncate transition-opacity duration-150 ${!sidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"}`}
-                  >
-                    Mes annonces
-                  </span>
-                  <span
-                    className={`transition-all duration-200 text-gray-400 ${servicesOpen ? "rotate-180" : ""} ${!sidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"}`}
-                  >
-                    <IconChevron />
-                  </span>
-                </button>
-
-                {/* Sub-items — only render when sidebar is open */}
-                {servicesOpen && sidebarOpen && (
-                  <div className="mt-1 ml-4 pl-3 border-l-2 border-[#A7D129]/30 flex flex-col gap-0.5">
-                    {BUSINESS_SERVICES.map((svc) => {
-                      const active = pathname?.startsWith(svc.href);
-                      const Icon = svc.icon;
-                      return (
-                        <Link
-                          key={svc.key}
-                          href={svc.href}
-                          className={`
-                            flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all duration-150
-                            ${
-                              active
-                                ? "bg-[#2D5016]/10 text-[#2D5016] font-semibold"
-                                : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-                            }
-                          `}
-                        >
-                          <span
-                            className={`shrink-0 ${active ? "text-[#2D5016]" : "text-gray-400"}`}
-                          >
-                            <Icon />
-                          </span>
-                          {svc.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
           </nav>
 
           {/* Bottom — avatar + logout */}

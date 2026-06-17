@@ -189,6 +189,10 @@ export default function Navbar() {
   const [addError, setAddError] = useState("");
   const [addLoading, setAddLoading] = useState(false);
   const [switchingId, setSwitchingId] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef(null);
 
   const dropdownRef = useRef(null);
   const userMenuRef = useRef(null);
@@ -213,6 +217,9 @@ export default function Navbar() {
           setAddForm({ email: "", password: "" });
         }, 150);
       }
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setNotifOpen(false);
+      }
     };
     document.addEventListener("mousedown", fn);
     return () => document.removeEventListener("mousedown", fn);
@@ -224,7 +231,31 @@ export default function Navbar() {
     setUserMenuOpen(false);
     setShowAddAccount(false);
     setMobileOpen(false);
+    setNotifOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchNotifs = async () => {
+      try {
+        const storedToken = localStorage.getItem("token");
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/notifications?limit=5`,
+          {
+            headers: { Authorization: `Bearer ${storedToken}` },
+          },
+        );
+        const data = await res.json();
+        if (data.success) {
+          setNotifications(data.data || []);
+          setUnreadCount(data.unreadCount || 0);
+        }
+      } catch {}
+    };
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 60_000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const handleLogout = async () => {
     setUserMenuOpen(false);
@@ -265,6 +296,27 @@ export default function Navbar() {
     } finally {
       setAddLoading(false);
     }
+  };
+
+  const handleNotifClick = async (notif) => {
+    if (!notif.isRead) {
+      try {
+        const storedToken = localStorage.getItem("token");
+        await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/notifications/${notif.id}/read`,
+          {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${storedToken}` },
+          },
+        );
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n)),
+        );
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      } catch {}
+    }
+    if (notif.link) router.push(notif.link);
+    setNotifOpen(false);
   };
 
   const isActive = (path) => pathname === path;
@@ -445,249 +497,360 @@ export default function Navbar() {
         </button>
 
         {user ? (
-          /* ── AVATAR DROPDOWN ───────────────────────────────────────── */
-          <div className="relative" ref={userMenuRef}>
-            <button
-              onClick={() => setUserMenuOpen((p) => !p)}
-              className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full border border-gray-200 hover:border-[#A7D129] transition-colors bg-white"
-            >
-              <Avatar user={user} size="sm" />
-              <span className="hidden md:block text-sm font-medium text-gray-700 max-w-[110px] truncate">
-                {user.name}
-              </span>
-              <span className="hidden md:block text-gray-400">
-                <ChevronDown
-                  size={12}
-                  className={`transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`}
-                />
-              </span>
-            </button>
+          <>
+            {/* ── NOTIFICATION BELL ──────────────────────────────────── */}
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => setNotifOpen((p) => !p)}
+                className="relative w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 hover:border-[#A7D129] bg-white transition"
+              >
+                <Bell size={16} className="text-gray-600" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
 
-            <AnimatePresence>
-              {userMenuOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: -6, scale: 0.97 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -6, scale: 0.97 }}
-                  transition={{ duration: 0.12 }}
-                  className="absolute right-0 top-11 w-64 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 overflow-hidden"
-                >
-                  {/* User header */}
-                  <div className="px-4 py-3 bg-gray-50/50 border-b border-gray-100">
-                    <div className="flex items-center gap-3">
-                      <Avatar user={user} size="md" />
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-gray-900 truncate">
-                          {user.name}
-                        </p>
-                        <p className="text-xs text-gray-400 truncate">
-                          {user.email}
-                        </p>
-                        <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E8F5D0] text-[#2D5016] uppercase tracking-wide">
-                          {getRoleLabel(user.role)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ── ACCOUNT SWITCHER ── */}
-                  {accounts.filter((a) => a.user?.id !== user?.id).length >
-                    0 && (
-                    <div className="border-b border-gray-100 py-2 px-4 max-h-[160px] overflow-y-auto bg-white">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
-                        Changer de compte
+              <AnimatePresence>
+                {notifOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                    transition={{ duration: 0.12 }}
+                    className="absolute right-0 top-11 w-80 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 overflow-hidden"
+                  >
+                    <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                      <p className="font-bold text-gray-900 text-sm">
+                        Notifications
                       </p>
-                      <div className="flex flex-col gap-1">
-                        {accounts
-                          .filter((a) => (a.user?.id || a.id) !== user?.id)
-                          .map((acc) => {
-                            const u = acc.user || acc; // Extract normalized reference
-                            const uName =
-                              u.name || u.email?.split("@")[0] || "Utilisateur";
-                            const uEmail = u.email || "";
-                            const uRole = u.role || "citoyen";
+                      {unreadCount > 0 && (
+                        <span className="text-xs text-[#2D5016] font-semibold bg-[#E8F5D0] px-2 py-0.5 rounded-full">
+                          {unreadCount} non lues
+                        </span>
+                      )}
+                    </div>
 
-                            return (
-                              <button
-                                key={u.id || uEmail}
-                                disabled={switchingId !== null}
-                                onClick={() => handleSwitch(u.id || acc.id)}
-                                className="w-full flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-gray-50 transition group text-left disabled:opacity-60"
-                              >
-                                <Avatar user={u} size="sm" />
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-xs font-semibold text-gray-800 truncate group-hover:text-[#2D5016]">
-                                    {uName}
-                                  </p>
-                                  <p className="text-[10px] text-gray-400 truncate">
-                                    {uEmail}
-                                  </p>
-                                </div>
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 group-hover:bg-[#E8F5D0] group-hover:text-[#2D5016] uppercase tracking-wide shrink-0 transition-colors">
-                                  {switchingId === u.id
-                                    ? "..."
-                                    : getRoleLabel(uRole)}
-                                </span>
-                              </button>
-                            );
-                          })}
+                    <div className="divide-y divide-gray-50 max-h-80 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-6 text-center text-sm text-gray-400">
+                          Aucune notification
+                        </div>
+                      ) : (
+                        notifications.map((notif) => (
+                          <div
+                            key={notif.id}
+                            onClick={() => handleNotifClick(notif)}
+                            className={`px-4 py-3 cursor-pointer hover:bg-gray-50 transition ${!notif.isRead ? "bg-[#E8F5D0]/30" : ""}`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div
+                                className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!notif.isRead ? "bg-[#A7D129]" : "bg-transparent"}`}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p
+                                  className={`text-sm ${!notif.isRead ? "font-semibold text-gray-900" : "text-gray-700"}`}
+                                >
+                                  {notif.title}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                                  {notif.body}
+                                </p>
+                                <p className="text-[10px] text-gray-400 mt-1">
+                                  {new Date(notif.createdAt).toLocaleDateString(
+                                    "fr-FR",
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="border-t border-gray-100 px-4 py-2">
+                      <a
+                        href={
+                          role === "business"
+                            ? "/dashboard/notifications"
+                            : "/my-space/notifications"
+                        }
+                        onClick={() => setNotifOpen(false)}
+                        className="text-xs font-semibold text-[#2D5016] hover:underline"
+                      >
+                        Voir toutes les notifications →
+                      </a>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* ── AVATAR DROPDOWN ───────────────────────────────────────── */}
+            <div className="relative" ref={userMenuRef}>
+              <button
+                onClick={() => setUserMenuOpen((p) => !p)}
+                className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full border border-gray-200 hover:border-[#A7D129] transition-colors bg-white"
+              >
+                <Avatar user={user} size="sm" />
+                <span className="hidden md:block text-sm font-medium text-gray-700 max-w-[110px] truncate">
+                  {user.name}
+                </span>
+                <span className="hidden md:block text-gray-400">
+                  <ChevronDown
+                    size={12}
+                    className={`transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`}
+                  />
+                </span>
+              </button>
+
+              <AnimatePresence>
+                {userMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                    transition={{ duration: 0.12 }}
+                    className="absolute right-0 top-11 w-64 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 overflow-hidden"
+                  >
+                    {/* User header */}
+                    <div className="px-4 py-3 bg-gray-50/50 border-b border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <Avatar user={user} size="md" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-gray-900 truncate">
+                            {user.name}
+                          </p>
+                          <p className="text-xs text-gray-400 truncate">
+                            {user.email}
+                          </p>
+                          <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E8F5D0] text-[#2D5016] uppercase tracking-wide">
+                            {getRoleLabel(user.role)}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  )}
 
-                  {/* ── ADD ACCOUNT ── */}
-                  <div className="border-b border-gray-100 py-2 px-4 bg-white">
-                    {!showAddAccount ? (
-                      <button
-                        onClick={() => setShowAddAccount(true)}
-                        className="flex items-center gap-2 text-xs font-medium text-gray-500 hover:text-[#2D5016] transition w-full py-1.5"
-                      >
-                        <Plus size={14} className="text-gray-400" />
-                        Ajouter un compte
-                      </button>
-                    ) : (
-                      <form
-                        onSubmit={handleAddAccountSubmit}
-                        className="flex flex-col gap-2 pt-1 pb-1"
-                      >
-                        <div className="flex items-center justify-between">
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                            Nouveau Compte
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowAddAccount(false);
-                              setAddError("");
-                            }}
-                            className="text-gray-400 hover:text-gray-600"
-                          >
-                            <X size={12} />
-                          </button>
-                        </div>
-                        <input
-                          type="email"
-                          placeholder="Email"
-                          required
-                          autoFocus
-                          value={addForm.email}
-                          onChange={(e) =>
-                            setAddForm((f) => ({ ...f, email: e.target.value }))
-                          }
-                          className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#A7D129] transition"
-                        />
-                        <input
-                          type="password"
-                          placeholder="Mot de passe"
-                          required
-                          value={addForm.password}
-                          onChange={(e) =>
-                            setAddForm((f) => ({
-                              ...f,
-                              password: e.target.value,
-                            }))
-                          }
-                          className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#A7D129] transition"
-                        />
-                        {addError && (
-                          <p className="text-[10px] text-red-500 font-medium">
-                            {addError}
-                          </p>
-                        )}
+                    {/* ── ACCOUNT SWITCHER ── */}
+                    {accounts.filter((a) => a.user?.id !== user?.id).length >
+                      0 && (
+                      <div className="border-b border-gray-100 py-2 px-4 max-h-[160px] overflow-y-auto bg-white">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
+                          Changer de compte
+                        </p>
+                        <div className="flex flex-col gap-1">
+                          {accounts
+                            .filter((a) => (a.user?.id || a.id) !== user?.id)
+                            .map((acc) => {
+                              const u = acc.user || acc; // Extract normalized reference
+                              const uName =
+                                u.name || u.email?.split("@")[0] || "Utilisateur";
+                              const uEmail = u.email || "";
+                              const uRole = u.role || "citoyen";
 
-                        <div className="flex gap-2 mt-0.5">
-                          <button
-                            type="submit"
-                            disabled={addLoading}
-                            className="flex-1 text-xs font-bold py-1.5 rounded-xl bg-[#2D5016] text-white hover:bg-[#3a6b1e] transition disabled:opacity-50"
-                          >
-                            {addLoading ? "En cours..." : "Connexion"}
-                          </button>
+                              return (
+                                <button
+                                  key={u.id || uEmail}
+                                  disabled={switchingId !== null}
+                                  onClick={() => handleSwitch(u.id || acc.id)}
+                                  className="w-full flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-gray-50 transition group text-left disabled:opacity-60"
+                                >
+                                  <Avatar user={u} size="sm" />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-semibold text-gray-800 truncate group-hover:text-[#2D5016]">
+                                      {uName}
+                                    </p>
+                                    <p className="text-[10px] text-gray-400 truncate">
+                                      {uEmail}
+                                    </p>
+                                  </div>
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 group-hover:bg-[#E8F5D0] group-hover:text-[#2D5016] uppercase tracking-wide shrink-0 transition-colors">
+                                    {switchingId === u.id
+                                      ? "..."
+                                      : getRoleLabel(uRole)}
+                                  </span>
+                                </button>
+                              );
+                            })}
                         </div>
-                        <div className="scale-90 origin-top">
-                          <GoogleAuth
-                            onSuccess={() => setUserMenuOpen(false)}
-                            redirect={false}
-                          />
-                        </div>
-                      </form>
+                      </div>
                     )}
-                  </div>
 
-                  {/* Navigation Links */}
-                  <div className="py-1 bg-white">
-                    <DropdownItem
-                      href="/my-space/profile"
-                      icon={<User size={16} />}
-                      label="Mon espace"
-                      active={pathname?.startsWith("/my-space/profile")}
-                      onClick={() => setUserMenuOpen(false)}
-                    />
-                    <DropdownItem
-                      href="/my-space/messages"
-                      icon={<MessageSquare size={16} />}
-                      label="Messages"
-                      active={pathname === "/my-space/messages"}
-                      onClick={() => setUserMenuOpen(false)}
-                    />
-                    <DropdownItem
-                      href="/my-space/favorites"
-                      icon={<Heart size={16} />}
-                      label="Mes favoris"
-                      active={pathname === "/my-space/favorites"}
-                      onClick={() => setUserMenuOpen(false)}
-                    />
-                    <DropdownItem
-                      href="/my-space/notifications"
-                      icon={<Bell size={16} />}
-                      label="Notifications"
-                      active={pathname === "/my-space/notifications"}
-                      onClick={() => setUserMenuOpen(false)}
-                    />
-                  </div>
+                    {/* ── ADD ACCOUNT ── */}
+                    <div className="border-b border-gray-100 py-2 px-4 bg-white">
+                      {!showAddAccount ? (
+                        <button
+                          onClick={() => setShowAddAccount(true)}
+                          className="flex items-center gap-2 text-xs font-medium text-gray-500 hover:text-[#2D5016] transition w-full py-1.5"
+                        >
+                          <Plus size={14} className="text-gray-400" />
+                          Ajouter un compte
+                        </button>
+                      ) : (
+                        <form
+                          onSubmit={handleAddAccountSubmit}
+                          className="flex flex-col gap-2 pt-1 pb-1"
+                        >
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                              Nouveau Compte
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowAddAccount(false);
+                                setAddError("");
+                              }}
+                              className="text-gray-400 hover:text-gray-600"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                          <input
+                            type="email"
+                            placeholder="Email"
+                            required
+                            autoFocus
+                            value={addForm.email}
+                            onChange={(e) =>
+                              setAddForm((f) => ({ ...f, email: e.target.value }))
+                            }
+                            className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#A7D129] transition"
+                          />
+                          <input
+                            type="password"
+                            placeholder="Mot de passe"
+                            required
+                            value={addForm.password}
+                            onChange={(e) =>
+                              setAddForm((f) => ({
+                                ...f,
+                                password: e.target.value,
+                              }))
+                            }
+                            className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#A7D129] transition"
+                          />
+                          {addError && (
+                            <p className="text-[10px] text-red-500 font-medium">
+                              {addError}
+                            </p>
+                          )}
 
-                  {/* Desktop Logout Options */}
-                  <div className="border-t border-gray-100 py-1 bg-white flex flex-col">
-                    {accounts.length > 1 ? (
-                      <>
+                          <div className="flex gap-2 mt-0.5">
+                            <button
+                              type="submit"
+                              disabled={addLoading}
+                              className="flex-1 text-xs font-bold py-1.5 rounded-xl bg-[#2D5016] text-white hover:bg-[#3a6b1e] transition disabled:opacity-50"
+                            >
+                              {addLoading ? "En cours..." : "Connexion"}
+                            </button>
+                          </div>
+                          <div className="scale-90 origin-top">
+                            <GoogleAuth
+                              onSuccess={() => setUserMenuOpen(false)}
+                              redirect={false}
+                            />
+                          </div>
+                        </form>
+                      )}
+                    </div>
+
+                    {/* Navigation Links */}
+                    <div className="py-1 bg-white">
+                      {role === "business" ? (
+                        <DropdownItem
+                          href="/dashboard"
+                          icon={<User size={16} />}
+                          label="Mon Dashboard"
+                          active={pathname?.startsWith("/dashboard")}
+                          onClick={() => setUserMenuOpen(false)}
+                        />
+                      ) : role === "admin" ? (
+                        <DropdownItem
+                          href="/admin"
+                          icon={<Shield size={16} />}
+                          label="Espace Admin"
+                          active={pathname?.startsWith("/admin")}
+                          onClick={() => setUserMenuOpen(false)}
+                        />
+                      ) : (
+                        <>
+                          <DropdownItem
+                            href="/my-space/profile"
+                            icon={<User size={16} />}
+                            label="Mon espace"
+                            active={pathname?.startsWith("/my-space/profile")}
+                            onClick={() => setUserMenuOpen(false)}
+                          />
+                          <DropdownItem
+                            href="/my-space/messages"
+                            icon={<MessageSquare size={16} />}
+                            label="Messages"
+                            active={pathname === "/my-space/messages"}
+                            onClick={() => setUserMenuOpen(false)}
+                          />
+                          <DropdownItem
+                            href="/my-space/favorites"
+                            icon={<Heart size={16} />}
+                            label="Mes favoris"
+                            active={pathname === "/my-space/favorites"}
+                            onClick={() => setUserMenuOpen(false)}
+                          />
+                          <DropdownItem
+                            href="/my-space/notifications"
+                            icon={<Bell size={16} />}
+                            label="Notifications"
+                            active={pathname === "/my-space/notifications"}
+                            onClick={() => setUserMenuOpen(false)}
+                          />
+                        </>
+                      )}
+                    </div>
+
+                    {/* Desktop Logout Options */}
+                    <div className="border-t border-gray-100 py-1 bg-white flex flex-col">
+                      {accounts.length > 1 ? (
+                        <>
+                          <button
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-3 px-4 py-2 text-xs text-gray-500 hover:bg-gray-50 transition-colors text-left"
+                          >
+                            <LogOut
+                              size={14}
+                              className="text-gray-400 shrink-0"
+                            />
+                            Se déconnecter de{" "}
+                            <span className="font-semibold truncate max-w-[80px]">
+                              {user?.name
+                                ? user.name.split(" ")[0]
+                                : "mon compte"}
+                            </span>
+                          </button>
+
+                          <button
+                            onClick={handleLogoutAll}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50/50 font-semibold transition-colors text-left"
+                          >
+                            <LogOut size={16} className="text-red-500 shrink-0" />
+                            Déconnexion de toutes
+                          </button>
+                        </>
+                      ) : (
                         <button
                           onClick={handleLogout}
-                          className="w-full flex items-center gap-3 px-4 py-2 text-xs text-gray-500 hover:bg-gray-50 transition-colors text-left"
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50/50 transition-colors text-left"
                         >
-                          <LogOut
-                            size={14}
-                            className="text-gray-400 shrink-0"
-                          />
-                          Se déconnecter de{" "}
-                          <span className="font-semibold truncate max-w-[80px]">
-                            {user?.name
-                              ? user.name.split(" ")[0]
-                              : "mon compte"}
-                          </span>
+                          <LogOut size={16} className="text-red-400 shrink-0" />
+                          Déconnexion
                         </button>
-
-                        <button
-                          onClick={handleLogoutAll}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50/50 font-semibold transition-colors text-left"
-                        >
-                          <LogOut size={16} className="text-red-500 shrink-0" />
-                          Déconnexion de toutes
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50/50 transition-colors text-left"
-                      >
-                        <LogOut size={16} className="text-red-400 shrink-0" />
-                        Déconnexion
-                      </button>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </>
         ) : (
           /* ── GUEST BUTTONS ─────────────────────────────────────────── */
           <div className="hidden md:flex items-center gap-3">
@@ -776,7 +939,7 @@ export default function Navbar() {
                 </div>
 
                 <a
-                  href="/my-space/profile"
+                  href={role === "business" ? "/dashboard" : role === "admin" ? "/admin" : "/my-space/profile"}
                   className="flex items-center gap-3 text-sm text-gray-700 px-2 py-2 rounded-lg hover:bg-gray-50"
                 >
                   <User size={16} className="text-gray-400" />

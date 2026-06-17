@@ -207,27 +207,30 @@ async function getListings(query) {
 
 // ─── 3. GET LISTING DETAIL (public) ─────────────────────────────────────────
 async function getListingById(id) {
-  const [listing] = await prisma.$transaction([
-    prisma.realEstateListing.findUnique({
-      where: { id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            avatar: true,
-            phone: true,
-            city: true,
-          },
+  const listing = await prisma.realEstateListing.findUnique({
+    where: { id },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          avatar: true,
+          phone: true,
+          city: true,
         },
-        category: { select: { id: true, name: true, slug: true } },
       },
-    }),
-    prisma.realEstateListing.update({
+      category: { select: { id: true, name: true, slug: true } },
+    },
+  });
+
+  // Only increment views if the listing actually exists
+  if (listing) {
+    await prisma.realEstateListing.updateMany({
       where: { id },
       data: { viewsCount: { increment: 1 } },
-    }),
-  ]);
+    });
+  }
+
   return listing;
 }
 

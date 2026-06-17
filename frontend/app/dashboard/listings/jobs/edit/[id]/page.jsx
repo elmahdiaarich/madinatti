@@ -221,7 +221,7 @@ function EditJobForm() {
         ...(form.categorySlug && { categorySlug: form.categorySlug }),
       };
       await jobsService.updateMyJob(id, payload, token);
-      router.push("/my-space/services/jobs");
+      router.push("/dashboard/listings/jobs");
     } catch (e) {
       setError(e.message || "Erreur serveur");
     } finally {

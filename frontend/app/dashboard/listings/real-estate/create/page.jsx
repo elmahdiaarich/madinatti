@@ -27,13 +27,13 @@ const PROPERTY_TYPES = [
 
 // Maps PropertyType enum → category slug produced by the seed
 const PROPERTY_TYPE_TO_SLUG = {
-  APARTMENT: "immobilier-appartement",
-  VILLA:     "immobilier-villa",
-  HOUSE:     "immobilier-maison",
-  STUDIO:    "immobilier-studio",
-  LAND:      "immobilier-terrain",
-  OFFICE:    "immobilier-bureau",
-  SHOP:      "immobilier-commerce",
+  APARTMENT: "appartement",
+  VILLA:     "villa",
+  HOUSE:     "maison",
+  STUDIO:    "studio",
+  LAND:      "terrain",
+  OFFICE:    "bureau",
+  SHOP:      "commerce",
 };
 
 const EMPTY = {
@@ -481,23 +481,21 @@ function CreateListingForm() {
     .sort();
 
   // ── Fetch immobilier subcategories ────────────────────────────────────────
-  useEffect(() => {
-    axios.get(`${API}/api/categories`).then((r) => {
-      const data = r.data.data || [];
-      const immobilier = data.find((p) =>
-        p.name.toLowerCase().includes("immobilier"),
-      );
-      setSubcategories(immobilier?.children || []);
-    });
-  }, []);
+useEffect(() => {
+  axios.get(`${API}/api/categories`).then((r) => {
+    const data = r.data.data || [];
+    const immobilierCats = data.filter((c) => c.module === "immobilier");
+    setSubcategories(immobilierCats);
+  });
+}, []);
 
   // ── Auto-set categoryId based on propertyType ─────────────────────────────
-  useEffect(() => {
-    if (!subcategories.length) return;
-    const slug = PROPERTY_TYPE_TO_SLUG[form.propertyType];
-    const match = subcategories.find((c) => c.slug === slug);
-    if (match) set("categoryId", match.id);
-  }, [form.propertyType, subcategories]);
+useEffect(() => {
+  if (!subcategories.length) return;
+  const slug = PROPERTY_TYPE_TO_SLUG[form.propertyType];
+  const match = subcategories.find((c) => c.slug === slug);
+  if (match) set("categoryId", match.id);
+}, [form.propertyType, subcategories]);
 
   const set = (field, value) => {
     setForm((p) => ({ ...p, [field]: value }));
@@ -549,7 +547,7 @@ function CreateListingForm() {
         longitude: form.longitude ? parseFloat(form.longitude) : undefined,
       };
       await realEstateService.createListing(payload, token);
-      router.push("/my-space/services/real-estate?created=1");
+      router.push("/dashboard/listings/real-estate?created=1");
     } catch (err) {
       setServerError(err.message || "Erreur serveur");
     } finally {

@@ -13,6 +13,7 @@ const getJobs = async (req, res) => {
       categoryId,
       contractType,
       location,
+      region,
       educationLevel,
       experienceLevel,
       categorySlug,
@@ -30,12 +31,17 @@ const getJobs = async (req, res) => {
           { description: { contains: search, mode: 'insensitive' } },
         ],
       }),
-      ...(categoryId     && { categoryId }),
-      ...(contractType   && { contractType }),
-      ...(educationLevel && { educationLevel: { hasSome: educationLevel.split(',') } }),
+      ...(categoryId      && { categoryId }),
+      ...(contractType    && { contractType }),
+      ...(educationLevel  && { educationLevel: { hasSome: educationLevel.split(',') } }),
       ...(experienceLevel && { experienceLevel }),
-      ...(categorySlug   && { category: { slug: categorySlug } }),
-      ...(location       && { location: { contains: location, mode: 'insensitive' } }),
+      ...(categorySlug    && { category: { slug: categorySlug } }),
+      // Si ville ET région : priorité à la ville
+      ...(location
+        ? { location: { contains: location, mode: 'insensitive' } }
+        : region
+          ? { region: { equals: region, mode: 'insensitive' } }
+          : {}),
       ...(salarySpecified === 'true' && {
         NOT: { AND: [{ salaryMin: null }, { salaryMax: null }] },
       }),
@@ -46,12 +52,13 @@ const getJobs = async (req, res) => {
         where,
         skip,
         take: parseInt(limit),
-        orderBy: [{ isFeatured: 'desc' }, { createdAt: 'desc' }],
+        orderBy: [{ isFeatured: 'desc' }, { publishedAt: 'desc' }],
         select: {
           id: true,
           title: true,
           companyName: true,
           location: true,
+          region: true,
           contractType: true,
           educationLevel: true,
           experienceLevel: true,
@@ -62,6 +69,7 @@ const getJobs = async (req, res) => {
           isSponsored: true,
           publishedAt: true,
           applicationDeadline: true,
+          skills: true,
           category: { select: { id: true, name: true } },
           user:     { select: { companyLogo: true } },
         },
@@ -84,7 +92,6 @@ const getJobs = async (req, res) => {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
-
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/jobs/:id
 // ─────────────────────────────────────────────────────────────────────────────
@@ -136,45 +143,66 @@ const getFiltersCount = async (req, res) => {
   try {
     const baseWhere = { status: 'APPROVED' };
 
-    const [contractCounts, experienceCounts, educationCounts, locationCounts, categoryCounts] =
-      await Promise.all([
-        prisma.jobListing.groupBy({
-          by: ['contractType'],
-          where: baseWhere,
-          _count: { contractType: true },
-        }),
-        prisma.jobListing.groupBy({
-          by: ['experienceLevel'],
-          where: baseWhere,
-          _count: { experienceLevel: true },
-        }),
-        prisma.jobListing.findMany({
-          where: baseWhere,
-          select: { educationLevel: true },
-        }),
-        prisma.jobListing.groupBy({
-          by: ['location'],
-          where: baseWhere,
-          _count: { location: true },
-          orderBy: { _count: { location: 'desc' } },
-          take: 20,
-        }),
-        prisma.category.findMany({
-          where: {
-            isActive: true,
-            jobListings: { some: { status: 'APPROVED' } },
+    const [
+      contractCounts,
+      experienceCounts,
+      educationCounts,
+      locationCounts,
+      regionCounts,
+      categoryCounts,
+      regionCityRaw,
+    ] = await Promise.all([
+      prisma.jobListing.groupBy({
+        by: ['contractType'],
+        where: baseWhere,
+        _count: { contractType: true },
+      }),
+      prisma.jobListing.groupBy({
+        by: ['experienceLevel'],
+        where: baseWhere,
+        _count: { experienceLevel: true },
+      }),
+      prisma.jobListing.findMany({
+        where: baseWhere,
+        select: { educationLevel: true },
+      }),
+      prisma.jobListing.groupBy({
+        by: ['location'],
+        where: baseWhere,
+        _count: { location: true },
+        orderBy: { _count: { location: 'desc' } },
+        take: 50,
+      }),
+      prisma.jobListing.groupBy({
+        by: ['region'],
+        where: { ...baseWhere, region: { not: null } },
+        _count: { region: true },
+        orderBy: { _count: { region: 'desc' } },
+      }),
+      prisma.category.findMany({
+        where: {
+          isActive: true,
+          jobListings: { some: { status: 'APPROVED' } },
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          _count: {
+            select: { jobListings: { where: { status: 'APPROVED' } } },
           },
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            _count: {
-              select: { jobListings: { where: { status: 'APPROVED' } } },
-            },
-          },
-          orderBy: { name: 'asc' },
-        }),
-      ]);
+        },
+        orderBy: { name: 'asc' },
+      }),
+// Villes groupées par région
+prisma.jobListing.findMany({
+  where: {
+    status: 'APPROVED',
+    region: { not: null },
+  },
+  select: { region: true, location: true },
+}),
+    ]);
 
     const toMap = (arr, key, countKey) =>
       arr.reduce((acc, item) => {
@@ -182,19 +210,29 @@ const getFiltersCount = async (req, res) => {
         return acc;
       }, {});
 
+    // Construire citiesByRegion : { "Grand Casablanca": { "Casablanca": 12, ... }, ... }
+    const citiesByRegion = regionCityRaw.reduce((acc, { region, location }) => {
+      if (!region || !location) return acc;
+      if (!acc[region]) acc[region] = {};
+      acc[region][location] = (acc[region][location] || 0) + 1;
+      return acc;
+    }, {});
+
     res.json({
       success: true,
       data: {
-        contractType:    toMap(contractCounts,   'contractType',   'contractType'),
-        experienceLevel: toMap(experienceCounts, 'experienceLevel','experienceLevel'),
+        contractType:    toMap(contractCounts,   'contractType',    'contractType'),
+        experienceLevel: toMap(experienceCounts, 'experienceLevel', 'experienceLevel'),
         educationLevel: educationCounts.reduce((acc, job) => {
           (job.educationLevel || []).forEach((lvl) => {
             acc[lvl] = (acc[lvl] || 0) + 1;
           });
           return acc;
         }, {}),
-        location:        toMap(locationCounts,   'location',       'location'),
-        categories:      categoryCounts.map((c) => ({
+        location:     toMap(locationCounts, 'location', 'location'),
+        region:       toMap(regionCounts,   'region',   'region'),
+        citiesByRegion,
+        categories:   categoryCounts.map((c) => ({
           id:    c.id,
           name:  c.name,
           slug:  c.slug,
@@ -344,7 +382,15 @@ const applyToJob = async (req, res) => {
         data:  { phone: phone.trim() },
       });
     }
-
+// Notify business of new application
+const { createNotification } = require('./notificationController');
+await createNotification(
+  job.userId,
+  'NEW_APPLICATION',
+  'Nouvelle candidature reçue',
+  `Un candidat a postulé pour "${job.title}".`,
+  '/dashboard/applications'
+);
     res.status(201).json({
       success: true,
       message: 'Candidature envoyée avec succès',
@@ -427,11 +473,24 @@ const updateApplicationStatus = async (req, res) => {
     if (application.jobListing.userId !== userId)  return res.status(403).json({ success: false, message: 'Accès refusé' });
 
     const updated = await prisma.jobApplication.update({
-      where: { id: appId },
-      data:  { status, reviewedAt: new Date() },
-    });
+  where: { id: appId },
+  data:  { status, reviewedAt: new Date() },
+  include: { jobListing: { select: { title: true, id: true } } },
+});
 
-    res.json({ success: true, data: updated });
+// Notify citizen only if accepted
+if (status === 'accepted') {
+  const { createNotification } = require('./notificationController');
+  await createNotification(
+    application.userId,
+    'APPLICATION_ACCEPTED',
+    'Candidature acceptée ! 🎉',
+    `Votre candidature pour "${updated.jobListing.title}" a été acceptée.`,
+    `/jobs/${updated.jobListing.id}`
+  );
+}
+
+res.json({ success: true, data: updated });
   } catch (error) {
     console.error('updateApplicationStatus error:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -687,7 +746,27 @@ const deleteJob = async (req, res) => {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
+const getBusinessApplications = async (req, res) => {
+  try {
+    const userId = req.user.userId;
 
+    const applications = await prisma.jobApplication.findMany({
+      where: {
+        jobListing: { userId },
+      },
+      include: {
+        user: { select: { id: true, name: true, email: true, avatar: true } },
+        jobListing: { select: { id: true, title: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json({ success: true, data: applications });
+  } catch (error) {
+    console.error('getBusinessApplications error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
 module.exports = {
   getJobs,
   getJobById,
@@ -703,4 +782,5 @@ module.exports = {
   getMyJobs,
   updateJob,
   deleteJob,
+  getBusinessApplications
 };
