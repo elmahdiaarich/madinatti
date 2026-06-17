@@ -757,8 +757,6 @@ export default function Navbar() {
         >
           ☰
         </button>
-
-<<<<<<< HEAD
         {user ? (
           <>
             {/* ── NOTIFICATION BELL ──────────────────────────────────── */}
@@ -1131,9 +1129,8 @@ export default function Navbar() {
             </a>
           </div>
         )}
-=======
+
         {renderAuthArea()}
->>>>>>> featuer/adminListings
       </div>
 
       {/* MOBILE MENU */}
@@ -1205,8 +1202,6 @@ export default function Navbar() {
                       </span>
                     </div>
                   </div>
-
-<<<<<<< HEAD
                 <a
                   href={role === "business" ? "/dashboard" : role === "admin" ? "/admin" : "/my-space/profile"}
                   className="flex items-center gap-3 text-sm text-gray-700 px-2 py-2 rounded-lg hover:bg-gray-50"
@@ -1235,29 +1230,7 @@ export default function Navbar() {
                   <Bell size={16} className="text-gray-400" />
                   Notifications
                 </a>
-=======
-                  <a
-                    href="/my-space/profile"
-                    className="flex items-center gap-3 text-sm text-gray-700 px-2 py-2 rounded-lg hover:bg-gray-50"
-                  >
-                    <User size={16} className="text-gray-400" />
-                    Mon espace
-                  </a>
-                  <a
-                    href="/my-space/favorites"
-                    className="flex items-center gap-3 text-sm text-gray-700 px-2 py-2 rounded-lg hover:bg-gray-50"
-                  >
-                    <Heart size={16} className="text-gray-400" />
-                    Mes favoris
-                  </a>
-                  <a
-                    href="/my-space/notifications"
-                    className="flex items-center gap-3 text-sm text-gray-700 px-2 py-2 rounded-lg hover:bg-gray-50"
-                  >
-                    <Bell size={16} className="text-gray-400" />
-                    Notifications
-                  </a>
->>>>>>> featuer/adminListings
+
 
                   <div className="border-t border-gray-100 py-1 bg-white flex flex-col mt-2">
                     {accounts.length > 1 ? (
