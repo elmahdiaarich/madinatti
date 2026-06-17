@@ -287,6 +287,7 @@ export async function getListings({
 export async function getOverview(token) {
   const json = await apiFetch('/api/admin/overview', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
   return json.data ?? { pending: 0, approvedToday: 0, openReports: 0, totalUsers: 0 }
+}
 
 export async function adminDeleteListing(id, token = null) {
   return apiFetch(`/api/admin/listings/${id}`, { method: 'DELETE' }, token)

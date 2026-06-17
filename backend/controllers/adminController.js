@@ -117,17 +117,9 @@ const getListings = async (req, res) => {
           { location: { contains: search, mode: "insensitive" } },
         ],
       }),
-<<<<<<< HEAD
-    }
- 
-    // ── Real Estate ─────────────────────────────────────────────────────────
-    // Statut unifié: l'API et la BDD utilisent APPROVED / REJECTED / PENDING
-    const reStatus = status;
- 
-=======
+
     };
 
->>>>>>> featuer/adminListings
     const reWhere = {
       ...(status && { status }),
       ...(userId && { userId }),
