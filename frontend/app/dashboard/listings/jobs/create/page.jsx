@@ -226,6 +226,7 @@ function PublierJobContent() {
     // Étape 1 — Poste
     title: '',
     categorySlug: '',
+    city: '',
     location: '',
     region: '',
     remote: 'ON_SITE',
@@ -271,7 +272,7 @@ function PublierJobContent() {
       if (!form.title.trim()) e.title = 'Le titre est requis';
       if (!form.categorySlug) e.categorySlug = 'Choisissez une catégorie';
       if (!form.region)   e.region   = 'Choisissez une région';
-      if (!form.location) e.location = 'Choisissez une ville';
+      if (!form.city) e.city = 'Choisissez une ville';
     }
     if (step === 2) {
       if (!form.contractType) e.contractType = 'Choisissez un type de contrat';
@@ -322,11 +323,11 @@ const next = () => {
   // ── Région auto à partir de la ville ──────────────────────
   const handleRegionChange = (region) => {
   set('region', region);
-  set('location', ''); // reset la ville quand on change de région
+  set('city', ''); // reset la ville quand on change de région
 };
 
 const handleCityChange = (city) => {
-  set('location', city);
+  set('city', city);
 };
 
   // ── Build description (mode guided) ──────────────────────
@@ -352,7 +353,8 @@ const handleCityChange = (city) => {
       await jobsService.createJob({
         title:               form.title,
         categorySlug:        form.categorySlug,
-        location:            form.location,
+        city: form.city,
+        location: form.location || '',
         region:              form.region,
         remote:              form.remote,
         contractType:        form.contractType,
@@ -508,7 +510,7 @@ const handleCityChange = (city) => {
 <div>
   <FieldLabel required>Ville</FieldLabel>
   <Select
-    value={form.location}
+    value={form.city}
     onChange={(e) => handleCityChange(e.target.value)}
     disabled={!form.region}
   >
@@ -521,7 +523,7 @@ const handleCityChange = (city) => {
         <option key={city} value={city}>{city}</option>
       ))}
   </Select>
-  <ErrorMsg msg={errors.location} />
+  <ErrorMsg msg={errors.city} />
 </div>
 </div>
 
@@ -1060,7 +1062,9 @@ const handleCityChange = (city) => {
                 onClick={() => {
                   setStep(1);
                   setForm({
-                    title: '', categorySlug: '', location: '', region: '',
+                    title: '', categorySlug: '', city: '',
+    location: '',
+    region: '',
                     remote: 'ON_SITE', contractType: '', salaryMin: '', salaryMax: '',
                     applicationDeadline: '', educationLevel: [], experienceLevel: '',
                     skills: [], skillInput: '', languages: [],

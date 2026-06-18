@@ -15,7 +15,7 @@ export default function JobListingFilters({ onChange, showStatus = true, jobs = 
   });
 
   // Derive unique values from actual listings
-  const cities = [...new Set(jobs.map(j => j.location).filter(Boolean))].sort();
+  const cities = [...new Set(jobs.map(j => j.city).filter(Boolean))].sort();
   const contractTypes = [...new Set(jobs.map(j => j.contractType).filter(Boolean))];
 
   const set = (key, value) => {

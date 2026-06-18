@@ -566,7 +566,7 @@ export default function JobDetailPage() {
                 <CriteriaRow label="Métier"          value={job.category?.name} />
                 <CriteriaRow label="Type de contrat" value={contract} />
                 <CriteriaRow label="Télétravail"     value={remote ? `${remote.icon} ${remote.label}` : null} />
-                <CriteriaRow label="Ville"           value={job.location} />
+                <CriteriaRow label="Ville"           value={job.city} />
                 <CriteriaRow label="Région"          value={job.region} />
               </div>
               <div>

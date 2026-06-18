@@ -12,6 +12,7 @@ const getJobs = async (req, res) => {
       search = "",
       categoryId,
       contractType,
+      city,
       location,
       region,
       educationLevel,
@@ -39,9 +40,7 @@ const getJobs = async (req, res) => {
       ...(experienceLevel && { experienceLevel }),
       ...(categorySlug && { category: { slug: categorySlug } }),
       // Si ville ET région : priorité à la ville
-      ...(location
-        ? { location: { contains: location, mode: "insensitive" } }
-        : region
+      ...(city ? { city: { contains: city, mode: "insensitive" } } : region
           ? { region: { equals: region, mode: "insensitive" } }
           : {}),
       ...(salarySpecified === "true" && {
@@ -59,6 +58,7 @@ const getJobs = async (req, res) => {
           id: true,
           title: true,
           companyName: true,
+          city: true,
           location: true,
           region: true,
           contractType: true,
@@ -153,7 +153,7 @@ const getFiltersCount = async (req, res) => {
       contractCounts,
       experienceCounts,
       educationCounts,
-      locationCounts,
+      cityCounts,
       regionCounts,
       categoryCounts,
       regionCityRaw,
@@ -173,10 +173,10 @@ const getFiltersCount = async (req, res) => {
         select: { educationLevel: true },
       }),
       prisma.jobListing.groupBy({
-        by: ["location"],
+        by: ["city"],
         where: baseWhere,
-        _count: { location: true },
-        orderBy: { _count: { location: "desc" } },
+        _count: { city: true },
+        orderBy: { _count: { city: "desc" } },
         take: 50,
       }),
       prisma.jobListing.groupBy({
@@ -206,7 +206,7 @@ const getFiltersCount = async (req, res) => {
           status: "APPROVED",
           region: { not: null },
         },
-        select: { region: true, location: true },
+        select: { region: true, city: true, location: true },
       }),
     ]);
 
@@ -217,10 +217,10 @@ const getFiltersCount = async (req, res) => {
       }, {});
 
     // Construire citiesByRegion : { "Grand Casablanca": { "Casablanca": 12, ... }, ... }
-    const citiesByRegion = regionCityRaw.reduce((acc, { region, location }) => {
-      if (!region || !location) return acc;
+    const citiesByRegion = regionCityRaw.reduce((acc, { region, city }) => {
+      if (!region || !city) return acc;
       if (!acc[region]) acc[region] = {};
-      acc[region][location] = (acc[region][location] || 0) + 1;
+      acc[region][city] = (acc[region][city] || 0) + 1;
       return acc;
     }, {});
 
@@ -239,7 +239,7 @@ const getFiltersCount = async (req, res) => {
           });
           return acc;
         }, {}),
-        location: toMap(locationCounts, "location", "location"),
+        city: toMap(cityCounts, "city", "city"),
         region: toMap(regionCounts, "region", "region"),
         citiesByRegion,
         categories: categoryCounts.map((c) => ({
@@ -266,6 +266,7 @@ const createJob = async (req, res) => {
     const {
       title,
       categorySlug,
+      city,
       location,
       region,
       remote,
@@ -292,7 +293,7 @@ const createJob = async (req, res) => {
       return res
         .status(400)
         .json({ success: false, message: "La catégorie est requise" });
-    if (!location)
+    if (!city)
       return res
         .status(400)
         .json({ success: false, message: "La ville est requise" });
@@ -321,7 +322,8 @@ const createJob = async (req, res) => {
         title: title.trim(),
         description: description.trim(),
         companyName: user?.companyName || "",
-        location,
+        city,
+        location: location || "",
         region: region || null,
         remote: remote || "ON_SITE",
         contractType,
@@ -593,6 +595,7 @@ const getMyApplications = async (req, res) => {
             id: true,
             title: true,
             companyName: true,
+            city: true,
             location: true,
             status: true,
             user: { select: { companyLogo: true } },
@@ -672,6 +675,7 @@ const getMyFavorites = async (req, res) => {
         id: true,
         title: true,
         companyName: true,
+        city: true,
         location: true,
         contractType: true,
         educationLevel: true,
@@ -726,7 +730,7 @@ const getMyJobs = async (req, res) => {
       ...(search && {
         OR: [
           { title: { contains: search, mode: "insensitive" } },
-          { location: { contains: search, mode: "insensitive" } },
+          { city: { contains: search, mode: "insensitive" } },
         ],
       }),
     };
@@ -781,6 +785,7 @@ const updateJob = async (req, res) => {
     const {
       title,
       categorySlug,
+      city,
       location,
       region,
       remote,
@@ -813,7 +818,8 @@ const updateJob = async (req, res) => {
         ...(title && { title: title.trim() }),
         ...(description && { description: description.trim() }),
         ...(categoryId && { categoryId }),
-        ...(location && { location }),
+        ...(city && { city }),
+        ...(location !== undefined && { location: location || "" }),
         ...(region !== undefined && { region: region || null }),
         ...(remote && { remote }),
         ...(contractType && { contractType }),

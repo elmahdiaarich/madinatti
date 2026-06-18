@@ -174,7 +174,7 @@ export default function JobFilter({ onFilter }) {
         value: cityName,
         label: cityName,
         // Show API count if available
-        count: counts?.location?.[cityName],
+        count: counts?.city?.[cityName],
       }))
       // Hide cities with zero jobs (only if we have count data)
       .filter((c) => c.count === undefined || c.count > 0)
@@ -205,7 +205,7 @@ export default function JobFilter({ onFilter }) {
     // City takes priority over region
     const city   = (newSelected.city   || [])[0];
     const region = (newSelected.region || [])[0];
-    filters.location = city   || undefined;
+    filters.city = city   || undefined;
     filters.region   = !city && region ? region : undefined;
 
     if (hideUnspecified) filters.salarySpecified = true;

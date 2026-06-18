@@ -10,6 +10,8 @@ const {
   getUsers,
   toggleUser,
   getBusinesses,
+  updateListingStatus,   // ← ajouté
+  deleteListing,  
   // Categories
   getCategories,
   createCategory,
@@ -47,7 +49,14 @@ router.patch('/listings/:id/approve', approveListing)
  
 // PATCH /api/admin/listings/:id/reject   body: { adminNote }
 router.patch('/listings/:id/reject', rejectListing)
- 
+ // PATCH /api/admin/listings/:id/reject   body: { adminNote }
+router.patch('/listings/:id/reject', rejectListing)
+
+// PATCH /api/admin/listings/:id/status   body: { status, adminNotes, module }
+router.patch('/listings/:id/status', updateListingStatus)
+
+// DELETE /api/admin/listings/:id
+router.delete('/listings/:id', deleteListing)
 // ── Reports (signalements) ────────────────────────────────────────────────────
 // GET /api/admin/reports/stats  — doit être AVANT /reports/:id
 router.get('/reports/stats', getReportStats)

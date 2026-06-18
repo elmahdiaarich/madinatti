@@ -205,7 +205,8 @@ function EditJobForm() {
     try {
       const payload = {
         title:               form.title,
-        location:            form.location,
+        city: form.city,
+        location: form.location || '',
         region:              form.region,
         remote:              form.remote,
         contractType:        form.contractType,

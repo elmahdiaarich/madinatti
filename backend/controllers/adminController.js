@@ -281,6 +281,104 @@ const getListings = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Shared helper — match job alerts and notify subscribed citizens.
+// Used by BOTH approval paths (quick "approve" button AND status-panel) so
+// notifications always fire regardless of which UI action the admin uses.
+// ─────────────────────────────────────────────────────────────────────────────
+async function notifyJobAlertSubscribers(approvedJob, createNotification) {
+  try {
+    const matchingAlerts = await prisma.alert.findMany({
+      where: {
+        module: "emploi",
+        isActive: true,
+        NOT: [{ userId: approvedJob.userId }],
+      },
+    });
+
+    const notifiedUserIds = new Set();
+    notifiedUserIds.add(approvedJob.userId);
+
+    for (const alert of matchingAlerts) {
+      if (notifiedUserIds.has(alert.userId)) continue;
+
+      const filters = alert.filters || {};
+      const categoryMatch =
+        !filters.categorySlug ||
+        filters.categorySlug === approvedJob.category?.slug;
+      const regionMatch =
+        !filters.region || filters.region === approvedJob.region;
+      const cityMatch =
+        !filters.city || filters.city === approvedJob.city;
+      const contractMatch =
+        !filters.contractType ||
+        filters.contractType === approvedJob.contractType;
+      const keywordMatch =
+        !filters.keyword ||
+        approvedJob.title.toLowerCase().includes(filters.keyword.toLowerCase());
+
+      if (
+        categoryMatch &&
+        regionMatch &&
+        cityMatch &&
+        contractMatch &&
+        keywordMatch
+      ) {
+        await createNotification(
+          alert.userId,
+          "JOB_ALERT",
+          "Nouvelle offre qui vous correspond 🔔",
+          `Une nouvelle offre "${approvedJob.title}" correspond à votre alerte.`,
+          `/jobs/${approvedJob.id}`,
+        );
+        notifiedUserIds.add(alert.userId);
+      }
+    }
+  } catch (err) {
+    console.error("[notifyJobAlertSubscribers] error:", err);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared helper — match real estate alerts and notify subscribed citizens.
+// Same rationale as notifyJobAlertSubscribers above.
+// ─────────────────────────────────────────────────────────────────────────────
+async function notifyRealEstateAlertSubscribers(approvedRe, createNotification) {
+  try {
+    const alerts = await prisma.alert.findMany({
+      where: { module: "immobilier", isActive: true },
+    });
+
+    const notifiedUserIds = new Set();
+    notifiedUserIds.add(approvedRe.userId);
+
+    for (const alert of alerts) {
+      if (notifiedUserIds.has(alert.userId)) continue;
+      const f = alert.filters || {};
+      const matches =
+        (!f.categoryId || f.categoryId === approvedRe.categoryId) &&
+        (!f.listingType || f.listingType === approvedRe.listingType) &&
+        (!f.region || f.region === approvedRe.region) &&
+        (!f.city || f.city === approvedRe.city) &&
+        (!f.minPrice || Number(approvedRe.price) >= Number(f.minPrice)) &&
+        (!f.maxPrice || Number(approvedRe.price) <= Number(f.maxPrice));
+
+      if (matches) {
+        await createNotification(
+          alert.userId,
+          "REALESTATE_ALERT_MATCH",
+          "Nouvelle annonce correspond à votre alerte 🔔",
+          `Une nouvelle annonce "${approvedRe.title}" correspond à votre alerte immobilière.`,
+          `/real-estate/${approvedRe.id}`,
+        );
+        notifiedUserIds.add(alert.userId);
+      }
+    }
+  } catch (err) {
+    console.error("[notifyRealEstateAlertSubscribers] error:", err);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PATCH /api/admin/listings/:id/approve
 // Détecte si c'est un job ou un bien immo par l'id (essaie les deux)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -309,41 +407,8 @@ const approveListing = async (req, res) => {
 });
 
 // Trigger job alerts
-const matchingAlerts = await prisma.alert.findMany({
-  where: {
-    module:   'emploi',
-    isActive: true,
-    NOT: [{ userId: job.userId }],
-  },
-});
+await notifyJobAlertSubscribers(approvedJob, createNotification);
 
-console.log(`Found ${matchingAlerts.length} active emploi alerts for job ${approvedJob.id}`);
-console.log('Alerts:', JSON.stringify(matchingAlerts, null, 2));
-
-const notifiedUserIds = new Set();
-notifiedUserIds.add(job.userId); // already excluded business owner
-
-for (const alert of matchingAlerts) {
-  if (notifiedUserIds.has(alert.userId)) continue; // skip if already notified
-
-  const filters = alert.filters || {};
-  const categoryMatch = !filters.categorySlug || filters.categorySlug === approvedJob.category?.slug;
-  const regionMatch   = !filters.region       || filters.region === approvedJob.region;
-  const cityMatch     = !filters.city         || filters.city === approvedJob.location;
-  const contractMatch = !filters.contractType || filters.contractType === approvedJob.contractType;
-  const keywordMatch  = !filters.keyword      || approvedJob.title.toLowerCase().includes(filters.keyword.toLowerCase());
-
-if (categoryMatch && regionMatch && cityMatch && contractMatch && keywordMatch) {
-    await createNotification(
-      alert.userId,
-      'JOB_ALERT',
-      'Nouvelle offre qui vous correspond 🔔',
-      `Une nouvelle offre "${approvedJob.title}" correspond à votre alerte.`,
-      `/jobs/${approvedJob.id}`
-    );
-    notifiedUserIds.add(alert.userId);
-  }
-}
 // Notify business that their job was approved
 
 await createNotification(
@@ -418,40 +483,7 @@ await createNotification(
 );
 
 // ── Match citizen alerts ──────────────────────────────────────────────────
-// REPLACE WITH:
-try {
-  const alerts = await prisma.alert.findMany({
-    where: { module: 'immobilier', isActive: true },
-  });
-
-  const notifiedUserIds = new Set();
-  notifiedUserIds.add(re.userId); // exclude listing owner
-
-  for (const alert of alerts) {
-    if (notifiedUserIds.has(alert.userId)) continue; // skip if already notified
-    const f = alert.filters || {};
-    const matches =
-      (!f.categoryId  || f.categoryId  === approvedRe.categoryId)  &&
-      (!f.listingType || f.listingType === approvedRe.listingType) &&
-      (!f.region      || f.region      === approvedRe.region)      &&
-      (!f.city        || f.city        === approvedRe.city)        &&
-      (!f.minPrice    || Number(approvedRe.price) >= Number(f.minPrice)) &&
-      (!f.maxPrice    || Number(approvedRe.price) <= Number(f.maxPrice));
-
-    if (matches) {
-      await createNotification(
-        alert.userId,
-        'REALESTATE_ALERT_MATCH',
-        'Nouvelle annonce correspond à votre alerte 🔔',
-        `Une nouvelle annonce "${approvedRe.title}" correspond à votre alerte immobilière.`,
-        `/real-estate/${approvedRe.id}`
-      );
-      notifiedUserIds.add(alert.userId); // mark as notified, skip future alerts from same user
-    }
-  }
-} catch (alertErr) {
-  console.error('[approveListing] alert matching error:', alertErr);
-}
+await notifyRealEstateAlertSubscribers(approvedRe, createNotification);
 
 return res.json({ success: true, message: 'Annonce immobilière approuvée' });
 
@@ -602,6 +634,8 @@ async function handleJob(req, res, { id, status, adminNotes, adminId, now }) {
       .status(404)
       .json({ success: false, message: "Annonce introuvable" });
 
+  const wasPending = job.status === "PENDING";
+
   const updated = await prisma.jobListing.update({
     where: { id },
     data: {
@@ -613,7 +647,32 @@ async function handleJob(req, res, { id, status, adminNotes, adminId, now }) {
         ? { publishedAt: now }
         : {}),
     },
+    include: { category: { select: { slug: true } } },
   });
+
+  // ── Notifications — mirrors the quick-approve path so behavior is
+  // identical no matter which admin UI action triggered the transition.
+  const { createNotification } = require("./notificationController");
+
+  if (status === "APPROVED" && wasPending) {
+    await notifyJobAlertSubscribers(updated, createNotification);
+    await createNotification(
+      updated.userId,
+      "LISTING_APPROVED",
+      "Votre annonce a été approuvée ✅",
+      `Votre offre d'emploi "${updated.title}" est maintenant en ligne.`,
+      `/jobs/${updated.id}`,
+    );
+  } else if (status === "REJECTED" && wasPending) {
+    await createNotification(
+      updated.userId,
+      "LISTING_REJECTED",
+      "Votre annonce a été refusée ❌",
+      `Votre offre d'emploi "${updated.title}" a été refusée. Consultez vos messages pour plus de détails.`,
+      `/dashboard/messages`,
+    );
+  }
+
   return res.json({
     success: true,
     message: "Offre d'emploi mise à jour",
@@ -648,6 +707,8 @@ async function handleRealEstate(
     return res
       .status(404)
       .json({ success: false, message: "Annonce introuvable" });
+
+  const wasPending = re.status === "PENDING";
 
   let images = re.images || [];
 
@@ -703,6 +764,30 @@ async function handleRealEstate(
       ...(status === "APPROVED" && !re.publishedAt ? { publishedAt: now } : {}),
     },
   });
+
+  // ── Notifications — mirrors the quick-approve path so behavior is
+  // identical no matter which admin UI action triggered the transition.
+  const { createNotification } = require("./notificationController");
+
+  if (status === "APPROVED" && wasPending) {
+    await createNotification(
+      updated.userId,
+      "LISTING_APPROVED",
+      "Votre annonce a été approuvée ✅",
+      `Votre annonce immobilière "${updated.title}" est maintenant en ligne.`,
+      `/real-estate/${updated.id}`,
+    );
+    await notifyRealEstateAlertSubscribers(updated, createNotification);
+  } else if (status === "REJECTED" && wasPending) {
+    await createNotification(
+      updated.userId,
+      "LISTING_REJECTED",
+      "Votre annonce a été refusée ❌",
+      `Votre annonce immobilière "${updated.title}" a été refusée. Consultez vos messages pour plus de détails.`,
+      `/dashboard/messages`,
+    );
+  }
+
   return res.json({
     success: true,
     message: "Annonce immobilière mise à jour",

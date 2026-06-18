@@ -216,7 +216,7 @@ export default function JobCard({ job, initialFavorited = false, onFavoriteToggl
                   <InfoRow label="Niveau d'études requis" value={EDUCATION_LABELS[job.educationLevel]} />
                   <InfoRow label="Niveau d'expérience"    value={EXPERIENCE_LABELS[job.experienceLevel]} />
                   <InfoRow label="Contrat proposé"         value={contract?.label || job.contractType} />
-                  <InfoRow label="Région de"               value={job.location} />
+                  <InfoRow label="Ville"               value={job.city} />
                   <InfoRow
                     label="Salaire"
                     value={formatSalary(job.salaryMin, job.salaryMax)}

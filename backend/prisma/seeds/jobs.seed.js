@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs')
+const { cities: moroccoCities } = require('morocco-cities')
 
 const logo = (domain) => `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
 
@@ -900,14 +901,17 @@ Profil :
   // ── CRÉER LES JOBS ────────────────────────────────────────
   let count = 0
   for (const job of jobsData) {
+    const randomCity = moroccoCities[Math.floor(Math.random() * moroccoCities.length)];
+
     await prisma.jobListing.create({
       data: {
         userId:              job.user.id,
         categoryId:          job.category.id,
         title:               job.title,
         companyName:         job.user.companyName,
-        location:            job.location,
-        region:              job.region,
+        city:                randomCity.name,
+        location:            '',
+        region:              randomCity.region_name,
         latitude:            job.latitude,
         longitude:           job.longitude,
         contractType:        job.contractType,
