@@ -397,18 +397,18 @@ return res.json({ success: true, message: 'Offre d\'emploi approuvée' });
         }),
       );
 
-      await prisma.realEstateListing.update({
-        where: { id },
-        data: {
-          status: "APPROVED",
-          publishedAt: now,
-          reviewedAt: now,
-          reviewedBy: adminId,
-          adminNotes: null,
-          images: movedImages,
-        },
-      })
-      
+const approvedRe = await prisma.realEstateListing.update({
+  where: { id },
+  data: {
+    status: "APPROVED",
+    publishedAt: now,
+    reviewedAt: now,
+    reviewedBy: adminId,
+    adminNotes: null,
+    images: movedImages,
+  },
+});
+
 await createNotification(
   re.userId,
   'LISTING_APPROVED',
@@ -417,7 +417,43 @@ await createNotification(
   `/real-estate/${re.id}`
 );
 
-      return res.json({ success: true, message: 'Annonce immobilière approuvée' })
+// ── Match citizen alerts ──────────────────────────────────────────────────
+// REPLACE WITH:
+try {
+  const alerts = await prisma.alert.findMany({
+    where: { module: 'immobilier', isActive: true },
+  });
+
+  const notifiedUserIds = new Set();
+  notifiedUserIds.add(re.userId); // exclude listing owner
+
+  for (const alert of alerts) {
+    if (notifiedUserIds.has(alert.userId)) continue; // skip if already notified
+    const f = alert.filters || {};
+    const matches =
+      (!f.categoryId  || f.categoryId  === approvedRe.categoryId)  &&
+      (!f.listingType || f.listingType === approvedRe.listingType) &&
+      (!f.region      || f.region      === approvedRe.region)      &&
+      (!f.city        || f.city        === approvedRe.city)        &&
+      (!f.minPrice    || Number(approvedRe.price) >= Number(f.minPrice)) &&
+      (!f.maxPrice    || Number(approvedRe.price) <= Number(f.maxPrice));
+
+    if (matches) {
+      await createNotification(
+        alert.userId,
+        'REALESTATE_ALERT_MATCH',
+        'Nouvelle annonce correspond à votre alerte 🔔',
+        `Une nouvelle annonce "${approvedRe.title}" correspond à votre alerte immobilière.`,
+        `/real-estate/${approvedRe.id}`
+      );
+      notifiedUserIds.add(alert.userId); // mark as notified, skip future alerts from same user
+    }
+  }
+} catch (alertErr) {
+  console.error('[approveListing] alert matching error:', alertErr);
+}
+
+return res.json({ success: true, message: 'Annonce immobilière approuvée' });
 
     }
 
@@ -435,11 +471,12 @@ await createNotification(
 const rejectListing = async (req, res) => {
   try {
     const { id } = req.params;
-    const { adminNote = "" } = req.body;
+    const { adminNote = "", messageToSend = "" } = req.body;
     const adminId = req.user.userId;
     const now = new Date();
+    const { createNotification } = require('./notificationController');
 
-    // Essai job
+    // ── Job ──────────────────────────────────────────────────────────────────
     const job = await prisma.jobListing.findUnique({ where: { id } });
     if (job) {
       await prisma.jobListing.update({
@@ -450,9 +487,9 @@ const rejectListing = async (req, res) => {
           reviewedAt: now,
           reviewedBy: adminId,
         },
-      })
+      });
 
-      // Créer un message business
+      // Message dashboard entreprise
       await prisma.businessMessage.create({
         data: {
           userId:       job.userId,
@@ -460,18 +497,26 @@ const rejectListing = async (req, res) => {
           targetType:   'JOB',
           targetId:     id,
           targetTitle:  job.title,
-          adminMessage: adminNote || '',
+          adminMessage: messageToSend || adminNote || '',
         },
-      })
+      });
 
-      return res.json({ success: true, message: 'Offre d\'emploi refusée' })
+      // Notification cloche
+      await createNotification(
+        job.userId,
+        'LISTING_REJECTED',
+        'Votre annonce a été refusée ❌',
+        `Votre offre d'emploi "${job.title}" a été refusée. Consultez vos messages pour plus de détails.`,
+        `/dashboard/messages`
+      );
 
+      return res.json({ success: true, message: "Offre d'emploi refusée" });
     }
 
-    // Essai immobilier
+    // ── Immobilier ───────────────────────────────────────────────────────────
     const re = await prisma.realEstateListing.findUnique({ where: { id } });
     if (re) {
-      // Delete images from Cloudinary temp folder
+      // Supprimer images Cloudinary (temp/)
       const images = re.images || [];
       await Promise.all(
         images.map(async (img) => {
@@ -483,7 +528,6 @@ const rejectListing = async (req, res) => {
             await cloudinary.uploader.destroy(publicId);
           } catch (err) {
             console.error("Failed to delete image:", img.url, err.message);
-            // don't block rejection if delete fails
           }
         }),
       );
@@ -496,9 +540,9 @@ const rejectListing = async (req, res) => {
           reviewedAt: now,
           reviewedBy: adminId,
         },
-      })
+      });
 
-      // Créer un message business
+      // Message dashboard entreprise
       await prisma.businessMessage.create({
         data: {
           userId:       re.userId,
@@ -506,12 +550,20 @@ const rejectListing = async (req, res) => {
           targetType:   'REAL_ESTATE',
           targetId:     id,
           targetTitle:  re.title,
-          adminMessage: adminNote || '',
+          adminMessage: messageToSend || adminNote || '',
         },
-      })
+      });
 
-      return res.json({ success: true, message: 'Annonce immobilière refusée' })
+      // Notification cloche
+      await createNotification(
+        re.userId,
+        'LISTING_REJECTED',
+        'Votre annonce a été refusée ❌',
+        `Votre annonce immobilière "${re.title}" a été refusée. Consultez vos messages pour plus de détails.`,
+        `/dashboard/messages`
+      );
 
+      return res.json({ success: true, message: "Annonce immobilière refusée" });
     }
 
     res.status(404).json({ success: false, message: "Annonce introuvable" });
@@ -520,7 +572,6 @@ const rejectListing = async (req, res) => {
     res.status(500).json({ success: false, message: "Erreur serveur" });
   }
 };
-
 // ─────────────────────────────────────────────────────────────────────────────
 // PATCH /api/admin/listings/:id/status
 // Body: { status, adminNotes }

@@ -275,11 +275,9 @@ export function StatusPanel({
 
   return (
     <>
-      <div className="flex flex-col gap-2">
-        <p className="text-[11px] uppercase tracking-wide text-gray-400 font-medium">
-          Actions disponibles
-        </p>
-        <div className="flex flex-wrap gap-2">
+
+<div className="flex flex-col gap-2">
+  <div className="flex flex-wrap gap-2 justify-end">
           {transitions.map(({ to, label, icon: Icon, style }) => (
             <button
               key={to}

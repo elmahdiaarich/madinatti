@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import RealEstateCard from '@/components/real-estate/RealEstateCard';
 import RealEstateFilter from '@/components/real-estate/RealEstateFilter';
+import { cities } from 'morocco-cities';
 
 const CATEGORIES = [
   { label: 'Tous',     listingType: null   },
@@ -23,10 +24,217 @@ const PROPERTY_TABS = [
   { label: 'Bureaux',      value: 'OFFICE'    },
 ];
 
+// ─── Villes par région (morocco-cities) — used by the alert modal ────────────
+const citiesByRegion = cities.reduce((acc, city) => {
+  if (!acc[city.region_name]) acc[city.region_name] = [];
+  acc[city.region_name].push(city.name);
+  return acc;
+}, {});
+const ALL_REGIONS = Object.keys(citiesByRegion).sort();
+
+const LISTING_TYPES = [
+  { value: 'SALE', label: 'Vente' },
+  { value: 'RENT', label: 'Location' },
+];
+
+// ─── ALERT MODAL COMPONENT (mirrors jobs/page.jsx pattern) ───────────────────
+function AlertModal({ token, onClose }) {
+  const [form, setForm] = useState({
+    listingType: '',
+    categoryId:  '',
+    region:      '',
+    city:        '',
+    minPrice:    '',
+    maxPrice:    '',
+  });
+  const [categories, setCategories] = useState([]);
+  const [saving, setSaving]         = useState(false);
+  const [saved, setSaved]           = useState(false);
+  const [error, setError]           = useState('');
+
+  const regions = ALL_REGIONS;
+  const citiesInRegion = form.region
+    ? [...(citiesByRegion[form.region] || [])].sort()
+    : [];
+
+  // Fetch real estate categories (already filtered to module: 'immobilier' server-side)
+  useEffect(() => {
+    realEstateService.getCategories()
+      .then((d) => { if (d.success) setCategories(d.data); })
+      .catch(() => {});
+  }, []);
+
+  const handleRegionChange = (region) => {
+    setForm((f) => ({ ...f, region, city: '' }));
+  };
+
+  const handleSave = async () => {
+    setError('');
+    setSaving(true);
+    try {
+      const filters = {
+        ...(form.listingType && { listingType: form.listingType }),
+        ...(form.categoryId  && { categoryId:  form.categoryId }),
+        ...(form.region      && { region:      form.region }),
+        ...(form.city        && { city:        form.city }),
+        ...(form.minPrice    && { minPrice:    form.minPrice }),
+        ...(form.maxPrice    && { maxPrice:    form.maxPrice }),
+      };
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/alerts`, {
+        method:  'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ module: 'immobilier', filters }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.message || 'Erreur'); return; }
+      setSaved(true);
+      setTimeout(() => onClose(), 2000);
+    } catch {
+      setError('Erreur réseau');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 animate-slide-up">
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">🔔 Créer une alerte</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Soyez notifié dès qu'une annonce correspond</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+        </div>
+
+        {saved ? (
+          <div className="flex flex-col items-center gap-2 py-8 text-green-700">
+            <div className="text-4xl">✅</div>
+            <p className="font-semibold">Alerte créée avec succès !</p>
+            <p className="text-xs text-gray-400 text-center">
+              Vous recevrez une notification pour chaque nouvelle annonce correspondante.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-col gap-3 mb-5">
+
+              {/* Listing type */}
+              <div>
+                <label className="text-xs font-semibold text-gray-500 mb-1 block">Type d'annonce</label>
+                <select
+                  value={form.listingType}
+                  onChange={(e) => setForm((f) => ({ ...f, listingType: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#A7D129] focus:ring-1 focus:ring-[#A7D129] transition bg-white"
+                >
+                  <option value="">Tous types</option>
+                  {LISTING_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Category (type de bien) */}
+              <div>
+                <label className="text-xs font-semibold text-gray-500 mb-1 block">Type de bien</label>
+                <select
+                  value={form.categoryId}
+                  onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#A7D129] focus:ring-1 focus:ring-[#A7D129] transition bg-white"
+                >
+                  <option value="">Tous les types de bien</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Region (morocco-cities) */}
+              <div>
+                <label className="text-xs font-semibold text-gray-500 mb-1 block">Région</label>
+                <select
+                  value={form.region}
+                  onChange={(e) => handleRegionChange(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#A7D129] focus:ring-1 focus:ring-[#A7D129] transition bg-white"
+                >
+                  <option value="">Toutes les régions</option>
+                  {regions.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* City — only shown if region selected and has cities */}
+              {form.region && citiesInRegion.length > 0 && (
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 mb-1 block">Ville</label>
+                  <select
+                    value={form.city}
+                    onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#A7D129] focus:ring-1 focus:ring-[#A7D129] transition bg-white"
+                  >
+                    <option value="">Toutes les villes</option>
+                    {citiesInRegion.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Price range */}
+              <div>
+                <label className="text-xs font-semibold text-gray-500 mb-1 block">Prix (MAD)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={form.minPrice}
+                    onChange={(e) => setForm((f) => ({ ...f, minPrice: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#A7D129] focus:ring-1 focus:ring-[#A7D129] transition"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    value={form.maxPrice}
+                    onChange={(e) => setForm((f) => ({ ...f, maxPrice: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#A7D129] focus:ring-1 focus:ring-[#A7D129] transition"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <p className="text-red-500 text-xs mb-3 text-center">{error}</p>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-gray-600 font-semibold text-sm hover:bg-gray-50 transition"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 py-2.5 bg-[#2D5016] text-white rounded-xl font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition disabled:opacity-60"
+              >
+                {saving ? 'Enregistrement...' : "Créer l'alerte"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function RealEstatePage() {
   const { user, token } = useAuth();
   const router = useRouter();
-  
 
   const [listings, setListings]     = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -35,6 +243,7 @@ export default function RealEstatePage() {
   const [activeType, setActiveType] = useState(null);
   const [activeProp, setActiveProp] = useState(null);
   const [favoritedIds, setFavoritedIds] = useState(new Set());
+  const [showAlertModal, setShowAlertModal] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -90,9 +299,9 @@ export default function RealEstatePage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-    const handlePublishClick = () => {
+  const handlePublishClick = () => {
     if (user.role === 'business') {
-      router.push('/my-space/services/real-estate/create');
+      router.push('/dashboard/listings/real-estate/create');
     }
   };
 
@@ -125,6 +334,14 @@ export default function RealEstatePage() {
                 <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
               </svg>
               Publier une annonce
+            </button>
+          )}
+          {user?.role === 'citizen' && (
+            <button
+              onClick={() => setShowAlertModal(true)}
+              className="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#A7D129] text-[#2D5016] font-semibold text-sm hover:bg-[#E8F5D0] transition-all duration-150 shrink-0"
+            >
+              🔔 Créer une alerte
             </button>
           )}
           </div>
@@ -228,6 +445,14 @@ export default function RealEstatePage() {
           )}
         </main>
       </div>
+
+      {/* ALERT MODAL */}
+      {showAlertModal && (
+        <AlertModal
+          token={token}
+          onClose={() => setShowAlertModal(false)}
+        />
+      )}
     </div>
   );
 }

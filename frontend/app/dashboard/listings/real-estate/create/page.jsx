@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/shared/ProtectedRoute";
 import { realEstateService } from "@/services/realEstateService";
 import axios from "axios";
 import moroccoCities from "morocco-cities";
-import LoadingSpinner from "@/components/shared/LoadingSpinner";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -16,18 +15,6 @@ const LISTING_TYPES = [
   { label: "Location", value: "RENT" },
 ];
 
-<<<<<<< HEAD:frontend/app/dashboard/listings/real-estate/create/page.jsx
-const PROPERTY_TYPES = [
-  { label: "Appartement", value: "APARTMENT" },
-  { label: "Villa", value: "VILLA" },
-  { label: "Maison", value: "HOUSE" },
-  { label: "Studio", value: "STUDIO" },
-  { label: "Terrain", value: "LAND" },
-  { label: "Bureau", value: "OFFICE" },
-  { label: "Commerce", value: "SHOP" },
-];
-
-// Maps PropertyType enum → category slug produced by the seed
 const PROPERTY_TYPE_TO_SLUG = {
   APARTMENT: "appartement",
   VILLA:     "villa",
@@ -38,8 +25,20 @@ const PROPERTY_TYPE_TO_SLUG = {
   SHOP:      "commerce",
 };
 
-=======
->>>>>>> featuer/adminListings:frontend/app/my-space/services/real-estate/create/page.jsx
+// ── Derive regions and grouped cities from the package ────────────────────────
+const ALL_CITIES = moroccoCities.cities;
+
+const REGIONS = [...new Set(ALL_CITIES.map((c) => c.region_name))]
+  .filter(Boolean)
+  .sort();
+
+function citiesByRegion(region) {
+  return ALL_CITIES
+    .filter((c) => c.region_name === region)
+    .map((c) => c.name)
+    .sort();
+}
+
 const EMPTY = {
   title: "",
   description: "",
@@ -50,6 +49,7 @@ const EMPTY = {
   rooms: "",
   bathrooms: "",
   floor: "",
+  region: "",
   city: "",
   location: "",
   latitude: "",
@@ -116,23 +116,23 @@ function SectionTitle({ children }) {
 
 // ─── Map picker ───────────────────────────────────────────────────────────────
 
-function MapPicker({ latitude, longitude, onChange }) {
+function MapPicker({ latitude, longitude, onChange, flyTo }) {
   const mapRef = useRef(null);
   const leafletMap = useRef(null);
   const markerRef = useRef(null);
   const [ready, setReady] = useState(false);
 
+  // Init map once
   useEffect(() => {
     if (leafletMap.current) return;
 
     const initMap = () => {
       if (!mapRef.current || !window.L) return;
-      // Prevent double-init (React StrictMode)
       if (mapRef.current._leaflet_id) return;
 
       const L = window.L;
-      const defaultLat = latitude ? parseFloat(latitude) : 33.9716;
-      const defaultLng = longitude ? parseFloat(longitude) : -6.8498;
+      const defaultLat = latitude ? parseFloat(latitude) : 31.7917;
+      const defaultLng = longitude ? parseFloat(longitude) : -7.0926;
 
       const map = L.map(mapRef.current).setView(
         [defaultLat, defaultLng],
@@ -145,10 +145,8 @@ function MapPicker({ latitude, longitude, onChange }) {
 
       const icon = L.icon({
         iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-        iconRetinaUrl:
-          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-        shadowUrl:
-          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
         iconSize: [25, 41],
         iconAnchor: [12, 41],
       });
@@ -192,14 +190,34 @@ function MapPicker({ latitude, longitude, onChange }) {
       document.head.appendChild(script);
     } else {
       const interval = setInterval(() => {
-        if (window.L) {
-          clearInterval(interval);
-          initMap();
-        }
+        if (window.L) { clearInterval(interval); initMap(); }
       }, 50);
       return () => clearInterval(interval);
     }
   }, []);
+
+  // Fly to city coords when `flyTo` changes
+  useEffect(() => {
+    if (!flyTo || !leafletMap.current || !window.L) return;
+    const { lat, lng, zoom = 12 } = flyTo;
+
+    const L = window.L;
+    const icon = L.icon({
+      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+      iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+    });
+
+    leafletMap.current.flyTo([lat, lng], zoom, { duration: 1.2 });
+
+    if (markerRef.current) {
+      markerRef.current.setLatLng([lat, lng]);
+    } else {
+      markerRef.current = L.marker([lat, lng], { icon }).addTo(leafletMap.current);
+    }
+  }, [flyTo]);
 
   return (
     <div className="flex flex-col gap-2">
@@ -218,8 +236,7 @@ function MapPicker({ latitude, longitude, onChange }) {
         </p>
       ) : (
         <p className="text-xs text-gray-400">
-          Cliquez sur la carte pour épingler la position exacte du bien
-          (optionnel).
+          Cliquez sur la carte pour épingler la position exacte du bien (optionnel).
         </p>
       )}
     </div>
@@ -273,9 +290,7 @@ function ImageUploader({ images, onChange, token, error }) {
 
   const remove = (i) => {
     const next = images.filter((_, idx) => idx !== i);
-    if (next.length > 0 && !next.some((img) => img.isCover)) {
-      next[0].isCover = true;
-    }
+    if (next.length > 0 && !next.some((img) => img.isCover)) next[0].isCover = true;
     onChange(next);
   };
 
@@ -295,47 +310,23 @@ function ImageUploader({ images, onChange, token, error }) {
               : "border-gray-200 hover:border-primary hover:bg-primary/5"
         }`}
       >
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={handleFiles}
-        />
+        <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} />
         {uploading ? (
           <div className="flex flex-col items-center gap-2">
             <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-primary font-semibold">
-              Upload en cours...
-            </p>
+            <p className="text-sm text-primary font-semibold">Upload en cours...</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 text-gray-500">
             <span className="text-3xl">📷</span>
-            <p className="text-sm font-semibold">
-              Cliquez pour choisir des photos
-            </p>
-            <p className="text-xs text-gray-400">
-              JPG, PNG, WEBP — max 5 Mo par photo — jusqu'à 10 photos
-            </p>
+            <p className="text-sm font-semibold">Cliquez pour choisir des photos</p>
+            <p className="text-xs text-gray-400">JPG, PNG, WEBP — max 5 Mo par photo — jusqu'à 10 photos</p>
           </div>
         )}
       </div>
 
-      {error && (
-        <p className="text-xs text-red-500 flex items-center gap-1">
-          <span>⚠</span>
-          {error}
-        </p>
-      )}
-
-      {uploadError && (
-        <p className="text-xs text-red-500 flex items-center gap-1">
-          <span>⚠</span>
-          {uploadError}
-        </p>
-      )}
+      {error && <p className="text-xs text-red-500 flex items-center gap-1"><span>⚠</span>{error}</p>}
+      {uploadError && <p className="text-xs text-red-500 flex items-center gap-1"><span>⚠</span>{uploadError}</p>}
 
       {images.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -346,26 +337,16 @@ function ImageUploader({ images, onChange, token, error }) {
                 img.isCover ? "border-primary" : "border-gray-200"
               }`}
             >
-              <img
-                src={img.url}
-                alt=""
-                className="w-full h-full object-cover"
-              />
+              <img src={img.url} alt="" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-1">
                 {!img.isCover && (
-                  <button
-                    type="button"
-                    onClick={() => setCover(i)}
-                    className="text-[10px] bg-white text-primary-dark px-2 py-0.5 rounded-full font-bold"
-                  >
+                  <button type="button" onClick={() => setCover(i)}
+                    className="text-[10px] bg-white text-primary-dark px-2 py-0.5 rounded-full font-bold">
                     Couverture
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => remove(i)}
-                  className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full font-bold"
-                >
+                <button type="button" onClick={() => remove(i)}
+                  className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full font-bold">
                   Supprimer
                 </button>
               </div>
@@ -391,8 +372,7 @@ function FeaturesManager({ features, onChange }) {
   const add = () => {
     if (!key.trim()) return;
     onChange({ ...features, [key.trim()]: val.trim() || true });
-    setKey("");
-    setVal("");
+    setKey(""); setVal("");
   };
 
   const remove = (k) => {
@@ -404,42 +384,25 @@ function FeaturesManager({ features, onChange }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex gap-2">
-        <input
-          value={key}
-          onChange={(e) => setKey(e.target.value)}
+        <input value={key} onChange={(e) => setKey(e.target.value)}
           placeholder="Équipement (ex: Parking)"
-          className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-        <input
-          value={val}
-          onChange={(e) => setVal(e.target.value)}
+          className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+        <input value={val} onChange={(e) => setVal(e.target.value)}
           placeholder="Valeur (optionnel)"
-          className="w-32 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-        <button
-          type="button"
-          onClick={add}
-          className="px-3 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition"
-        >
+          className="w-32 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+        <button type="button" onClick={add}
+          className="px-3 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition">
           +
         </button>
       </div>
       {Object.keys(features).length > 0 && (
         <div className="flex flex-wrap gap-2">
           {Object.entries(features).map(([k, v]) => (
-            <span
-              key={k}
-              className="flex items-center gap-1 px-3 py-1 bg-primary-mint border border-primary rounded-full text-xs font-semibold text-primary-dark"
-            >
-              {k}
-              {v !== true ? `: ${v}` : ""}
-              <button
-                type="button"
-                onClick={() => remove(k)}
-                className="ml-1 text-red-400 hover:text-red-600 font-bold"
-              >
-                ×
-              </button>
+            <span key={k}
+              className="flex items-center gap-1 px-3 py-1 bg-primary-mint border border-primary rounded-full text-xs font-semibold text-primary-dark">
+              {k}{v !== true ? `: ${v}` : ""}
+              <button type="button" onClick={() => remove(k)}
+                className="ml-1 text-red-400 hover:text-red-600 font-bold">×</button>
             </span>
           ))}
         </div>
@@ -466,12 +429,14 @@ function CreateListingForm() {
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState(null);
   const [subcategories, setSubcategories] = useState([]);
-  const [catsLoading, setCatsLoading] = useState(true);
+  const [geocoding, setGeocoding] = useState(false);
+  const [flyTo, setFlyTo] = useState(null);
 
   const sectionRefs = {
     title: useRef(null),
     description: useRef(null),
     price: useRef(null),
+    region: useRef(null),
     city: useRef(null),
     location: useRef(null),
     images: useRef(null),
@@ -482,67 +447,92 @@ function CreateListingForm() {
     if (errors[field]) setErrors((p) => ({ ...p, [field]: null }));
   };
 
-  const ERROR_ORDER = [
-    "title",
-    "description",
-    "price",
-    "city",
-    "location",
-    "images",
-  ];
+  const ERROR_ORDER = ["title", "description", "price", "region", "city", "location", "images"];
 
-  const cities = moroccoCities.cities
-    .map((c) => c.label || c.name || c.city)
-    .filter(Boolean)
-    .sort();
+  const availableCities = form.region ? citiesByRegion(form.region) : [];
 
   // ── Fetch immobilier subcategories ────────────────────────────────────────
-<<<<<<< HEAD:frontend/app/dashboard/listings/real-estate/create/page.jsx
-useEffect(() => {
-  axios.get(`${API}/api/categories`).then((r) => {
-    const data = r.data.data || [];
-    const immobilierCats = data.filter((c) => c.module === "immobilier");
-    setSubcategories(immobilierCats);
-  });
-}, []);
-
-  // ── Auto-set categoryId based on propertyType ─────────────────────────────
-useEffect(() => {
-  if (!subcategories.length) return;
-  const slug = PROPERTY_TYPE_TO_SLUG[form.propertyType];
-  const match = subcategories.find((c) => c.slug === slug);
-  if (match) set("categoryId", match.id);
-}, [form.propertyType, subcategories]);
-=======
   useEffect(() => {
-    axios
-      .get(`${API}/api/categories`)
-      .then((r) => {
-        const data = r.data.data || [];
-        const immobilierCats = data.filter((c) => c.module === "immobilier");
-        setSubcategories(immobilierCats);
-        setForm((p) => ({ ...p, categoryId: immobilierCats[0]?.id ?? "" }));
-      })
-      .finally(() => setCatsLoading(false));
+    axios.get(`${API}/api/categories`).then((r) => {
+      const data = r.data.data || [];
+      setSubcategories(data.filter((c) => c.module === "immobilier"));
+    });
   }, []);
 
-  if (catsLoading) return <LoadingSpinner message="Chargement..." />;
->>>>>>> featuer/adminListings:frontend/app/my-space/services/real-estate/create/page.jsx
+  // ── Auto-set categoryId based on propertyType ─────────────────────────────
+  useEffect(() => {
+    if (!subcategories.length) return;
+    const slug = PROPERTY_TYPE_TO_SLUG[form.propertyType];
+    const match = subcategories.find((c) => c.slug === slug);
+    if (match) set("categoryId", match.id);
+  }, [form.propertyType, subcategories]);
 
-  // After fetching subcategories:
   const propertyTypeOptions = subcategories.map((c) => ({
-    label: c.name, // "Appartement"
-    value: c.id, // the actual categoryId
-    slug: c.slug,
+    label: c.name,
+    value: c.id,
   }));
 
+  // ── Shared geocode function (city + optional address/quartier) ────────────
+  const geocodeAddress = useCallback(async (city, address) => {
+    if (!city) return;
+    setGeocoding(true);
+    try {
+      const q = encodeURIComponent(
+        `${address ? address + ", " : ""}${city}, Maroc`
+      );
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
+        { headers: { "Accept-Language": "fr" } }
+      );
+      const data = await res.json();
+      if (data?.[0]) {
+        const lat = parseFloat(data[0].lat).toFixed(6);
+        const lng = parseFloat(data[0].lon).toFixed(6);
+        setForm((p) => ({ ...p, latitude: lat, longitude: lng }));
+        setFlyTo({
+          lat: parseFloat(lat),
+          lng: parseFloat(lng),
+          zoom: address ? 15 : 12,
+        });
+      }
+    } catch {
+      // Geocoding failed silently — user can still click the map manually
+    } finally {
+      setGeocoding(false);
+    }
+  }, []);
+
+  // ── When region changes → reset city + coords ─────────────────────────────
+  const handleRegionChange = (region) => {
+    setForm((p) => ({ ...p, region, city: "", latitude: "", longitude: "" }));
+    setFlyTo(null);
+    if (errors.region) setErrors((p) => ({ ...p, region: null }));
+  };
+
+  // ── When city changes → geocode city only ────────────────────────────────
+  const handleCityChange = useCallback(async (cityName) => {
+    set("city", cityName);
+    if (!cityName) return;
+    // Pass current location value so we already have it if filled
+    await geocodeAddress(cityName, form.location || "");
+  }, [form.location, geocodeAddress]);
+
+  // ── When address/quartier changes → debounced re-geocode ─────────────────
+  useEffect(() => {
+    if (!form.city || !form.location.trim()) return;
+    const t = setTimeout(() => {
+      geocodeAddress(form.city, form.location);
+    }, 500);
+    return () => clearTimeout(t);
+  }, [form.location, form.city, geocodeAddress]);
+
+  // ── Validation ────────────────────────────────────────────────────────────
   const validate = () => {
     const e = {};
-    if (!form.title.trim() || form.title.trim().length < 5)
-      e.title = "Min 5 caractères";
-    if (!form.description.trim() || form.description.trim().length < 10)
-      e.description = "Min 10 caractères";
+    if (!form.title.trim() || form.title.trim().length < 5) e.title = "Min 5 caractères";
+    if (!form.description.trim() || form.description.trim().length < 10) e.description = "Min 10 caractères";
     if (!form.price || Number(form.price) <= 0) e.price = "Prix invalide";
+    if (!form.region) e.region = "Veuillez sélectionner une région";
     if (!form.city) e.city = "Veuillez sélectionner une ville";
     if (!form.location.trim()) e.location = "Requis";
     if (form.images.length === 0) e.images = "Ajoutez au moins une photo";
@@ -555,10 +545,7 @@ useEffect(() => {
       setErrors(e);
       const firstKey = ERROR_ORDER.find((k) => e[k]);
       if (firstKey && sectionRefs[firstKey]?.current) {
-        sectionRefs[firstKey].current.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
+        sectionRefs[firstKey].current.scrollIntoView({ behavior: "smooth", block: "center" });
       }
       return;
     }
@@ -590,9 +577,7 @@ useEffect(() => {
       {/* Header */}
       <div className="bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-          <h1 className="font-extrabold text-primary-dark text-lg">
-            Publier une annonce
-          </h1>
+          <h1 className="font-extrabold text-primary-dark text-lg">Publier une annonce</h1>
           <span className="text-xs bg-yellow-50 border border-yellow-200 text-yellow-700 px-3 py-1 rounded-full font-semibold">
             En attente de validation admin
           </span>
@@ -600,6 +585,7 @@ useEffect(() => {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-8 flex flex-col gap-6">
+
         {/* ── INFORMATIONS GÉNÉRALES ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
           <SectionTitle>Informations générales</SectionTitle>
@@ -617,26 +603,17 @@ useEffect(() => {
 
           <div className="grid grid-cols-2 gap-4">
             <Field label="Type de transaction *">
-              <Select
-                value={form.listingType}
-                onChange={(e) => set("listingType", e.target.value)}
-              >
+              <Select value={form.listingType} onChange={(e) => set("listingType", e.target.value)}>
                 {LISTING_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
+                  <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
               </Select>
             </Field>
             <Field label="Type de bien *">
-              <Select
-                value={form.categoryId}
-                onChange={(e) => set("categoryId", e.target.value)}
-              >
+              <Select value={form.categoryId} onChange={(e) => set("categoryId", e.target.value)}>
+                <option value="">Sélectionner</option>
                 {propertyTypeOptions.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
+                  <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
               </Select>
             </Field>
@@ -666,8 +643,7 @@ useEffect(() => {
           <div ref={sectionRefs.price} className="grid grid-cols-2 gap-4">
             <Field label="Prix (MAD) *" error={errors.price}>
               <Input
-                type="number"
-                min="1"
+                type="number" min="1"
                 value={form.price}
                 onChange={(e) => set("price", e.target.value)}
                 placeholder="Ex: 1500000"
@@ -676,8 +652,7 @@ useEffect(() => {
             </Field>
             <Field label="Surface (m²)">
               <Input
-                type="number"
-                min="0"
+                type="number" min="0"
                 value={form.surface}
                 onChange={(e) => set("surface", e.target.value)}
                 placeholder="Ex: 90"
@@ -687,31 +662,16 @@ useEffect(() => {
 
           <div className="grid grid-cols-3 gap-4">
             <Field label="Pièces">
-              <Input
-                type="number"
-                min="0"
-                value={form.rooms}
-                onChange={(e) => set("rooms", e.target.value)}
-                placeholder="Ex: 3"
-              />
+              <Input type="number" min="0" value={form.rooms}
+                onChange={(e) => set("rooms", e.target.value)} placeholder="Ex: 3" />
             </Field>
             <Field label="Salles de bain">
-              <Input
-                type="number"
-                min="0"
-                value={form.bathrooms}
-                onChange={(e) => set("bathrooms", e.target.value)}
-                placeholder="Ex: 2"
-              />
+              <Input type="number" min="0" value={form.bathrooms}
+                onChange={(e) => set("bathrooms", e.target.value)} placeholder="Ex: 2" />
             </Field>
             <Field label="Étage">
-              <Input
-                type="number"
-                min="0"
-                value={form.floor}
-                onChange={(e) => set("floor", e.target.value)}
-                placeholder="Ex: 4"
-              />
+              <Input type="number" min="0" value={form.floor}
+                onChange={(e) => set("floor", e.target.value)} placeholder="Ex: 4" />
             </Field>
           </div>
         </div>
@@ -720,52 +680,90 @@ useEffect(() => {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
           <SectionTitle>Localisation</SectionTitle>
 
+          {/* Row 1: Region + City */}
           <div className="grid grid-cols-2 gap-4">
-            <div ref={sectionRefs.city}>
-              <Field label="Ville *" error={errors.city}>
+            <div ref={sectionRefs.region}>
+              <Field label="Région *" error={errors.region}>
                 <Select
-                  value={form.city}
-                  onChange={(e) => set("city", e.target.value)}
-                  error={errors.city}
+                  value={form.region}
+                  onChange={(e) => handleRegionChange(e.target.value)}
+                  error={errors.region}
                 >
-                  <option value="">Sélectionner une ville</option>
-                  {cities.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
+                  <option value="">Sélectionner une région</option>
+                  {REGIONS.map((r) => (
+                    <option key={r} value={r}>{r}</option>
                   ))}
                 </Select>
               </Field>
             </div>
-            <div ref={sectionRefs.location}>
-              <Field label="Adresse / Quartier *" error={errors.location}>
+
+            <div ref={sectionRefs.city}>
+              <Field label="Ville *" error={errors.city}>
+                <div className="relative">
+                  <Select
+                    value={form.city}
+                    onChange={(e) => handleCityChange(e.target.value)}
+                    error={errors.city}
+                    disabled={!form.region}
+                  >
+                    <option value="">
+                      {form.region ? "Sélectionner une ville" : "Choisir une région d'abord"}
+                    </option>
+                    {availableCities.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </Select>
+                  {geocoding && (
+                    <div className="absolute right-8 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                </div>
+              </Field>
+            </div>
+          </div>
+
+          {/* Row 2: Address / Quartier — now also triggers geocoding */}
+          <div ref={sectionRefs.location}>
+            <Field
+              label="Adresse / Quartier *"
+              error={errors.location}
+              hint={
+                form.city
+                  ? "La carte se met à jour automatiquement selon l'adresse saisie."
+                  : undefined
+              }
+            >
+              <div className="relative">
                 <Input
                   value={form.location}
                   onChange={(e) => set("location", e.target.value)}
                   placeholder="Ex: Quartier Maarif, Bd Zerktouni"
                   error={errors.location}
                 />
-              </Field>
-            </div>
+                {/* Geocoding spinner on the address field */}
+                {geocoding && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
+            </Field>
           </div>
 
+          {/* Map */}
           <Field
             label="Position sur la carte"
-            hint="Cliquez sur la carte pour épingler l'emplacement exact (optionnel mais recommandé)."
+            hint="La carte se centre automatiquement sur la ville et l'adresse saisies. Cliquez pour affiner la position exacte (optionnel)."
           >
             <MapPicker
               latitude={form.latitude}
               longitude={form.longitude}
+              flyTo={flyTo}
               onChange={(lat, lng) => {
                 const lat_n = parseFloat(lat);
                 const lng_n = parseFloat(lng);
-                // Morocco bounds: lat 27.6–35.9, lng -13.2–-1.0
-                if (
-                  lat_n < 27.6 ||
-                  lat_n > 35.9 ||
-                  lng_n < -13.2 ||
-                  lng_n > -1.0
-                ) {
+                if (lat_n < 27.6 || lat_n > 35.9 || lng_n < -13.2 || lng_n > -1.0) {
                   setErrors((p) => ({
                     ...p,
                     map: "Position hors du Maroc. Veuillez sélectionner un emplacement au Maroc.",
@@ -788,10 +786,7 @@ useEffect(() => {
         {/* ── CONTACT ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
           <SectionTitle>Contact</SectionTitle>
-          <Field
-            label="Téléphone de contact"
-            hint="Formats acceptés : 06XXXXXXXX, 07XXXXXXXX, +212XXXXXXXXX"
-          >
+          <Field label="Téléphone de contact" hint="Formats acceptés : 06XXXXXXXX, 07XXXXXXXX, +212XXXXXXXXX">
             <Input
               value={form.contactPhone}
               onChange={(e) => set("contactPhone", e.target.value)}
@@ -801,10 +796,7 @@ useEffect(() => {
         </div>
 
         {/* ── PHOTOS ── */}
-        <div
-          ref={sectionRefs.images}
-          className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4"
-        >
+        <div ref={sectionRefs.images} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
           <SectionTitle>Photos *</SectionTitle>
           <ImageUploader
             images={form.images}
@@ -820,10 +812,7 @@ useEffect(() => {
           <p className="text-xs text-gray-400">
             Exemples: Parking, Piscine, Terrasse, Climatisation, Ascenseur...
           </p>
-          <FeaturesManager
-            features={form.features}
-            onChange={(v) => set("features", v)}
-          />
+          <FeaturesManager features={form.features} onChange={(v) => set("features", v)} />
         </div>
 
         {/* ── SERVER ERROR ── */}

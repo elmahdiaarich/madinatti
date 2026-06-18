@@ -118,6 +118,7 @@ function JobCard({ job, onDelete, onViewApplications }) {
       label: "Rejetée",
       className: "bg-red-50 text-red-700 border border-red-200",
     },
+    
   };
   const statusStyle = statusStyles[job.status] ?? statusStyles.PENDING;
 

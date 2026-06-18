@@ -1,9 +1,3 @@
-/*
-  Warnings:
-
-  - A unique constraint covering the columns `[userId,jobListingId]` on the table `JobApplication` will be added. If there are existing duplicate values, this will fail.
-
-*/
 -- AlterEnum
 -- This migration adds more than one value to an enum.
 -- With PostgreSQL versions 11 and earlier, this is not possible
@@ -12,9 +6,9 @@
 -- the enum.
 
 
-ALTER TYPE "ListingStatus" ADD VALUE 'SUSPENDED';
-ALTER TYPE "ListingStatus" ADD VALUE 'EXPIRED';
-ALTER TYPE "ListingStatus" ADD VALUE 'ARCHIVED';
+ALTER TYPE "ListingStatus" ADD VALUE IF NOT EXISTS 'SUSPENDED';
+ALTER TYPE "ListingStatus" ADD VALUE IF NOT EXISTS 'EXPIRED';
+ALTER TYPE "ListingStatus" ADD VALUE IF NOT EXISTS 'ARCHIVED';
 
 -- CreateTable
 CREATE TABLE "Notification" (

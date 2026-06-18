@@ -1,7 +1,17 @@
 // prisma/seeds/realEstate.seed.js
 
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { cities }       = require('morocco-cities');
+
+// ─── Build city → region lookup from morocco-cities ───────────────────────────
+// Keyed by city name for O(1) lookup when populating listings.
+const cityToRegion = cities.reduce((acc, c) => {
+  acc[c.name] = c.region_name;
+  return acc;
+}, {});
+
+// Helper: given a city name, return the matching region_name (or null).
+const getRegion = (cityName) => cityToRegion[cityName] ?? null;
 
 async function seedRealEstate(prisma, roles, categories) {
   console.log('🏠 Seeding real estate listings...');
@@ -27,8 +37,7 @@ async function seedRealEstate(prisma, roles, categories) {
     });
   }
 
-  // ── 2. Resolve immobilier categories from passed-in categories map ───────────
-  // categories.immobilier is keyed by slug: appartement, villa, maison, studio, terrain, bureau, commerce
+  // ── 2. Resolve immobilier categories ─────────────────────────────────────
   const catAppartement = categories.immobilier['appartement'];
   const catVilla       = categories.immobilier['villa'];
   const catMaison      = categories.immobilier['maison'];
@@ -41,8 +50,8 @@ async function seedRealEstate(prisma, roles, categories) {
     return;
   }
 
-
   // ── 3. Listings data ──────────────────────────────────────────────────────
+  // `city` must match a name in morocco-cities so getRegion() resolves correctly.
   const listings = [
     {
       title:        'Bel appartement 3 pièces - Maarif Casablanca',
@@ -65,8 +74,8 @@ async function seedRealEstate(prisma, roles, categories) {
         { url: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800', isCover: false },
         { url: 'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800', isCover: false },
       ],
-      features: { parking: true, ascenseur: true, gardien: true, balcon: true },
-      status:   'APPROVED',
+      features:    { parking: true, ascenseur: true, gardien: true, balcon: true },
+      status:      'APPROVED',
       publishedAt: new Date(),
     },
     {
@@ -89,10 +98,10 @@ async function seedRealEstate(prisma, roles, categories) {
         { url: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800', isCover: true  },
         { url: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800', isCover: false },
       ],
-      features: { piscine: true, jardin: true, garage: '2 voitures', cheminée: true, gardien: true },
-      status:   'APPROVED',
+      features:    { piscine: true, jardin: true, garage: '2 voitures', cheminée: true, gardien: true },
+      status:      'APPROVED',
       publishedAt: new Date(),
-      isFeatured: true,
+      isFeatured:  true,
     },
     {
       title:        'Studio meublé à louer - Centre ville Rabat',
@@ -111,10 +120,10 @@ async function seedRealEstate(prisma, roles, categories) {
       longitude:    -6.8326,
       contactPhone: '+212600000002',
       images: [
-        { url: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800', isCover: true  },
+        { url: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800', isCover: true },
       ],
-      features: { meublé: true, internet: 'fibre', 'proche tramway': true },
-      status:   'APPROVED',
+      features:    { meublé: true, internet: 'fibre', 'proche tramway': true },
+      status:      'APPROVED',
       publishedAt: new Date(),
     },
     {
@@ -137,8 +146,8 @@ async function seedRealEstate(prisma, roles, categories) {
         { url: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800', isCover: true  },
         { url: 'https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800', isCover: false },
       ],
-      features: { parking: true, piscine: 'résidence', ascenseur: true },
-      status:   'APPROVED',
+      features:    { parking: true, piscine: 'résidence', ascenseur: true },
+      status:      'APPROVED',
       publishedAt: new Date(),
     },
     {
@@ -161,8 +170,8 @@ async function seedRealEstate(prisma, roles, categories) {
         { url: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800', isCover: true  },
         { url: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800', isCover: false },
       ],
-      features: { terrasse: '40m²', garage: true, 'salon marocain': true },
-      status:   'APPROVED',
+      features:    { terrasse: '40m²', garage: true, 'salon marocain': true },
+      status:      'APPROVED',
       publishedAt: new Date(),
     },
     {
@@ -182,10 +191,10 @@ async function seedRealEstate(prisma, roles, categories) {
       longitude:    -7.6298,
       contactPhone: '+212600000001',
       images: [
-        { url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800', isCover: true  },
+        { url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800', isCover: true },
       ],
-      features: { climatisation: true, 'salle de réunion': true, 'accès 24h': true, parking: true },
-      status:   'APPROVED',
+      features:    { climatisation: true, 'salle de réunion': true, 'accès 24h': true, parking: true },
+      status:      'APPROVED',
       publishedAt: new Date(),
     },
     {
@@ -207,8 +216,8 @@ async function seedRealEstate(prisma, roles, categories) {
       images: [
         { url: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800', isCover: true },
       ],
-      features: { 'titre foncier': true, viabilisé: true, 'R+2 autorisé': true },
-      status:   'APPROVED',
+      features:    { 'titre foncier': true, viabilisé: true, 'R+2 autorisé': true },
+      status:      'APPROVED',
       publishedAt: new Date(),
     },
     {
@@ -232,7 +241,7 @@ async function seedRealEstate(prisma, roles, categories) {
         { url: 'https://images.unsplash.com/photo-1502005229762-cf1b2da7c5d6?w=800', isCover: false },
         { url: 'https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=800', isCover: false },
       ],
-      features: { 'vue mer': true, terrasse: '30m²', piscine: 'résidence', parking: 'double', gardien: true },
+      features:    { 'vue mer': true, terrasse: '30m²', piscine: 'résidence', parking: 'double', gardien: true },
       status:      'APPROVED',
       publishedAt: new Date(),
       isFeatured:  true,
@@ -251,6 +260,12 @@ async function seedRealEstate(prisma, roles, categories) {
       .replace(/-+/g, '-')
       + '-' + Date.now().toString(36);
 
+    // Resolve region automatically from morocco-cities
+    const region = getRegion(data.city);
+    if (!region) {
+      console.warn(`  ⚠️  No region found for city "${data.city}" — check spelling against morocco-cities`);
+    }
+
     await prisma.realEstateListing.create({
       data: {
         userId:       user.id,
@@ -266,6 +281,7 @@ async function seedRealEstate(prisma, roles, categories) {
         bathrooms:    data.bathrooms ?? null,
         floor:        data.floor     ?? null,
         city:         data.city,
+        region:       region,           // ← populated from morocco-cities
         location:     data.location,
         latitude:     data.latitude  ?? null,
         longitude:    data.longitude ?? null,
@@ -279,7 +295,7 @@ async function seedRealEstate(prisma, roles, categories) {
       },
     });
 
-    console.log(`  ✅ ${data.listingType} · ${data.propertyType} · ${data.title.slice(0, 50)}`);
+    console.log(`  ✅ ${data.listingType} · ${data.propertyType} · [${region ?? '⚠️ no region'}] · ${data.title.slice(0, 45)}`);
   }
 
   console.log('🎉 Done seeding real estate listings!\n');

@@ -205,6 +205,7 @@ async function moderateListing(req, res) {
     const result = await service.moderateListing(req.params.id, action, req.user.userId, adminNotes);
     if (result.error)
       return res.status(result.status).json({ success: false, message: result.error });
+
     return res.json({ success: true, data: result.listing });
   } catch (err) {
     console.error('[moderateListing]', err);

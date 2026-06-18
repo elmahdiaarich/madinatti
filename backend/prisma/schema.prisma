@@ -35,7 +35,7 @@ enum ListingStatus {
   REJECTED     // Denied validation (never went live)
   SUSPENDED    // Admin revoked approval after it was live (The "Undo" button)
   EXPIRED      // The listing's paid or free time limit ran out
-  ARCHIVED     // Soft-deleted or successfully sold/rented
+  ARCHIEVED     // Soft-deleted or successfully sold/rented
 }
 
 model User {
@@ -194,13 +194,14 @@ model JobListing {
   companyName         String
   companyLogo         String?
   location            String
+  city                String
   latitude            Decimal?
   longitude           Decimal?
   salaryMin           Decimal?
   salaryMax           Decimal?
   salaryPeriod        String?
   applicationDeadline DateTime?
-  status              ListingStatus     @default(PENDING)
+  status              ListingStatus @default(PENDING)
   isFeatured          Boolean       @default(false)
   isSponsored         Boolean       @default(false)
   boostExpiresAt      DateTime?

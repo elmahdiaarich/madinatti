@@ -419,7 +419,7 @@ export default function RealEstateDetailPage() {
                 <SpecRow label="Type de bien" value={propertyType} />
                 <SpecRow label="Transaction" value={listingType} />
                 <SpecRow label="Ville" value={listing.city} />
-                <SpecRow label="Localisation" value={listing.location} />
+                <SpecRow label="Quartier" value={listing.location} />
               </div>
               <div>
                 <SpecRow label="Surface" value={listing.surface ? `${listing.surface} m²` : null} />

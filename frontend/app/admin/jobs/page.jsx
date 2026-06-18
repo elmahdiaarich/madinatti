@@ -62,6 +62,10 @@ function FilterChip({ label, onRemove }) {
   )
 }
 
+// Notifie la sidebar de recalculer ses compteurs
+const refreshSidebarCounts = () =>
+  window.dispatchEvent(new Event('admin:counts:refresh'))
+
 export default function AdminJobsPage() {
   const { token } = useAuth()
   const { toast } = useToast()
@@ -71,7 +75,6 @@ export default function AdminJobsPage() {
   const [tableLoading, setTableLoading]   = useState(true)
   const [actionLoading, setActionLoading] = useState(null)
 
-  // Modal state
   const [selectedListing, setSelectedListing] = useState(null)
 
   const [status, setStatus]             = useState('PENDING')
@@ -114,6 +117,7 @@ export default function AdminJobsPage() {
     try {
       await approveListing(id, token)
       await loadListings()
+      refreshSidebarCounts()
       toast.success('Offre approuvée avec succès.')
     } catch (e) {
       toast.error(`Erreur : ${e.message}`)
@@ -127,6 +131,7 @@ export default function AdminJobsPage() {
     try {
       await rejectListing(id, note, token)
       await loadListings()
+      refreshSidebarCounts()
       toast.success('Offre refusée.')
     } catch (e) {
       toast.error(`Erreur : ${e.message}`)
@@ -140,6 +145,7 @@ export default function AdminJobsPage() {
     try {
       await updateListingStatus(id, newStatus, adminNotes, token)
       await loadListings()
+      refreshSidebarCounts()
       toast.success(`Statut mis à jour → ${STATUS_LABELS[newStatus] ?? newStatus}`)
     } catch (e) {
       toast.error(`Erreur : ${e.message}`)
@@ -148,21 +154,16 @@ export default function AdminJobsPage() {
     }
   }
 
-  // New — just refreshes, no API call
   const handleRefresh = async () => {
     await loadListings()
   }
 
   // ── Status change from inside the detail modal ───────────────────────────
-  // Called by ListingDetailModal after any transition (approve, reject, suspend…)
-  // newStatus === 'DELETED' means the listing was permanently deleted
 
   const handleModalStatusChanged = useCallback(async (listingId, newStatus) => {
-    // Reload the table so the row reflects the change immediately
     await loadListings()
+    refreshSidebarCounts()
 
-    // Update the selectedListing in-place so the modal stays open with fresh status
-    // (unless the listing was deleted — then close the modal)
     if (newStatus === 'DELETED') {
       setSelectedListing(null)
       toast.success('Offre supprimée définitivement.')

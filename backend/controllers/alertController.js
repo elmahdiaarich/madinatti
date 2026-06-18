@@ -15,6 +15,16 @@ function isDuplicateFilter(existing, incoming, module) {
       (existing.contractType || null) === (incoming.contractType || null) &&
       (existing.keyword      || null) === (incoming.keyword      || null)
     );
+      if (module === 'immobilier') {
+    return (
+      (existing.categoryId   || null) === (incoming.categoryId   || null) &&
+      (existing.listingType  || null) === (incoming.listingType  || null) &&
+      (existing.region       || null) === (incoming.region       || null) &&
+      (existing.city         || null) === (incoming.city         || null) &&
+      (existing.minPrice     || null) === (incoming.minPrice     || null) &&
+      (existing.maxPrice     || null) === (incoming.maxPrice     || null)
+    );
+  }
   }
   
   return false;

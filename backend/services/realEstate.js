@@ -124,6 +124,7 @@ async function createListing(data, userId) {
       bathrooms: data.bathrooms ? parseInt(data.bathrooms, 10) : null,
       floor: data.floor ? parseInt(data.floor, 10) : null,
       city: data.city?.trim() || null,
+      region: data.region?.trim() || null,
       location: data.location.trim(),
       latitude: data.latitude ? parseFloat(data.latitude) : null,
       longitude: data.longitude ? parseFloat(data.longitude) : null,
@@ -492,6 +493,7 @@ async function updateMyListing(id, userId, data) {
       }),
       ...(data.city !== undefined && { city: data.city?.trim() || null }),
       ...(data.location && { location: data.location.trim() }),
+      ...(data.region !== undefined && { region: data.region?.trim() || null }), 
       ...(data.latitude !== undefined && {
         latitude: data.latitude ? parseFloat(data.latitude) : null,
       }),
