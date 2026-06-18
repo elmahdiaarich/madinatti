@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import axios from "axios";
+import GuestRoute from "@/components/shared/GuestRoute";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");

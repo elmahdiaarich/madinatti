@@ -298,7 +298,11 @@ export default function RegisterPage() {
             {loading ? "Création..." : "Créer un compte"}
           </button>
         </form>
-
+  <p className="text-center text-sm mt-2">
+          <a href="/auth/forgot-password" className="text-primary-dark hover:underline">
+            Mot de passe oublié ?
+          </a>
+        </p>
         <GoogleAuth />
       </AuthLayout>
     </GuestRoute>

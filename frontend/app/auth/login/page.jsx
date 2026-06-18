@@ -74,7 +74,11 @@ export default function LoginPage() {
             {loading ? "Connexion..." : "Se connecter"}
           </button>
         </form>
-
+<p className="text-right text-sm">
+  <a href="/auth/forgot-password" className="text-primary-dark hover:underline">
+    Mot de passe oublié ?
+  </a>
+</p>
         <GoogleAuth />
 
         <p className="text-center text-sm mt-4">
