@@ -37,15 +37,12 @@ const CONTRACT_TYPES = [
 ];
 
 // ─── Villes par région (morocco-cities) ───────────────────────────────────────
-// Built once at module load from the `morocco-cities` package — used as the
-// single source of truth for region/city selects (AlertModal + page below).
 const citiesByRegion = cities.reduce((acc, city) => {
   if (!acc[city.region_name]) acc[city.region_name] = [];
   acc[city.region_name].push(city.name);
   return acc;
 }, {});
 
-// Sorted list of all region names, derived from the same data.
 const ALL_REGIONS = Object.keys(citiesByRegion).sort();
 
 // ─── ALERT MODAL COMPONENT ────────────────────────────────────────────────────
@@ -56,20 +53,18 @@ function AlertModal({ token, initialFilters, onClose, apiUrl }) {
     region:       initialFilters.region       || '',
     city:         initialFilters.city         || '',
     contractType: initialFilters.contractType || '',
+    remote:       initialFilters.remote       || '',
   });
-  const [categories, setCategories]     = useState([]);
-  const [saving, setSaving]             = useState(false);
-  const [saved, setSaved]               = useState(false);
-  const [error, setError]               = useState('');
+  const [categories, setCategories] = useState([]);
+  const [saving, setSaving]         = useState(false);
+  const [saved, setSaved]           = useState(false);
+  const [error, setError]           = useState('');
 
-  // Regions & cities now come straight from the morocco-cities package,
-  // no network round-trip needed.
   const regions = ALL_REGIONS;
   const citiesInRegion = form.region
     ? [...(citiesByRegion[form.region] || [])].sort()
     : [];
 
-  // Fetch categories on mount
   useEffect(() => {
     fetch(`${apiUrl}/api/jobs/categories`)
       .then(r => r.json())
@@ -91,6 +86,7 @@ function AlertModal({ token, initialFilters, onClose, apiUrl }) {
         ...(form.region       && { region:       form.region }),
         ...(form.city         && { city:         form.city }),
         ...(form.contractType && { contractType: form.contractType }),
+        ...(form.remote       && { remote:       form.remote }),
       };
 
       const res = await fetch(`${apiUrl}/api/alerts`, {
@@ -176,6 +172,34 @@ function AlertModal({ token, initialFilters, onClose, apiUrl }) {
                     <option key={c.value} value={c.value}>{c.label}</option>
                   ))}
                 </select>
+              </div>
+
+              {/* Mode de travail */}
+              <div>
+                <label className="text-xs font-semibold text-gray-500 mb-1 block">Mode de travail</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { value: '',        icon: '🔍', label: 'Tous',       desc: 'Peu importe' },
+                    { value: 'ON_SITE', icon: '🏢', label: 'Présentiel', desc: 'Sur site uniquement' },
+                    { value: 'REMOTE',  icon: '🌍', label: 'Remote',     desc: 'Travail à distance' },
+                    { value: 'HYBRID',  icon: '🔀', label: 'Hybride',    desc: 'Mix présentiel/remote' },
+                  ].map((r) => (
+                    <button
+                      key={r.value}
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, remote: r.value }))}
+                      className={`p-3 rounded-xl border-2 text-center transition-all
+                        ${form.remote === r.value
+                          ? 'border-[#A7D129] bg-[#E8F5D0]'
+                          : 'border-gray-200 hover:border-[#A7D129]/50 bg-white'
+                        }`}
+                    >
+                      <div className="text-xl mb-1">{r.icon}</div>
+                      <div className="text-[11px] font-bold text-[#2D5016] leading-tight">{r.label}</div>
+                      <div className="text-[9px] text-gray-400 mt-0.5 leading-tight">{r.desc}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Region (morocco-cities) */}

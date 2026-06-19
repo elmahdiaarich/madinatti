@@ -4,7 +4,7 @@
  * components/admin/ListingTable.jsx
  * ─────────────────────────────────────────────────────────────────────────────
  * Reusable paginated table used on every admin listing page.
- * Columns: Type badge | Titre | Soumis par | Date | Statut | Actions
+ * Columns: Logo | Type badge | Titre | Soumis par | Date | Statut | Actions
  *
  * Props:
  *  listings        — array of listing objects
@@ -163,8 +163,9 @@ export default function ListingTable({
 }) {
   const [detailListing, setDetailListing] = useState(null);
   const [rejectTarget, setRejectTarget] = useState(null);
+  const [logoPopup, setLogoPopup] = useState(null); // { src, name }
 
-  const colCount = showModuleCol ? 6 : 5;
+  const colCount = showModuleCol ? 7 : 6;
 
   const handleRowClick = (listing) => {
     if (onView) onView(listing);
@@ -181,9 +182,6 @@ export default function ListingTable({
     setRejectTarget(listing);
   };
 
-  // RejectModal now owns its own API call (matches SuspendModal/ArchiveModal).
-  // onConfirm fires with the new status string after a successful call —
-  // we just need to refresh the table here, not call the API again.
   const handleConfirmReject = async (newStatus) => {
     if (!rejectTarget) return;
     setRejectTarget(null);
@@ -191,11 +189,6 @@ export default function ListingTable({
     onStatusSuccess?.(newStatus);
   };
 
-  // Called by ListingDetailModal whenever StatusPanel, SuspendModal, RejectModal,
-  // or ArchiveModal confirms a transition (including a permanent DELETE).
-  // This is the missing link that makes the table reload after any of those
-  // modal-driven transitions — it routes through the same onUpdateStatus the
-  // parent page already uses to refresh listings + overview stats.
   const handleModalStatusChanged = async (id, newStatus) => {
     setDetailListing(null);
     await onRefresh?.();
@@ -204,7 +197,6 @@ export default function ListingTable({
 
   const { page = 1, totalPages = 1, total = 0 } = pagination;
 
-  // Smart page range (show max 7 page buttons)
   const pageRange = () => {
     if (totalPages <= 7)
       return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -221,12 +213,45 @@ export default function ListingTable({
 
   return (
     <>
+      {/* Logo popup */}
+      {logoPopup && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => setLogoPopup(null)}
+        >
+          <div
+            className="flex flex-col items-center gap-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={logoPopup.src}
+              alt={logoPopup.name}
+              className="max-w-[240px] max-h-[240px] rounded-2xl object-contain bg-white p-4 shadow-xl border border-gray-100"
+            />
+            {logoPopup.name && (
+              <p className="text-white text-sm font-semibold drop-shadow">
+                {logoPopup.name}
+              </p>
+            )}
+            <button
+              onClick={() => setLogoPopup(null)}
+              className="text-white/70 hover:text-white text-xs mt-1 transition-colors"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-16">
+                  Logo
+                </th>
                 {showModuleCol && (
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">
                     Type
@@ -283,6 +308,32 @@ export default function ListingTable({
                       onClick={() => handleRowClick(listing)}
                       className="hover:bg-gray-50/80 cursor-pointer transition-colors group"
                     >
+                      {/* Logo entreprise */}
+                      <td
+                        className="px-4 py-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {listing.submittedByLogo ? (
+                          <img
+                            src={listing.submittedByLogo}
+                            alt=""
+                            className="w-9 h-9 rounded-lg object-cover border border-gray-100 cursor-zoom-in hover:scale-110 transition-transform"
+                            onClick={() =>
+                              setLogoPopup({
+                                src: listing.submittedByLogo,
+                                name: listing.submittedBy || listing.company || "",
+                              })
+                            }
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-400">
+                            {(listing.submittedBy || listing.company || "?")
+                              .charAt(0)
+                              .toUpperCase()}
+                          </div>
+                        )}
+                      </td>
+
                       {/* Type badge */}
                       {showModuleCol && (
                         <td className="px-4 py-3">
@@ -294,9 +345,6 @@ export default function ListingTable({
                       <td className="px-4 py-3">
                         <p className="font-semibold text-gray-900 group-hover:text-[#2D5016] transition-colors truncate max-w-[220px]">
                           {listing.title}
-                        </p>
-                        <p className="text-xs text-gray-400 truncate max-w-[220px] mt-0.5">
-                          {listing.city}
                         </p>
                       </td>
 

@@ -13,9 +13,12 @@ function isDuplicateFilter(existing, incoming, module) {
       (existing.region       || null) === (incoming.region       || null) &&
       (existing.city         || null) === (incoming.city         || null) &&
       (existing.contractType || null) === (incoming.contractType || null) &&
-      (existing.keyword      || null) === (incoming.keyword      || null)
+      (existing.keyword      || null) === (incoming.keyword      || null) &&
+      (existing.remote       || null) === (incoming.remote       || null)
     );
-      if (module === 'immobilier') {
+  }
+
+  if (module === 'immobilier') {
     return (
       (existing.categoryId   || null) === (incoming.categoryId   || null) &&
       (existing.listingType  || null) === (incoming.listingType  || null) &&
@@ -25,8 +28,7 @@ function isDuplicateFilter(existing, incoming, module) {
       (existing.maxPrice     || null) === (incoming.maxPrice     || null)
     );
   }
-  }
-  
+
   return false;
 }
 

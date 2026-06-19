@@ -137,21 +137,39 @@ const getListings = async (req, res) => {
 
     if (mod === "tous" || mod === "emploi") {
       jobs = await prisma.jobListing.findMany({
-        where: jobWhere,
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          title: true,
-          companyName: true,
-          location: true,
-          contractType: true,
-          status: true,
-          adminNotes: true,
-          description: true,
-          createdAt: true,
-          user: { select: { id: true, name: true, email: true } },
-        },
-      });
+  where: jobWhere,
+  orderBy: { createdAt: 'desc' },
+  select: {
+    id:                  true,
+    title:               true,
+    description:         true,
+    companyName:         true,
+    companyLogo:         true,
+    location:            true,
+    region:              true,
+    contractType:        true,
+    remote:              true,
+    salaryMin:           true,
+    salaryMax:           true,
+    salaryPeriod:        true,
+    experienceLevel:     true,
+    educationLevel:      true,
+    languages:           true,
+    skills:              true,
+    applicationDeadline: true,
+    status:              true,
+    isFeatured:          true,
+    isSponsored:         true,
+    viewsCount:          true,
+    adminNotes:          true,
+    createdAt:           true,
+    updatedAt:           true,
+    publishedAt:         true,
+    reviewedAt:          true,
+user: {
+  select: { id: true, name: true, email: true, companyName: true, companyLogo: true, avatar: true },
+}, },
+})
     }
 
     if (mod === "tous" || mod === "immobilier") {
@@ -190,8 +208,8 @@ const getListings = async (req, res) => {
           reviewedBy: true,
           categoryId: true,
           user: {
-            select: { id: true, name: true, email: true, companyName: true },
-          },
+  select: { id: true, name: true, email: true, companyName: true, companyLogo: true, avatar: true },
+},
           category: { select: { id: true, name: true, slug: true } },
           _count: { select: { inquiries: true } },
         },
@@ -199,21 +217,49 @@ const getListings = async (req, res) => {
     }
 
     // ── Normalize to common shape ────────────────────────────────────────────
-    const normalizeJob = (j) => ({
-      id: j.id,
-      module: "emploi",
-      title: j.title,
-      company: j.companyName,
-      submittedBy: j.user?.name || j.companyName,
-      submittedByEmail: j.user?.email || "",
-      submittedById: j.user?.id || "",
-      city: j.location,
-      contractType: j.contractType,
-      status: j.status,
-      adminNote: j.adminNotes || null,
-      description: j.description || null,
-      createdAt: j.createdAt,
-    });
+   const normalizeJob = (j) => ({
+  id:                 j.id,
+  module:             'emploi',
+  title:              j.title,
+  company:            j.companyName,
+  companyName:        j.companyName,
+  companyLogo:        j.companyLogo || null,
+  submittedBy:        j.user?.name || j.companyName,
+  submittedByEmail:   j.user?.email || '',
+  submittedById:      j.user?.id || '',
+  submittedByLogo: j.user?.companyLogo || j.user?.avatar || null,
+
+  // localisation — dans JobListing, "location" est la ville/adresse
+  city:               j.location,
+  location:           j.location,
+  region:             j.region || null,
+  // contrat & conditions
+  contractType:       j.contractType,
+  remote:             j.remote || null,
+  // salaire
+  salaryMin:          j.salaryMin ?? null,
+  salaryMax:          j.salaryMax ?? null,
+  salaryPeriod:       j.salaryPeriod || null,
+  // profil recherché
+  experienceLevel:    j.experienceLevel || null,
+  educationLevel:     j.educationLevel  || [],
+  languages:          j.languages       || [],
+  skills:             j.skills          || [],
+  // dates
+  applicationDeadline: j.applicationDeadline || null,
+  createdAt:          j.createdAt,
+  updatedAt:          j.updatedAt,
+  publishedAt:        j.publishedAt || null,
+  reviewedAt:         j.reviewedAt  || null,
+  // misc
+  status:             j.status,
+  isFeatured:         j.isFeatured  || false,
+  isSponsored:        j.isSponsored || false,
+  viewsCount:         j.viewsCount  ?? 0,
+  adminNote:          j.adminNotes  || null,
+  description:        j.description || null,
+  deletedByOwner:     j.deletedByOwner ?? false,
+})
 
     const normalizeRE = (r) => ({
       id: r.id,
@@ -224,6 +270,7 @@ const getListings = async (req, res) => {
       submittedBy: r.user?.companyName || r.user?.name || "",
       submittedByEmail: r.user?.email || "",
       submittedById: r.user?.id || "",
+      submittedByLogo: r.user?.companyLogo || r.user?.avatar || null,
       location: r.location,
       city: r.city || r.location,
       region: r.region,
@@ -312,17 +359,20 @@ async function notifyJobAlertSubscribers(approvedJob, createNotification) {
       const contractMatch =
         !filters.contractType ||
         filters.contractType === approvedJob.contractType;
-      const keywordMatch =
-        !filters.keyword ||
-        approvedJob.title.toLowerCase().includes(filters.keyword.toLowerCase());
+     const keywordMatch =
+  !filters.keyword ||
+  approvedJob.title.toLowerCase().includes(filters.keyword.toLowerCase());
+const remoteMatch =
+  !filters.remote || filters.remote === approvedJob.remote;
 
-      if (
-        categoryMatch &&
-        regionMatch &&
-        cityMatch &&
-        contractMatch &&
-        keywordMatch
-      ) {
+if (
+  categoryMatch &&
+  regionMatch &&
+  cityMatch &&
+  contractMatch &&
+  keywordMatch &&
+  remoteMatch
+) {
         await createNotification(
           alert.userId,
           "JOB_ALERT",
