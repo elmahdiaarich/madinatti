@@ -130,6 +130,7 @@ const sendResetPasswordEmail = async (
   </div>
 `
   })
+
 }
 
 async function sendReportContactEmail({ to, ownerName, listingTitle, adminMessage }) {
@@ -164,4 +165,4 @@ async function sendReportContactEmail({ to, ownerName, listingTitle, adminMessag
 module.exports = {
   sendResetPasswordEmail,
   sendReportContactEmail,
-}
+}

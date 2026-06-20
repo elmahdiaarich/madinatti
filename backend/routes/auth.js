@@ -8,14 +8,16 @@ const {
   resetPassword,
   completeProfile,
   getMe,
-  updateMe 
+  updateMe,
+  googleLogin 
 } = require('../controllers/authController')
 const authMiddleware = require('../middlewares/authMiddleware')
-const googleAuth = require('./googleAuth')
+// const googleAuth = require('./googleAuth')
 const { upload } = require('../config/cloudinary')
 
 // Google auth
-router.use('/', googleAuth)
+// router.use('/', googleAuth)
+router.post('/google', googleLogin);
 
 router.post('/register', upload.single('companyLogo'), register)
 router.post('/login', login)

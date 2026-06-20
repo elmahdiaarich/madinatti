@@ -1,9 +1,18 @@
 const prisma = require("../config/db");
 const { cloudinary } = require("../config/cloudinary");
+const { cities: moroccoCities } = require('morocco-cities');
+
+// Build once at module load — same pattern as real estate
+const citiesByRegion = moroccoCities.reduce((acc, city) => {
+  if (!acc[city.region_name]) acc[city.region_name] = [];
+  acc[city.region_name].push(city.name);
+  return acc;
+}, {});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/jobs
 // ─────────────────────────────────────────────────────────────────────────────
+
 const getJobs = async (req, res) => {
   try {
     const {
@@ -13,7 +22,6 @@ const getJobs = async (req, res) => {
       categoryId,
       contractType,
       city,
-      location,
       region,
       educationLevel,
       experienceLevel,
@@ -23,27 +31,34 @@ const getJobs = async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
+    // ── Location filter — same logic as real estate ─────────────────
+    let locationFilter = {};
+    if (city) {
+      locationFilter = { city: { contains: city, mode: 'insensitive' } };
+    } else if (region) {
+      const citiesInRegion = citiesByRegion[region] || [];
+      if (citiesInRegion.length > 0) {
+        locationFilter = { city: { in: citiesInRegion } };
+      }
+    }
+    // ────────────────────────────────────────────────────────────────
+
     const where = {
-      status: "APPROVED",
+      status: 'APPROVED',
+      ...locationFilter,
       ...(search && {
         OR: [
-          { title: { contains: search, mode: "insensitive" } },
-          { companyName: { contains: search, mode: "insensitive" } },
-          { description: { contains: search, mode: "insensitive" } },
+          { title:       { contains: search, mode: 'insensitive' } },
+          { companyName: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
         ],
       }),
-      ...(categoryId && { categoryId }),
-      ...(contractType && { contractType }),
-      ...(educationLevel && {
-        educationLevel: { hasSome: educationLevel.split(",") },
-      }),
+      ...(categoryId     && { categoryId }),
+      ...(contractType   && { contractType }),
+      ...(educationLevel && { educationLevel: { hasSome: educationLevel.split(',') } }),
       ...(experienceLevel && { experienceLevel }),
-      ...(categorySlug && { category: { slug: categorySlug } }),
-      // Si ville ET région : priorité à la ville
-      ...(city ? { city: { contains: city, mode: "insensitive" } } : region
-          ? { region: { equals: region, mode: "insensitive" } }
-          : {}),
-      ...(salarySpecified === "true" && {
+      ...(categorySlug   && { category: { slug: categorySlug } }),
+      ...(salarySpecified === 'true' && {
         NOT: { AND: [{ salaryMin: null }, { salaryMax: null }] },
       }),
     };

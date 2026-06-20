@@ -244,7 +244,7 @@ const googleLogin = async (req, res) => {
     });
 
     const payload = ticket.getPayload();
-    const { email, name } = payload;
+    const { email, name ,picture } = payload;
 
     let user = await prisma.user.findUnique({
       where: { email },
