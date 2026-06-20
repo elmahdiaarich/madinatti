@@ -16,8 +16,7 @@ export default function ForgotPasswordPage() {
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/auth/forgot-password`,
         { email },
-      );
-
+      )
       setMessage(
         "Un lien de réinitialisation a été envoyé à votre adresse email.",
       );

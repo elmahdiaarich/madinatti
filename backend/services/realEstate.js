@@ -1,6 +1,14 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { cloudinary } = require("../config/cloudinary");
+const { cities: moroccoCities } = require('morocco-cities');
+
+// Build once at module load
+const citiesByRegion = moroccoCities.reduce((acc, city) => {
+  if (!acc[city.region_name]) acc[city.region_name] = [];
+  acc[city.region_name].push(city.name);
+  return acc;
+}, {});
 
 // ─── Slug Generator ──────────────────────────────────────────────────────────
 function generateSlug(title) {
@@ -154,6 +162,7 @@ async function getListings(query) {
     page = 1,
     limit = 12,
     city,
+    region,          // ← new
     listingType,
     propertyType,
     categoryId,
@@ -162,13 +171,26 @@ async function getListings(query) {
     rooms,
     search,
   } = query;
+
   const skip = (parseInt(page) - 1) * parseInt(limit);
   const take = parseInt(limit);
 
+  // ── Location filter ───────────────────────────────────────────────
+  let locationFilter = {};
+  if (city) {
+    locationFilter = { city: { contains: city, mode: 'insensitive' } };
+  } else if (region) {
+    const citiesInRegion = citiesByRegion[region] || [];
+    if (citiesInRegion.length > 0) {
+      locationFilter = { city: { in: citiesInRegion } };
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────
+
   const where = {
-    status: "APPROVED",
+    status: 'APPROVED',
     isActive: true,
-    ...(city && { city: { contains: city, mode: "insensitive" } }),
+    ...locationFilter,   // ← replaces the old city-only spread
     ...(listingType && { listingType }),
     ...(propertyType && { propertyType }),
     ...(categoryId && { categoryId }),
@@ -181,8 +203,8 @@ async function getListings(query) {
     }),
     ...(search && {
       OR: [
-        { title: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
+        { title:       { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
       ],
     }),
   };
@@ -192,7 +214,7 @@ async function getListings(query) {
       where,
       skip,
       take,
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
       select: {
         id: true,
         slug: true,
@@ -208,7 +230,7 @@ async function getListings(query) {
         isActive: true,
         isFeatured: true,
         createdAt: true,
-        user: { select: { id: true, name: true, avatar: true } },
+        user:     { select: { id: true, name: true, avatar: true } },
         category: { select: { id: true, name: true } },
       },
     }),
@@ -219,8 +241,8 @@ async function getListings(query) {
     listings,
     pagination: {
       total,
-      page: parseInt(page),
-      limit: take,
+      page:       parseInt(page),
+      limit:      take,
       totalPages: Math.ceil(total / take),
     },
   };

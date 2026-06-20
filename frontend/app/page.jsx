@@ -3,231 +3,147 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation"; // Added for routing
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Search,
-  MapPin,
-  ChevronDown,
-  ArrowRight,
-} from "lucide-react";
+import { Search, MapPin, ChevronDown, ArrowRight } from "lucide-react";
 import { cities } from "morocco-cities";
-import {
-  SERVICES,
-  STATS,
-  FEATURES,
-} from "@/constants/home.constants";
+import { useAuth } from "@/context/AuthContext";
+import HeroSearch from "@/components/shared/HeroSearch";
+import { SERVICES, STATS, FEATURES } from "@/constants/home.constants";
 
 const ALL_CITIES = cities.map((c) => ({ name: c.name, region: c.region_name }));
-const Services = SERVICES; 
-const Stats = STATS; 
-const Features = FEATURES; 
-
-// Keep your CityDropdown exactly as it is...
-function CityDropdown({ selectedCity, onSelect }) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const ref = useRef(null);
-
-  const filtered =
-    query.length > 0
-      ? ALL_CITIES.filter((c) =>
-          c.name.toLowerCase().includes(query.toLowerCase()),
-        ).slice(0, 8)
-      : [];
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  return (
-    <div className="relative flex-none" ref={ref} style={{ zIndex: 100 }}>
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 bg-gray-50 border border-gray-200 text-gray-700 rounded-xl px-3 py-2.5 text-sm w-48 hover:border-gray-300 transition-colors"
-      >
-        <MapPin
-          size={14}
-          className="text-[var(--color-primary-sage)] flex-shrink-0"
-        />
-        <span className="flex-1 text-left truncate">
-          {selectedCity ? selectedCity.name : "Toutes les villes"}
-        </span>
-        <ChevronDown
-          size={14}
-          className={`flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.15 }}
-            style={{ position: "fixed", zIndex: 9999, width: "256px" }}
-            className="bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
-            ref={(el) => {
-              if (el && ref.current) {
-                const btn = ref.current.getBoundingClientRect();
-                el.style.top = btn.bottom + 6 + "px";
-                el.style.left = btn.left + "px";
-              }
-            }}
-          >
-            <div className="p-2">
-              <input
-                autoFocus
-                type="text"
-                placeholder="Rechercher une ville..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="w-full text-primary-dark bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary"
-              />
-            </div>
-            <div className="max-h-52 overflow-y-auto">
-              <button
-                type="button"
-                onClick={() => {
-                  onSelect(null);
-                  setQuery("");
-                  setOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 transition-colors"
-              >
-                Toutes les villes
-              </button>
-              {filtered.length > 0 ? (
-                filtered.map((c) => (
-                  <button
-                    key={c.name + c.region}
-                    type="button"
-                    onClick={() => {
-                      onSelect(c);
-                      setQuery("");
-                      setOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-[var(--color-primary-mint)] transition-colors"
-                  >
-                    <span className="font-medium text-gray-900">{c.name}</span>
-                    <span className="text-xs text-gray-400 ml-1">
-                      — {c.region}
-                    </span>
-                  </button>
-                ))
-              ) : query.length > 0 ? (
-                <p className="px-4 py-3 text-sm text-gray-400">
-                  Aucune ville trouvée
-                </p>
-              ) : (
-                <p className="px-4 py-3 text-sm text-gray-400">
-                  Tapez pour rechercher…
-                </p>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
+const Services = SERVICES;
+const Stats = STATS;
+const Features = FEATURES;
 
 export default function HomePage() {
+  const { user } = useAuth();
   const router = useRouter(); // Access Next.js router
   const [selectedCity, setSelectedCity] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    
-    // Build query params securely
-    const params = new URLSearchParams();
-    if (selectedCity) params.set("city", selectedCity.name);
-    if (searchQuery) params.set("search", searchQuery);
+  // const handleSearch = (e) => {
+  //   e.preventDefault();
 
-    // Default main fallback for general search bar could route directly to real-estate
-    // or you can configure it dynamically based on selected tabs later
-    router.push(`/real-estate?${params.toString()}`);
-  };
+  //   // Build query params securely
+  //   const params = new URLSearchParams();
+  //   if (selectedCity) params.set("city", selectedCity.name);
+  //   if (searchQuery) params.set("search", searchQuery);
 
-  const quickTags = [
-    "Emploi à Rabat",
-    "Appartement à Casablanca",
-    "Événements à Marrakech",
-    "Pharmacie de garde",
-  ];
+  //   // Default main fallback for general search bar could route directly to real-estate
+  //   // or you can configure it dynamically based on selected tabs later
+  //   router.push(`/real-estate?${params.toString()}`);
+  // };
+
+  // const quickTags = [
+  //   "Emploi à Rabat",
+  //   "Appartement à Casablanca",
+  //   "Événements à Marrakech",
+  //   "Pharmacie de garde",
+  // ];
 
   return (
     <main className="min-h-screen bg-white">
       {/* HERO */}
-      <section className="relative overflow-hidden bg-[linear-gradient(135deg,var(--color-primary-dark)_0%,var(--color-primary-sage)_100%)] text-white">
-        {/* Decorative background shapes omitted for readability */}
-        
-        <div className="relative max-w-5xl mx-auto px-6 py-20 md:py-28">
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
-              <span className="w-2 h-2 rounded-full bg-[var(--color-primary)] animate-pulse" />
-              La plateforme locale du Maroc
-            </div>
+<section className="relative overflow-hidden text-white" style={{
+  background: 'linear-gradient(135deg, #2D5016 0%, #7BA428 100%)'
+}}>
 
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-5 max-w-2xl">
-              Votre ville,{" "}
-              <span style={{ color: "var(--color-primary)" }}>
-                tous ses services.
-              </span>
-            </h1>
+  {/* Dot grid */}
+  <div
+    className="absolute inset-0"
+    style={{
+      backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.15) 1.5px, transparent 1.5px)`,
+      backgroundSize: '24px 24px',
+    }}
+  />
 
-            <p className="text-lg text-white/75 max-w-xl mb-10 leading-relaxed">
-              Emploi, immobilier, événements, santé et bien plus — tout ce dont vous avez besoin, à portée de clic.
-            </p>
+  {/* Glow top right */}
+  <div style={{
+    position: 'absolute',
+    top: '-160px',
+    right: '-160px',
+    width: '600px',
+    height: '600px',
+    borderRadius: '50%',
+    background: 'radial-gradient(circle, rgba(167,209,41,0.35) 0%, transparent 70%)',
+    pointerEvents: 'none',
+  }} />
 
-            <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 max-w-2xl bg-white rounded-2xl p-2 shadow-xl">
-              <CityDropdown selectedCity={selectedCity} onSelect={setSelectedCity} />
-              <div className="hidden sm:block w-px bg-gray-200 my-1" />
-              <input
-                type="text"
-                placeholder="Chercher un service, une offre..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 px-4 py-2.5 text-sm text-gray-800 bg-transparent outline-none placeholder-gray-400 min-w-0"
-              />
-              <button type="submit" className="flex-none bg-[var(--color-primary-dark)] hover:bg-[var(--color-primary-sage)] text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2">
-                <Search size={15} />
-                Rechercher
-              </button>
-            </form>
+  {/* Glow bottom left */}
+  <div style={{
+    position: 'absolute',
+    bottom: '-120px',
+    left: '-120px',
+    width: '400px',
+    height: '400px',
+    borderRadius: '50%',
+    background: 'radial-gradient(circle, rgba(0,0,0,0.25) 0%, transparent 70%)',
+    pointerEvents: 'none',
+  }} />
 
-            {/* Quick tags click handler utility can go here */}
-            <div className="flex flex-wrap gap-2 mt-5">
-              {quickTags.map((tag) => (
-                <button key={tag} type="button" className="text-xs bg-white/10 hover:bg-white/20 border border-white/20 rounded-full px-3 py-1.5 transition-colors">
-                  {tag}
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        </div>
-      </section>
+  {/* Content */}
+  <div className="relative max-w-5xl mx-auto px-6 py-20 md:py-28">
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <div style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '8px',
+        background: 'rgba(255,255,255,0.12)',
+        border: '1px solid rgba(255,255,255,0.25)',
+        borderRadius: '9999px',
+        padding: '6px 16px',
+        fontSize: '14px',
+        fontWeight: '500',
+        marginBottom: '24px',
+      }}>
+        <span style={{
+          width: '8px', height: '8px',
+          borderRadius: '50%',
+          background: '#A7D129',
+          display: 'inline-block',
+          animation: 'pulse 2s infinite',
+        }} />
+        La plateforme locale du Maroc 🇲🇦
+      </div>
 
+      <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-5 max-w-2xl">
+        Votre ville,{' '}
+        <span style={{ color: '#A7D129' }}>
+          tous ses services.
+        </span>
+      </h1>
+
+      <p style={{ color: 'rgba(255,255,255,0.75)' }} className="text-lg max-w-xl mb-10 leading-relaxed">
+        Emploi, immobilier, événements, santé et bien plus — tout ce dont vous avez besoin, à portée de clic.
+      </p>
+
+      <HeroSearch />
+
+    </motion.div>
+  </div>
+</section>
       {/* STATS SECTION OMITTED FOR SPACE... */}
 
       {/* SERVICES */}
       <section className="max-w-5xl mx-auto px-6 py-16">
         <div className="mb-10">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Nos services</h2>
-          <p className="text-gray-500">Explorez tout ce que Madinatti a à offrir dans votre ville.</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Nos services
+          </h2>
+          <p className="text-gray-500">
+            Explorez tout ce que Madinatti a à offrir dans votre ville.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Services.map((svc, i) => {
             const Icon = svc.icon;
-            
+
             // Generate the link dynamically appending selected city query parameter
-            const dynamicHref = selectedCity 
+            const dynamicHref = selectedCity
               ? `${svc.href}?city=${encodeURIComponent(selectedCity.name)}`
               : svc.href;
 
@@ -243,19 +159,31 @@ export default function HomePage() {
               >
                 {/* Content inner items remain identical */}
                 <div className="relative">
-                  <div className={`inline-flex items-center justify-center w-10 h-10 rounded-xl mb-3 ${svc.color}`}>
+                  <div
+                    className={`inline-flex items-center justify-center w-10 h-10 rounded-xl mb-3 ${svc.color}`}
+                  >
                     <Icon size={20} />
                   </div>
-                  <h3 className="font-semibold text-gray-900 text-base mb-1">{svc.label}</h3>
-                  <p className="text-sm text-gray-500 mb-4">{svc.description}</p>
+                  <h3 className="font-semibold text-gray-900 text-base mb-1">
+                    {svc.label}
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    {svc.description}
+                  </p>
                   <div className="flex flex-wrap gap-1.5">
                     {svc.categories.slice(0, 3).map((cat) => (
-                      <span key={cat} className="text-xs bg-gray-100 group-hover:bg-white/70 text-gray-600 rounded-full px-2.5 py-0.5 transition-colors">
+                      <span
+                        key={cat}
+                        className="text-xs bg-gray-100 group-hover:bg-white/70 text-gray-600 rounded-full px-2.5 py-0.5 transition-colors"
+                      >
                         {cat}
                       </span>
                     ))}
                   </div>
-                  <ArrowRight size={16} className="absolute top-0 right-0 text-gray-300 group-hover:text-[var(--color-primary-sage)] transition-colors" />
+                  <ArrowRight
+                    size={16}
+                    className="absolute top-0 right-0 text-gray-300 group-hover:text-[var(--color-primary-sage)] transition-colors"
+                  />
                 </div>
               </motion.a>
             );
@@ -264,33 +192,65 @@ export default function HomePage() {
       </section>
 
       {/* CTA */}
-      <section className="bg-[linear-gradient(135deg,var(--color-primary-dark)_0%,var(--color-primary-sage)_100%)] text-white">
-        <div className="max-w-5xl mx-auto px-6 py-14 flex flex-col md:flex-row items-center justify-between gap-8">
-          <div>
-            <h2 className="text-2xl font-bold mb-2">
-              Vous avez une annonce à publier ?
-            </h2>
-            <p className="text-white/70 text-sm max-w-md leading-relaxed">
-              Rejoignez des milliers d'entreprises et de particuliers qui font
-              confiance à Madinatti pour toucher leurs concitoyens.
-            </p>
+      {!user ? (
+        <section className="bg-[linear-gradient(135deg,var(--color-primary-dark)_0%,var(--color-primary-sage)_100%)] text-white">
+          <div className="max-w-5xl mx-auto px-6 py-14 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">
+                Vous avez une annonce à publier ?
+              </h2>
+              <p className="text-white/70 text-sm max-w-md leading-relaxed">
+                Rejoignez des milliers d'entreprises et de particuliers qui font
+                confiance à Madinatti.
+              </p>
+            </div>
+            <div className="flex gap-3 flex-shrink-0">
+              <a
+                href="/auth/register"
+                className="bg-[var(--color-primary)] hover:opacity-90 text-[var(--color-primary-dark)] font-semibold px-6 py-3 rounded-xl text-sm transition-opacity"
+              >
+                Créer un compte
+              </a>
+              <a
+                href="/auth/login"
+                className="border border-white/30 hover:bg-white/10 text-white px-6 py-3 rounded-xl text-sm transition-colors"
+              >
+                Se connecter
+              </a>
+            </div>
           </div>
-          <div className="flex gap-3 flex-shrink-0">
-            <a
-              href="/auth/register"
-              className="bg-[var(--color-primary)] hover:opacity-90 text-[var(--color-primary-dark)] font-semibold px-6 py-3 rounded-xl text-sm transition-opacity"
-            >
-              Créer un compte
-            </a>
-            <a
-              href="/auth/login"
-              className="border border-white/30 hover:bg-white/10 text-white px-6 py-3 rounded-xl text-sm transition-colors"
-            >
-              Se connecter
-            </a>
+        </section>
+      ) : (
+        <section className="bg-[linear-gradient(135deg,var(--color-primary-dark)_0%,var(--color-primary-sage)_100%)] text-white">
+          <div className="max-w-5xl mx-auto px-6 py-14 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">
+                Bienvenue, {user.firstName || user.name || "sur Madinatti"} 👋
+              </h2>
+              <p className="text-white/70 text-sm max-w-md leading-relaxed">
+                Gérez vos annonces, suivez vos candidatures et consultez vos
+                messages depuis votre espace.
+              </p>
+            </div>
+            <div className="flex gap-3 flex-shrink-0">
+              <a
+                href="/my-space"
+                className="bg-[var(--color-primary)] hover:opacity-90 text-[var(--color-primary-dark)] font-semibold px-6 py-3 rounded-xl text-sm transition-opacity"
+              >
+                Mon espace
+              </a>
+              {user.role === "business" && (
+                <a
+                  href="/dashboard"
+                  className="border border-white/30 hover:bg-white/10 text-white px-6 py-3 rounded-xl text-sm transition-colors"
+                >
+                  Dashboard
+                </a>
+              )}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* FEATURES */}
       <section className="max-w-6xl mx-auto px-6 py-20">
