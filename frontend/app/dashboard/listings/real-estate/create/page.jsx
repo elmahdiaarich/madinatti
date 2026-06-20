@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/shared/ProtectedRoute";
 import { realEstateService } from "@/services/realEstateService";
+import PricingModal from "@/components/shared/PricingModal";
 import axios from "axios";
 import moroccoCities from "morocco-cities";
 
@@ -431,6 +432,7 @@ function CreateListingForm() {
   const [subcategories, setSubcategories] = useState([]);
   const [geocoding, setGeocoding] = useState(false);
   const [flyTo, setFlyTo] = useState(null);
+  const [selectedPlan, setSelectedPlan] = useState(null);
 
   const sectionRefs = {
     title: useRef(null),
@@ -555,6 +557,7 @@ function CreateListingForm() {
     try {
       const payload = {
         ...form,
+        plan: selectedPlan,
         price: parseFloat(form.price),
         surface: form.surface ? parseFloat(form.surface) : undefined,
         rooms: form.rooms ? parseInt(form.rooms) : undefined,
@@ -574,13 +577,37 @@ function CreateListingForm() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {!selectedPlan && (
+        <PricingModal module="immobilier" onSelect={(planId) => setSelectedPlan(planId)} />
+      )}
+
       {/* Header */}
       <div className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
           <h1 className="font-extrabold text-primary-dark text-lg">Publier une annonce</h1>
-          <span className="text-xs bg-yellow-50 border border-yellow-200 text-yellow-700 px-3 py-1 rounded-full font-semibold">
-            En attente de validation admin
-          </span>
+
+          <div className="flex items-center gap-2">
+            {selectedPlan && (
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full
+                  ${selectedPlan === 'vip' ? 'bg-primary-dark text-primary-mint'
+                  : selectedPlan === 'pro' ? 'bg-primary text-white'
+                  : selectedPlan === 'boost' ? 'bg-yellow-100 text-yellow-700'
+                  : 'bg-gray-100 text-gray-600'}`}>
+                  Plan {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}
+                </span>
+                <button
+                  onClick={() => setSelectedPlan(null)}
+                  className="text-xs text-gray-400 hover:text-primary-dark underline transition"
+                >
+                  Changer
+                </button>
+              </div>
+            )}
+            <span className="text-xs bg-yellow-50 border border-yellow-200 text-yellow-700 px-3 py-1 rounded-full font-semibold whitespace-nowrap">
+              En attente de validation admin
+            </span>
+          </div>
         </div>
       </div>
 

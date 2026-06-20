@@ -4,6 +4,7 @@ import DevTools from "../components/shared/DevTools";
 import LayoutShell from "../components/shared/LayoutShell";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import Script from "next/script";
+import ChatWidget from '@/components/shared/ChatWidget';
 import "./globals.css";
 
 export const metadata = {
@@ -30,6 +31,7 @@ export default function RootLayout({ children }) {
             <ToastProvider>
               <LayoutShell>{children}</LayoutShell>
             {/*  <DevTools  /> */  }
+             <ChatWidget /> 
             </ToastProvider>
           </AuthProvider>
         </GoogleOAuthProvider>

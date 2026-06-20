@@ -1,27 +1,30 @@
-"use client";
+'use client';
 
-import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import LoadingSpinner from "./LoadingSpinner";
+import { useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
-const GuestRoute = ({ children }) => {
+export default function GuestRoute({ children }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (loading) return;
+    if (!user) return;
 
-    if (user) {
-      router.replace("/"); 
+    // Lire les params ici, côté client, au bon moment
+    const params = new URLSearchParams(window.location.search);
+    const isBypass = params.get('type') === 'business';
+
+    if (!isBypass) {
+      router.replace('/');
     }
-  }, [user, loading, router]);
+  }, [user, loading]);
 
-  if (loading) {
-    return <LoadingSpinner message="Vérification du profil..." />;
-  }
+  // Pendant le chargement → attendre
+  if (loading) return null;
 
-  return !user ? children : null;
-};
-
-export default GuestRoute;
+  // Ne jamais bloquer le rendu synchrone — laisser le useEffect gérer la redirect
+  return <>{children}</>;
+}

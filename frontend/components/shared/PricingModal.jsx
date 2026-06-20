@@ -4,13 +4,20 @@ import { useRouter } from 'next/navigation'
 import { X, Check } from 'lucide-react'
 import { pricingPlans } from '@/constants/pricingPlans'
 
+const CTA_LABELS = {
+  gratuit: 'Commencer gratuitement',
+  boost: 'Booster une offre',
+  pro: 'Choisir Pro',
+  vip: 'Choisir VIP',
+}
+
 export default function PricingModal({ module, onSelect }) {
   const router = useRouter()
   const plans = pricingPlans[module] || []
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-3xl shadow-xl overflow-hidden">
+      <div className="bg-white rounded-2xl w-full max-w-5xl shadow-xl overflow-hidden">
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
@@ -30,7 +37,7 @@ export default function PricingModal({ module, onSelect }) {
         </div>
 
         {/* Cards */}
-        <div className="grid grid-cols-3 gap-4 p-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6">
           {plans.map((plan) => (
             <div
               key={plan.id}
@@ -85,9 +92,7 @@ export default function PricingModal({ module, onSelect }) {
                     : 'border-2 border-[#2D5016] text-[#2D5016] hover:bg-[#E8F5D0]'
                   }`}
               >
-                {plan.id === 'gratuit' ? 'Commencer gratuitement'
-                  : plan.id === 'pro' ? 'Choisir Pro'
-                  : 'Choisir VIP'}
+                {CTA_LABELS[plan.id] || plan.label}
               </button>
             </div>
           ))}

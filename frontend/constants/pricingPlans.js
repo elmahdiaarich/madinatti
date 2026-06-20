@@ -1,3 +1,7 @@
+// frontend/constants/pricingPlans.js
+//
+// Modèle hybride : Gratuit (7 jours) → Boost ponctuel (20 jours) → Pro (abonnement) → VIP (abonnement)
+
 export const pricingPlans = {
   jobs: [
     {
@@ -10,7 +14,21 @@ export const pricingPlans = {
         { text: '1 offre active', included: true },
         { text: 'Visibilité standard', included: true },
         { text: 'Mise en avant', included: false },
-        { text: 'Expiration 30 jours', included: true },
+        { text: 'Expiration 7 jours', included: true },
+      ],
+    },
+    {
+      id: 'boost',
+      label: 'Boost',
+      price: 39,
+      period: 'offre',
+      subtitle: 'Boostez une offre ponctuellement',
+      features: [
+        { text: '1 offre boostée', included: true },
+        { text: 'Mise en avant 20 jours', included: true },
+        { text: 'Visibilité prioritaire dans les résultats', included: true },
+        { text: 'Sans engagement', included: true },
+        { text: 'Badge entreprise vérifié', included: false },
       ],
     },
     {
@@ -57,7 +75,22 @@ export const pricingPlans = {
         { text: '2 annonces actives', included: true },
         { text: '3 photos par annonce', included: true },
         { text: 'Mise en avant', included: false },
-        { text: 'Expiration 30 jours', included: true },
+        { text: 'Expiration 7 jours', included: true },
+      ],
+    },
+    {
+      id: 'boost',
+      label: 'Boost',
+      price: 59,
+      period: 'annonce',
+      subtitle: 'Boostez une annonce ponctuellement',
+      features: [
+        { text: '1 annonce boostée', included: true },
+        { text: 'Mise en avant 20 jours', included: true },
+        { text: 'Visibilité prioritaire dans les résultats', included: true },
+        { text: '5 photos supplémentaires', included: true },
+        { text: 'Sans engagement', included: true },
+        { text: 'Badge agence vérifiée', included: false },
       ],
     },
     {
@@ -104,7 +137,21 @@ export const pricingPlans = {
         { text: '1 annonce active', included: true },
         { text: '4 photos par annonce', included: true },
         { text: 'Mise en avant', included: false },
-        { text: 'Expiration 30 jours', included: true },
+        { text: 'Expiration 7 jours', included: true },
+      ],
+    },
+    {
+      id: 'boost',
+      label: 'Boost',
+      price: 39,
+      period: 'annonce',
+      subtitle: 'Boostez une annonce ponctuellement',
+      features: [
+        { text: '1 annonce boostée', included: true },
+        { text: 'Mise en avant 20 jours', included: true },
+        { text: 'Position prioritaire dans les résultats', included: true },
+        { text: 'Sans engagement', included: true },
+        { text: 'Badge vendeur vérifié', included: false },
       ],
     },
     {

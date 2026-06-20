@@ -41,6 +41,9 @@ app.use('/api/notifications', require('./routes/notifications'));
 
 app.use('/api/alerts', require('./routes/alerts'));
 
+const chatRoutes = require('./routes/chat');
+app.use('/api/chat', chatRoutes);
+
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
