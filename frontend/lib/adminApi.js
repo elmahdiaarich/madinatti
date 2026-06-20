@@ -215,17 +215,17 @@ export async function getSidebarCounts(token = null) {
 
 // ── CATEGORIES ────────────────────────────────────────────────────────────────
 
-export async function getAdminCategories(parentSlug = '', token = null) {
+export async function getAdminCategories(module = '', token = null) {
   const params = new URLSearchParams()
-  if (parentSlug) params.set('parentSlug', parentSlug)
+  if (module) params.set('module', module)
   const json = await apiFetch(`/api/admin/categories?${params}`, {}, token)
   return json.data ?? []
 }
 
-export async function adminCreateCategory({ name, parentId }, token = null) {
+export async function adminCreateCategory({ name, module }, token = null) {
   const json = await apiFetch(
     '/api/admin/categories',
-    { method: 'POST', body: JSON.stringify({ name, parentId }) },
+    { method: 'POST', body: JSON.stringify({ name, module }) },
     token
   )
   return json.data
@@ -246,4 +246,8 @@ export async function adminToggleCategory(id, token = null) {
 
 export async function adminDeleteCategory(id, token = null) {
   return apiFetch(`/api/admin/categories/${id}`, { method: 'DELETE' }, token)
+}
+
+export async function adminDeleteModule(module, token = null) {
+  return apiFetch(`/api/admin/categories/module/${module}`, { method: 'DELETE' }, token)
 }

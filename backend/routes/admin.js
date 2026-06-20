@@ -18,6 +18,7 @@ const {
   updateCategory,
   toggleCategoryActive,
   deleteCategory,
+  deleteModule 
 } = require('../controllers/adminController')
 
 const {
@@ -107,6 +108,8 @@ router.patch('/categories/:id', updateCategory)
 router.patch('/categories/:id/toggle', toggleCategoryActive)
 
 // DELETE /api/admin/categories/:id
+router.delete('/categories/module/:module', deleteModule)
 router.delete('/categories/:id', deleteCategory)
+
  
 module.exports = router

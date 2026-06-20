@@ -1194,7 +1194,7 @@ const getBusinesses = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CATEGORY MANAGEMENT
+// CATEGORY MANAGEMENT — flat schema, module-based
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -1215,32 +1215,19 @@ function toSlug(text) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/admin/categories
-// Query: parentSlug (e.g. "emploi" | "immobilier") — optional filter
-// Returns parent categories with their children and listing counts.
+// Query: module (e.g. "emploi" | "immobilier") — optional filter
+// Returns flat list of categories with listing counts.
 // ─────────────────────────────────────────────────────────────────────────────
 const getCategories = async (req, res) => {
   try {
-    const { parentSlug } = req.query;
+    const { module: mod } = req.query;
 
-    const where = parentSlug
-      ? { parentId: null, slug: parentSlug }
-      : { parentId: null };
+    const where = mod ? { module: mod } : {};
 
-    const parents = await prisma.category.findMany({
+    const categories = await prisma.category.findMany({
       where,
       orderBy: { name: "asc" },
       include: {
-        children: {
-          orderBy: { name: "asc" },
-          include: {
-            _count: {
-              select: {
-                jobListings: true,
-                realEstateListings: true,
-              },
-            },
-          },
-        },
         _count: {
           select: {
             jobListings: true,
@@ -1250,7 +1237,7 @@ const getCategories = async (req, res) => {
       },
     });
 
-    res.json({ success: true, data: parents });
+    res.json({ success: true, data: categories });
   } catch (error) {
     console.error("admin getCategories error:", error);
     res.status(500).json({ success: false, message: "Erreur serveur" });
@@ -1259,41 +1246,39 @@ const getCategories = async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/admin/categories
-// Body: { name, parentId }
-// Creates a new child category under a given parent.
+// Body: { name, module }
+// Creates a new category under the given module.
 // ─────────────────────────────────────────────────────────────────────────────
 const createCategory = async (req, res) => {
   try {
-    const { name, parentId } = req.body;
+    const { name, module: mod } = req.body;
 
     if (!name || !name.trim()) {
       return res
         .status(400)
         .json({ success: false, message: "Le nom est requis" });
     }
-    if (!parentId) {
+    if (!mod) {
       return res
         .status(400)
-        .json({ success: false, message: "parentId est requis" });
+        .json({ success: false, message: "Le module est requis (emploi | immobilier)" });
     }
 
-    const parent = await prisma.category.findUnique({
-      where: { id: parentId },
-    });
-    if (!parent) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Catégorie parente introuvable" });
-    }
+    const MODULE_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+if (!MODULE_SLUG_RE.test(mod)) {
+  return res.status(400).json({
+    success: false,
+    message: "Le module doit contenir uniquement des minuscules, chiffres et tirets.",
+  });
+}
 
-    const slug = `${parent.slug}-${toSlug(name.trim())}`;
+    const slug = `${mod}-${toSlug(name.trim())}`;
 
-    // Check for slug collision
     const existing = await prisma.category.findUnique({ where: { slug } });
     if (existing) {
       return res.status(409).json({
         success: false,
-        message: "Une catégorie avec ce nom existe déjà",
+        message: "Une catégorie avec ce nom existe déjà dans ce module",
       });
     }
 
@@ -1301,8 +1286,8 @@ const createCategory = async (req, res) => {
       data: {
         name: name.trim(),
         slug,
+        module: mod,
         isActive: true,
-        parentId,
       },
     });
 
@@ -1336,16 +1321,8 @@ const updateCategory = async (req, res) => {
         .json({ success: false, message: "Catégorie introuvable" });
     }
 
-    // Rebuild slug: if it's a child, prefix with parent slug
-    let newSlug;
-    if (cat.parentId) {
-      const parent = await prisma.category.findUnique({
-        where: { id: cat.parentId },
-      });
-      newSlug = `${parent.slug}-${toSlug(name.trim())}`;
-    } else {
-      newSlug = toSlug(name.trim());
-    }
+    // Rebuild slug: module prefix + new name
+    const newSlug = `${cat.module}-${toSlug(name.trim())}`;
 
     // Check collision (exclude self)
     const collision = await prisma.category.findFirst({
@@ -1354,7 +1331,7 @@ const updateCategory = async (req, res) => {
     if (collision) {
       return res.status(409).json({
         success: false,
-        message: "Une catégorie avec ce nom existe déjà",
+        message: "Une catégorie avec ce nom existe déjà dans ce module",
       });
     }
 
@@ -1372,16 +1349,13 @@ const updateCategory = async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PATCH /api/admin/categories/:id/toggle
-// Flips isActive. Toggling a parent also cascades to children.
+// Flips isActive on the category.
 // ─────────────────────────────────────────────────────────────────────────────
 const toggleCategoryActive = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const cat = await prisma.category.findUnique({
-      where: { id },
-      include: { children: { select: { id: true } } },
-    });
+    const cat = await prisma.category.findUnique({ where: { id } });
     if (!cat) {
       return res
         .status(404)
@@ -1390,19 +1364,10 @@ const toggleCategoryActive = async (req, res) => {
 
     const newValue = !cat.isActive;
 
-    // Update the category itself
     await prisma.category.update({
       where: { id },
       data: { isActive: newValue },
     });
-
-    // Cascade to children if it's a parent
-    if (cat.children.length > 0) {
-      await prisma.category.updateMany({
-        where: { parentId: id },
-        data: { isActive: newValue },
-      });
-    }
 
     res.json({
       success: true,
@@ -1417,7 +1382,7 @@ const toggleCategoryActive = async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DELETE /api/admin/categories/:id
-// Blocks deletion if the category has linked job or real-estate listings.
+// Blocks deletion if the category has linked listings.
 // ─────────────────────────────────────────────────────────────────────────────
 const deleteCategory = async (req, res) => {
   try {
@@ -1430,7 +1395,6 @@ const deleteCategory = async (req, res) => {
           select: {
             jobListings: true,
             realEstateListings: true,
-            children: true,
           },
         },
       },
@@ -1450,19 +1414,54 @@ const deleteCategory = async (req, res) => {
       });
     }
 
-    if (cat._count.children > 0) {
-      return res.status(409).json({
-        success: false,
-        message:
-          "Impossible de supprimer une catégorie parente qui a des sous-catégories.",
-      });
-    }
-
     await prisma.category.delete({ where: { id } });
 
     res.json({ success: true, message: "Catégorie supprimée" });
   } catch (error) {
     console.error("admin deleteCategory error:", error);
+    res.status(500).json({ success: false, message: "Erreur serveur" });
+  }
+};
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE /api/admincategories/module/:module
+// delete full module.
+// ─────────────────────────────────────────────────────────────────────────────
+const deleteModule = async (req, res) => {
+  try {
+    const { module: mod } = req.params;
+
+    // Find all categories in this module
+    const cats = await prisma.category.findMany({
+      where: { module: mod },
+      include: { _count: { select: { jobListings: true, realEstateListings: true } } },
+    });
+
+    const deletable = cats.filter(
+      c => c._count.jobListings === 0 && c._count.realEstateListings === 0
+    );
+    const blocked   = cats.length - deletable.length;
+
+    if (deletable.length === 0) {
+      return res.status(409).json({
+        success: false,
+        message: `Aucune catégorie supprimable — ${blocked} ont des annonces liées.`,
+      });
+    }
+
+    await prisma.category.deleteMany({
+      where: { id: { in: deletable.map(c => c.id) } },
+    });
+
+    res.json({
+      success: true,
+      deleted: deletable.length,
+      blocked,
+      message: `${deletable.length} catégorie(s) supprimée(s)${blocked > 0 ? `, ${blocked} conservée(s) (annonces liées)` : ""}.`,
+    });
+  } catch (error) {
+    console.error("admin deleteModule error:", error);
     res.status(500).json({ success: false, message: "Erreur serveur" });
   }
 };
@@ -1485,4 +1484,5 @@ module.exports = {
   updateCategory,
   toggleCategoryActive,
   deleteCategory,
+  deleteModule
 };
