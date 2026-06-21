@@ -75,7 +75,61 @@ const IconMail = () => (
   </svg>
 );
 
+const IconBriefcase = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect x="2" y="7" width="20" height="14" rx="2" />
+    <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+    <path d="M2 12h9m11 0h-4" />
+  </svg>
+);
 
+const IconBuilding = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M3 21h18" />
+    <path d="M5 21V7l8-4v18" />
+    <path d="M19 21V11l-6-4" />
+    <rect x="9" y="10" width="2" height="3" />
+    <rect x="13" y="14" width="2" height="7" />
+  </svg>
+);
+
+const IconClipboard = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+    <rect x="9" y="3" width="6" height="4" rx="1" />
+    <path d="M9 12h6M9 16h4" />
+  </svg>
+);
 
 const IconLogout = () => (
   <svg
@@ -94,7 +148,6 @@ const IconLogout = () => (
   </svg>
 );
 
-// Toggle icon — flips direction based on open/closed state
 const IconSidebarToggle = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -111,8 +164,7 @@ const IconSidebarToggle = () => (
   </svg>
 );
 
-// ── Services registry ─────────────────────────────────────────────────────────
-
+// ── Nav registries ────────────────────────────────────────────────────────────
 
 const COMMON_NAV = [
   {
@@ -141,9 +193,22 @@ const COMMON_NAV = [
   },
 ];
 
+const BUSINESS_NAV = [
+  {
+    key: "profile",
+    label: "Mon profil",
+    href: "/my-space/profile",
+    icon: IconUser,
+  },
+  {
+    key: "favorites",
+    label: "Mes favoris",
+    href: "/my-space/favorites",
+    icon: IconHeart,
+  },
+];
+
 // ── Nav item ──────────────────────────────────────────────────────────────────
-// NEW: accepts `collapsed` prop — hides label + badge text when sidebar is narrow,
-// and shows the native browser tooltip (title) for accessibility.
 
 function NavItem({ href, icon: Icon, label, active, badge, collapsed }) {
   return (
@@ -170,7 +235,6 @@ function NavItem({ href, icon: Icon, label, active, badge, collapsed }) {
         <Icon />
       </span>
 
-      {/* Hide label + badge smoothly via opacity when collapsed */}
       <span
         className={`flex-1 truncate transition-opacity duration-150 ${collapsed ? "opacity-0 pointer-events-none" : "opacity-100"}`}
       >
@@ -197,7 +261,6 @@ export default function MySpaceLayout({ children }) {
   const pathname = usePathname();
   const [servicesOpen, setServicesOpen] = useState(false);
 
-  // Sidebar open/closed state — persisted to localStorage
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("myspace-sidebar") !== "closed";
@@ -211,7 +274,6 @@ export default function MySpaceLayout({ children }) {
     if (isInServices) setServicesOpen(true);
   }, [isInServices]);
 
-  // NEW: persist sidebar state across page navigations
   const toggleSidebar = () => {
     setSidebarOpen((prev) => {
       const next = !prev;
@@ -219,6 +281,9 @@ export default function MySpaceLayout({ children }) {
       return next;
     });
   };
+
+  const isBusiness = user?.role === "business";
+  const activeNav = isBusiness ? BUSINESS_NAV : COMMON_NAV;
 
   const initials = user?.name
     ? user.name
@@ -238,22 +303,16 @@ export default function MySpaceLayout({ children }) {
     <ProtectedRoute>
       <div className="flex min-h-[calc(100vh-57px)] bg-gray-50">
         {/* ── SIDEBAR ──────────────────────────────────────────────────── */}
-        {/*
-          NEW:
-          - Width transitions between w-64 (open) and w-[60px] (collapsed)
-          - overflow-hidden is required so content doesn't bleed during animation
-          - transition-[width] animates only the width property for performance
-        */}
         <aside
           onClick={!sidebarOpen ? toggleSidebar : undefined}
           className={`
-    shrink-0 bg-white border-r border-gray-100 flex flex-col
-    sticky top-[57px] h-[calc(100vh-65px)]
-    transition-[width] duration-[250ms] ease-in-out overflow-hidden
-    ${sidebarOpen ? "w-64" : "w-[60px] cursor-pointer"}
-  `}
+            shrink-0 bg-white border-r border-gray-100 flex flex-col
+            sticky top-[57px] h-[calc(100vh-65px)]
+            transition-[width] duration-[250ms] ease-in-out overflow-hidden
+            ${sidebarOpen ? "w-64" : "w-[60px] cursor-pointer"}
+          `}
         >
-          {/* Header — NEW: toggle button added, header text fades out when collapsed */}
+          {/* Header */}
           <div className="px-4 pt-5 pb-4 border-b border-gray-100 flex items-center justify-between gap-2 min-h-[72px]">
             <div
               className={`transition-opacity duration-150 overflow-hidden ${sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
@@ -262,11 +321,10 @@ export default function MySpaceLayout({ children }) {
                 Mon espace
               </p>
               <p className="text-xs text-gray-400 mt-1 font-medium tracking-wide uppercase whitespace-nowrap">
-                Citoyen
+                {isBusiness ? "Business" : "Citoyen"}
               </p>
             </div>
 
-            {/* Toggle button — NEW */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -275,11 +333,11 @@ export default function MySpaceLayout({ children }) {
               title={sidebarOpen ? "Réduire le menu" : "Agrandir le menu"}
               aria-label={sidebarOpen ? "Réduire le menu" : "Agrandir le menu"}
               className={`
-              shrink-0 w-7 h-7 rounded-md border border-gray-200
-              flex items-center justify-center
-            text-gray-400 hover:text-gray-700 hover:bg-gray-100
-              transition-all duration-150
-              ${!sidebarOpen ? "mx-auto" : ""}
+                shrink-0 w-7 h-7 rounded-md border border-gray-200
+                flex items-center justify-center
+                text-gray-400 hover:text-gray-700 hover:bg-gray-100
+                transition-all duration-150
+                ${!sidebarOpen ? "mx-auto" : ""}
               `}
             >
               <span
@@ -292,7 +350,7 @@ export default function MySpaceLayout({ children }) {
 
           {/* Nav */}
           <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 flex flex-col gap-0.5">
-            {COMMON_NAV.map(({ key, ...item }) => (
+            {activeNav.map(({ key, ...item }) => (
               <NavItem
                 key={key}
                 {...item}
@@ -300,14 +358,11 @@ export default function MySpaceLayout({ children }) {
                 collapsed={!sidebarOpen}
               />
             ))}
-
-
           </nav>
 
           {/* Bottom — avatar + logout */}
           <div className="px-3 py-4 border-t border-gray-100">
             <div className="flex items-center gap-3 overflow-hidden">
-              {/* Avatar always visible */}
               <div className="w-9 h-9 rounded-full bg-[#A7D129]/20 border border-[#A7D129]/40 flex items-center justify-center shrink-0 overflow-hidden">
                 {user?.avatar ? (
                   <img
@@ -322,7 +377,6 @@ export default function MySpaceLayout({ children }) {
                 )}
               </div>
 
-              {/* Name + role fade out when collapsed */}
               <div
                 className={`flex-1 min-w-0 transition-opacity duration-150 ${!sidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"}`}
               >
@@ -334,7 +388,6 @@ export default function MySpaceLayout({ children }) {
                 </p>
               </div>
 
-              {/* Logout button fades out when collapsed */}
               <button
                 onClick={handleLogout}
                 title="Se déconnecter"
@@ -347,7 +400,7 @@ export default function MySpaceLayout({ children }) {
         </aside>
 
         {/* ── MAIN CONTENT ─────────────────────────────────────────────── */}
-        <main className="flex-1 min-w-0 ">{children}</main>
+        <main className="flex-1 min-w-0">{children}</main>
       </div>
     </ProtectedRoute>
   );

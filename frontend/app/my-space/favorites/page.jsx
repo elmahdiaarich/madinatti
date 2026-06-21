@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { jobsService } from '@/services/jobsService';
 import { realEstateService } from '@/services/realEstateService';
@@ -31,8 +31,19 @@ function Tab({ active, onClick, children, count }) {
 }
 
 // ── Empty state ───────────────────────────────────────────────────────────────
-function EmptyState({ type }) {
+function EmptyState({ type, query }) {
   const isJob = type === 'jobs';
+
+  if (query) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+        <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mb-4 text-2xl">🔍</div>
+        <h2 className="text-base font-bold text-gray-900 mb-1">Aucun résultat pour « {query} »</h2>
+        <p className="text-sm text-gray-400">Essayez un autre mot-clé.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
       <div className="w-16 h-16 rounded-2xl bg-[#E8F5D0] flex items-center justify-center mb-5">
@@ -62,7 +73,7 @@ function EmptyState({ type }) {
   );
 }
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
+// ── Skeletons ─────────────────────────────────────────────────────────────────
 function SkeletonJob() {
   return (
     <div className="bg-[#E8F5D0]/60 rounded-2xl p-5 animate-pulse">
@@ -92,7 +103,7 @@ function SkeletonRE() {
   );
 }
 
-// ── Wrapper job avec animation retrait ────────────────────────────────────────
+// ── Wrapper with remove animation ─────────────────────────────────────────────
 function FavoriteJobCard({ job, onUnfavorite, token }) {
   const [removing, setRemoving] = useState(false);
 
@@ -109,12 +120,11 @@ function FavoriteJobCard({ job, onUnfavorite, token }) {
 
   return (
     <div className={`transition-all duration-300 ${removing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
-      <JobCard job={job} initialFavorited={true} onFavoriteToggle={handleToggle} />
+      <JobCard job={job} initialFavorited={true} onFavoriteToggle={handleToggle} showShare={true} />
     </div>
   );
 }
 
-// ── Wrapper real-estate avec animation retrait ────────────────────────────────
 function FavoriteRECard({ listing, onUnfavorite, token }) {
   const [removing, setRemoving] = useState(false);
 
@@ -131,8 +141,24 @@ function FavoriteRECard({ listing, onUnfavorite, token }) {
 
   return (
     <div className={`transition-all duration-300 ${removing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
-      <RealEstateCard listing={listing} initialFavorited={true} onFavoriteToggle={handleToggle} />
+      <RealEstateCard listing={listing} initialFavorited={true} onFavoriteToggle={handleToggle} showShare={true} />
     </div>
+  );
+}
+
+// ── Sort select ───────────────────────────────────────────────────────────────
+function SortSelect({ value, onChange }) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 focus:outline-none focus:border-[#A7D129] transition cursor-pointer"
+    >
+      <option value="newest">Plus récent</option>
+      <option value="oldest">Plus ancien</option>
+      <option value="price_asc">Prix croissant</option>
+      <option value="price_desc">Prix décroissant</option>
+    </select>
   );
 }
 
@@ -141,11 +167,17 @@ export default function FavoritesPage() {
   const { token } = useAuth();
   const [activeTab, setActiveTab] = useState('jobs');
 
-  const [jobs, setJobs]           = useState([]);
-  const [listings, setListings]   = useState([]);
+  const [jobs, setJobs]         = useState([]);
+  const [listings, setListings] = useState([]);
   const [loadingJobs, setLoadingJobs]         = useState(true);
   const [loadingListings, setLoadingListings] = useState(true);
-  const [error, setError]         = useState(null);
+  const [error, setError]       = useState(null);
+
+  // Search & sort state per tab
+  const [jobSearch, setJobSearch]         = useState('');
+  const [reSearch, setReSearch]           = useState('');
+  const [jobSort, setJobSort]             = useState('newest');
+  const [reSort, setReSort]               = useState('newest');
 
   useEffect(() => {
     if (!token) return;
@@ -168,6 +200,48 @@ export default function FavoritesPage() {
     loadAll();
   }, [token]);
 
+  // ── Filtered + sorted jobs ────────────────────────────────────────────────
+  const filteredJobs = useMemo(() => {
+    let result = [...jobs];
+    if (jobSearch.trim()) {
+      const q = jobSearch.toLowerCase();
+      result = result.filter(
+        (j) =>
+          j.title?.toLowerCase().includes(q) ||
+          j.companyName?.toLowerCase().includes(q) ||
+          j.city?.toLowerCase().includes(q)
+      );
+    }
+    result.sort((a, b) => {
+      if (jobSort === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
+      if (jobSort === 'oldest') return new Date(a.createdAt) - new Date(b.createdAt);
+      return 0; // jobs don't have price
+    });
+    return result;
+  }, [jobs, jobSearch, jobSort]);
+
+  // ── Filtered + sorted real estate ─────────────────────────────────────────
+  const filteredListings = useMemo(() => {
+    let result = [...listings];
+    if (reSearch.trim()) {
+      const q = reSearch.toLowerCase();
+      result = result.filter(
+        (l) =>
+          l.title?.toLowerCase().includes(q) ||
+          l.city?.toLowerCase().includes(q) ||
+          l.location?.toLowerCase().includes(q)
+      );
+    }
+    result.sort((a, b) => {
+      if (reSort === 'newest')     return new Date(b.createdAt) - new Date(a.createdAt);
+      if (reSort === 'oldest')     return new Date(a.createdAt) - new Date(b.createdAt);
+      if (reSort === 'price_asc')  return Number(a.price) - Number(b.price);
+      if (reSort === 'price_desc') return Number(b.price) - Number(a.price);
+      return 0;
+    });
+    return result;
+  }, [listings, reSearch, reSort]);
+
   const totalCount = jobs.length + listings.length;
   const isLoading  = loadingJobs || loadingListings;
 
@@ -178,7 +252,9 @@ export default function FavoritesPage() {
       <div>
         <h1 className="text-xl font-bold text-gray-900">Mes favoris</h1>
         <p className="text-sm text-gray-400 mt-0.5">
-          {isLoading ? 'Chargement…' : `${totalCount} annonce${totalCount > 1 ? 's' : ''} sauvegardée${totalCount > 1 ? 's' : ''}`}
+          {isLoading
+            ? 'Chargement…'
+            : `${totalCount} annonce${totalCount > 1 ? 's' : ''} sauvegardée${totalCount > 1 ? 's' : ''}`}
         </p>
       </div>
 
@@ -202,15 +278,34 @@ export default function FavoritesPage() {
       {/* ── JOBS TAB ── */}
       {activeTab === 'jobs' && (
         <>
+          {/* Search + sort toolbar — only show if there are items */}
+          {!loadingJobs && jobs.length > 0 && (
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Rechercher dans mes offres…"
+                  value={jobSearch}
+                  onChange={(e) => setJobSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:border-[#A7D129] transition"
+                />
+              </div>
+              <SortSelect value={jobSort} onChange={setJobSort} />
+            </div>
+          )}
+
           {loadingJobs ? (
             <div className="flex flex-col gap-4">
               {[1, 2, 3].map((i) => <SkeletonJob key={i} />)}
             </div>
-          ) : jobs.length === 0 ? (
-            <EmptyState type="jobs" />
+          ) : filteredJobs.length === 0 ? (
+            <EmptyState type="jobs" query={jobSearch} />
           ) : (
             <div className="flex flex-col gap-4">
-              {jobs.map((job) => (
+              {filteredJobs.map((job) => (
                 <FavoriteJobCard
                   key={job.id}
                   job={job}
@@ -226,15 +321,33 @@ export default function FavoritesPage() {
       {/* ── REAL ESTATE TAB ── */}
       {activeTab === 'real-estate' && (
         <>
+          {!loadingListings && listings.length > 0 && (
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Rechercher dans mes annonces…"
+                  value={reSearch}
+                  onChange={(e) => setReSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:border-[#A7D129] transition"
+                />
+              </div>
+              <SortSelect value={reSort} onChange={setReSort} />
+            </div>
+          )}
+
           {loadingListings ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[1, 2, 3, 4].map((i) => <SkeletonRE key={i} />)}
             </div>
-          ) : listings.length === 0 ? (
-            <EmptyState type="real-estate" />
+          ) : filteredListings.length === 0 ? (
+            <EmptyState type="real-estate" query={reSearch} />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {listings.map((listing) => (
+              {filteredListings.map((listing) => (
                 <FavoriteRECard
                   key={listing.id}
                   listing={listing}

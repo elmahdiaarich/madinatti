@@ -1,10 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '@/context/AuthContext';
 import { realEstateService } from '@/services/realEstateService';
 import ReportModal from '@/components/shared/ReportModal';
+import ShareMenu from '@/components/shared/ShareMenu';
 
 const LISTING_TYPE_LABELS = {
   SALE: { label: 'Vente',    color: 'bg-orange-500 text-white' },
@@ -44,7 +46,6 @@ function PhotoFrame({ images, title }) {
         </div>
       )}
 
-      {/* Photo count badge */}
       {images?.length > 1 && (
         <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1">
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -125,8 +126,61 @@ function FavoriteButton({ listingId, initialFavorited = false, onToggle }) {
   );
 }
 
+// ─── Share Button ─────────────────────────────────────────────────────────────
+function ShareButton({ listing }) {
+  const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
+  const btnRef = useRef(null);
+
+  const handleClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setMenuPos({
+        top: rect.bottom + window.scrollY + 6,
+        right: window.innerWidth - rect.right,
+      });
+    }
+    setOpen((p) => !p);
+  };
+
+  return (
+    <div className="relative">
+      <button
+        ref={btnRef}
+        onClick={handleClick}
+        title="Partager cette annonce"
+        className="w-8 h-8 rounded-full flex items-center justify-center
+          bg-white/80 text-gray-400 hover:text-orange-500 hover:bg-orange-50
+          transition-all duration-200 hover:scale-110 active:scale-95"
+      >
+        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round"
+            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+          />
+        </svg>
+      </button>
+
+      {open && typeof window !== 'undefined' && createPortal(
+        <div
+          style={{ position: 'absolute', top: menuPos.top, right: menuPos.right, zIndex: 9999 }}
+        >
+          <ShareMenu
+            type="real-estate"
+            id={listing.id}
+            title={listing.title}
+            onClose={() => setOpen(false)}
+          />
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 // ─── RealEstateCard ───────────────────────────────────────────────────────────
-export default function RealEstateCard({ listing, initialFavorited = false, onFavoriteToggle }) {
+export default function RealEstateCard({ listing, initialFavorited = false, onFavoriteToggle, showShare = false }) {
   const [reportOpen, setReportOpen] = useState(false);
 
   const listingType  = LISTING_TYPE_LABELS[listing.listingType];
@@ -155,8 +209,9 @@ export default function RealEstateCard({ listing, initialFavorited = false, onFa
                 </span>
               </div>
 
-              {/* Bouton cœur — coin supérieur droit */}
-              <div className="absolute top-3 right-3 z-10">
+              {/* Top-right action buttons */}
+              <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+                {showShare && <ShareButton listing={listing} />}
                 <FavoriteButton
                   listingId={listing.id}
                   initialFavorited={initialFavorited}
@@ -167,7 +222,6 @@ export default function RealEstateCard({ listing, initialFavorited = false, onFa
 
             {/* Content */}
             <div className="p-4">
-              {/* Price */}
               <div className="flex items-baseline justify-between mb-2">
                 <span className="text-xl font-extrabold text-orange-600">
                   {fmtPrice(listing.price)} MAD
@@ -177,12 +231,10 @@ export default function RealEstateCard({ listing, initialFavorited = false, onFa
                 </span>
               </div>
 
-              {/* Title */}
               <h2 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 group-hover:text-orange-600 transition-colors mb-2">
                 {listing.title}
               </h2>
 
-              {/* Location */}
               <div className="flex items-center gap-1 text-gray-500 text-xs mb-3">
                 <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -192,7 +244,6 @@ export default function RealEstateCard({ listing, initialFavorited = false, onFa
                 <span className="truncate">{listing.city || listing.location}</span>
               </div>
 
-              {/* Specs */}
               <div className="flex items-center gap-3 text-xs text-gray-500 border-t border-gray-50 pt-3">
                 {listing.surface && (
                   <div className="flex items-center gap-1">
@@ -231,15 +282,11 @@ export default function RealEstateCard({ listing, initialFavorited = false, onFa
           </div>
         </Link>
 
-        {/* Bouton Signaler — visible, hors du Link pour éviter la navigation */}
+        {/* Bouton Signaler */}
         <div className="flex justify-end mt-1 pr-1">
           <button
             onClick={() => setReportOpen(true)}
-            className="
-              flex items-center gap-1 px-2.5 py-1 rounded-lg
-              text-[11px] text-gray-400 hover:text-red-500
-              hover:bg-red-50 transition-colors
-            "
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
             title="Signaler cette annonce"
           >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -251,7 +298,6 @@ export default function RealEstateCard({ listing, initialFavorited = false, onFa
         </div>
       </div>
 
-      {/* Modale de signalement */}
       <ReportModal
         isOpen={reportOpen}
         onClose={() => setReportOpen(false)}

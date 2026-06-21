@@ -1,6 +1,7 @@
 const prisma = require("../config/db");
 const { cloudinary } = require("../config/cloudinary");
 const { cities: moroccoCities } = require('morocco-cities');
+const { trackListingView } = require("../services/viewTrackingService");
 
 // Build once at module load — same pattern as real estate
 const citiesByRegion = moroccoCities.reduce((acc, city) => {
@@ -145,10 +146,7 @@ const getJobById = async (req, res) => {
         .json({ success: false, message: "Offre non disponible" });
     }
 
-    await prisma.jobListing.update({
-      where: { id },
-      data: { viewsCount: { increment: 1 } },
-    });
+    await trackListingView(job.id, "JOB", req.user?.userId || null);
 
     res.json({ success: true, data: job });
   } catch (error) {

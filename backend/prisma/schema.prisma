@@ -409,3 +409,15 @@ model Notification {
   @@index([isRead])
   @@index([createdAt])
 }
+
+model ListingView {
+  id          String   @id @default(uuid())
+  listingId   String
+  listingType String   // "JOB" | "REAL_ESTATE"
+  userId      String?  // null si visiteur anonyme/non connecté
+  viewedAt    DateTime @default(now())
+
+  @@index([listingId, listingType])
+  @@index([listingType, viewedAt])
+  @@index([viewedAt])
+}

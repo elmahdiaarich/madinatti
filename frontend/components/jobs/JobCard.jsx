@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { jobsService } from '@/services/jobsService';
 import ReportModal from '@/components/shared/ReportModal';
+import ShareMenu from '@/components/shared/ShareMenu';
 
 const CONTRACT_LABELS = {
   CDI:           { label: 'CDI' },
@@ -126,10 +127,10 @@ function FavoriteButton({ jobId, initialFavorited = false, onToggle }) {
       className={`
         shrink-0 w-9 h-9 rounded-full flex items-center justify-center
         transition-all duration-200 hover:scale-110 active:scale-95
- ${favorited
-  ? 'bg-[#E8F5D0] text-[#A7D129] hover:bg-[#A7D129]/15'
-  : 'bg-white/70 text-gray-300 hover:text-[#A7D129] hover:bg-[#E8F5D0]'
-}
+        ${favorited
+          ? 'bg-[#E8F5D0] text-[#A7D129] hover:bg-[#A7D129]/15'
+          : 'bg-white/70 text-gray-300 hover:text-[#A7D129] hover:bg-[#E8F5D0]'
+        }
         ${loading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
       `}
     >
@@ -150,8 +151,44 @@ function FavoriteButton({ jobId, initialFavorited = false, onToggle }) {
   );
 }
 
+// ─── Share Button ─────────────────────────────────────────────────────────────
+function ShareButton({ job }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen((p) => !p);
+        }}
+        title="Partager cette offre"
+        className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center
+          bg-white/70 text-gray-400 hover:text-[#2D5016] hover:bg-[#E8F5D0]
+          transition-all duration-200 hover:scale-110 active:scale-95"
+      >
+        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round"
+            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+          />
+        </svg>
+      </button>
+
+      {open && (
+        <ShareMenu
+          type="job"
+          id={job.id}
+          title={job.title}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
 // ─── JobCard ──────────────────────────────────────────────────────────────────
-export default function JobCard({ job, initialFavorited = false, onFavoriteToggle }) {
+export default function JobCard({ job, initialFavorited = false, onFavoriteToggle, showShare = false }) {
   const [reportOpen, setReportOpen] = useState(false);
 
   const formatSalary = (min, max) => {
@@ -180,13 +217,14 @@ export default function JobCard({ job, initialFavorited = false, onFavoriteToggl
         <Link href={`/jobs/${job.id}`} className="block group">
           <div className="relative bg-[#E8F5D0] hover:bg-[#d8edbb] border border-[#A7D129]/50 rounded-2xl p-5 transition-all duration-200 hover:shadow-md hover:border-[#A7D129]">
 
-            {/* Bouton cœur — coin supérieur droit */}
-            <div className="absolute top-3 right-3 z-10">
+            {/* Top-right action buttons - stacked vertically */}
+            <div className="absolute top-3 right-3 z-10 flex flex-col items-center gap-1.5">
               <FavoriteButton
                 jobId={job.id}
                 initialFavorited={initialFavorited}
                 onToggle={onFavoriteToggle}
               />
+              {showShare && <ShareButton job={job} />}
             </div>
 
             <div className="flex gap-5">
@@ -194,7 +232,7 @@ export default function JobCard({ job, initialFavorited = false, onFavoriteToggl
               <CompanyLogo logo={job.user?.companyLogo} name={job.companyName} />
 
               {/* Content */}
-              <div className="flex-1 min-w-0 flex flex-col gap-3 pr-8">
+              <div className="flex-1 min-w-0 flex flex-col gap-3 pr-16">
 
                 {/* Title + company + date */}
                 <div>
@@ -210,7 +248,6 @@ export default function JobCard({ job, initialFavorited = false, onFavoriteToggl
                     {job.companyName}
                   </span>
                 </div>
-
                 {/* Info rows */}
                 <div className="flex flex-col gap-1.5">
                   <InfoRow label="Niveau d'études requis" value={EDUCATION_LABELS[job.educationLevel]} />
@@ -238,15 +275,11 @@ export default function JobCard({ job, initialFavorited = false, onFavoriteToggl
           </div>
         </Link>
 
-        {/* Bouton Signaler — visible, hors du Link pour éviter la navigation */}
+        {/* Bouton Signaler */}
         <div className="flex justify-end mt-1 pr-1">
           <button
             onClick={() => setReportOpen(true)}
-            className="
-              flex items-center gap-1 px-2.5 py-1 rounded-lg
-              text-[11px] text-gray-400 hover:text-red-500
-              hover:bg-red-50 transition-colors
-            "
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
             title="Signaler cette offre"
           >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -258,7 +291,6 @@ export default function JobCard({ job, initialFavorited = false, onFavoriteToggl
         </div>
       </div>
 
-      {/* Modale de signalement */}
       <ReportModal
         isOpen={reportOpen}
         onClose={() => setReportOpen(false)}

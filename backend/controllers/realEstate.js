@@ -1,7 +1,9 @@
 
 const service = require('../services/realEstate');
 
+const { trackListingView } = require('../services/viewTrackingService');
 const VALID_LISTING_TYPES = ['SALE', 'RENT'];
+
 
 // ─── Validators ──────────────────────────────────────────────────────────────
 function validateCreate(body) {
@@ -117,13 +119,15 @@ async function getListingById(req, res) {
       return res.status(404).json({ success: false, message: 'Listing not found.' });
     if (listing.status !== 'APPROVED' || !listing.isActive)
       return res.status(404).json({ success: false, message: 'Listing not available.' });
+
+    await trackListingView(listing.id, 'REAL_ESTATE', req.user?.userId || null);
+
     return res.json({ success: true, data: listing });
   } catch (err) {
     console.error('[getListingById]', err);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }
-
 // ─── 4. FAVORITES (authenticated) ───────────────────────────────────────────
 async function toggleFavorite(req, res) {
   try {

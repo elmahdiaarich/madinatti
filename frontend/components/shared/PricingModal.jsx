@@ -2,18 +2,24 @@
 
 import { useRouter } from 'next/navigation'
 import { X, Check } from 'lucide-react'
-import { pricingPlans } from '@/constants/pricingPlans'
+import { unifiedPlans } from '@/constants/pricingPlans'
 
 const CTA_LABELS = {
   gratuit: 'Commencer gratuitement',
-  boost: 'Booster une offre',
-  pro: 'Choisir Pro',
-  vip: 'Choisir VIP',
+  boost:   'Booster une annonce',
+  pro:     'Choisir Pro',
+  vip:     'Choisir VIP',
+}
+
+// Wording contextuel dans le sous-titre du header selon le module
+const MODULE_SUBTITLE = {
+  jobs:       "Pour vos offres d'emploi et annonces immobilières",
+  immobilier: "Pour vos annonces immobilières et offres d'emploi",
+  vehicules:  'Pour toutes vos annonces',
 }
 
 export default function PricingModal({ module, onSelect }) {
   const router = useRouter()
-  const plans = pricingPlans[module] || []
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
@@ -24,7 +30,7 @@ export default function PricingModal({ module, onSelect }) {
           <div>
             <h2 className="text-lg font-extrabold text-[#2D5016]">Choisir un plan</h2>
             <p className="text-xs text-gray-400 mt-0.5">
-              Sélectionnez le plan qui correspond à vos besoins
+              {MODULE_SUBTITLE[module] || 'Pour toutes vos annonces'} — quota partagé jobs & immo
             </p>
           </div>
           <button
@@ -38,7 +44,7 @@ export default function PricingModal({ module, onSelect }) {
 
         {/* Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6">
-          {plans.map((plan) => (
+          {unifiedPlans.map((plan) => (
             <div
               key={plan.id}
               className={`relative rounded-2xl border-2 p-5 flex flex-col transition-all
@@ -74,7 +80,7 @@ export default function PricingModal({ module, onSelect }) {
                   <li key={i} className="flex items-start gap-2 text-xs text-gray-500">
                     {f.included
                       ? <Check size={13} className="text-[#7BA428] shrink-0 mt-0.5" />
-                      : <X size={13} className="text-gray-300 shrink-0 mt-0.5" />
+                      : <X     size={13} className="text-gray-300 shrink-0 mt-0.5" />
                     }
                     <span className={f.included ? '' : 'text-gray-300'}>{f.text}</span>
                   </li>
@@ -97,6 +103,11 @@ export default function PricingModal({ module, onSelect }) {
             </div>
           ))}
         </div>
+
+        {/* Footer note */}
+        <p className="text-center text-[11px] text-gray-400 pb-4">
+          Le quota d'annonces est partagé entre toutes vos publications (emploi + immobilier).
+        </p>
       </div>
     </div>
   )

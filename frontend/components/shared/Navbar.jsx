@@ -911,15 +911,31 @@ export default function Navbar() {
 
                     {/* Nav links — role-aware */}
                     <div className="py-1 bg-white">
-                      {role === "business" ? (
-                        <DropdownItem
-                          href="/dashboard"
-                          icon={<User size={16} />}
-                          label="Mon Dashboard"
-                          active={pathname?.startsWith("/dashboard")}
-                          onClick={() => setUserMenuOpen(false)}
-                        />
-                      ) : role === "admin" ? (
+{role === 'business' ? (
+  <>
+    <DropdownItem
+      href="/dashboard"
+      icon={<Shield size={16} />}
+      label="Dashboard"
+      active={pathname === '/dashboard'}
+      onClick={() => setUserMenuOpen(false)}
+    />
+    <DropdownItem
+      href="/my-space/profile"
+      icon={<User size={16} />}
+      label="Mon profil"
+      active={pathname === '/my-space/profile'}
+      onClick={() => setUserMenuOpen(false)}
+    />
+    <DropdownItem
+      href="/my-space/favorites"
+      icon={<Heart size={16} />}
+      label="Mes favoris"
+      active={pathname === '/my-space/favorites'}
+      onClick={() => setUserMenuOpen(false)}
+    />
+  </>
+) : role === 'admin' ? (
                         <DropdownItem
                           href="/admin"
                           icon={<Shield size={16} />}
