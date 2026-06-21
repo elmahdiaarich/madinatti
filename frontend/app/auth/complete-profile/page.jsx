@@ -107,7 +107,9 @@ export default function CompleteProfilePage() {
         }
       );
 
-      loginWithGoogle(res.data.user, token);
+      const newToken = res.data.token;        // ← fresh JWT with role: "business"
+      const updatedUser = res.data.user;
+      loginWithGoogle(updatedUser, newToken); // ← replaces old citizen token
       router.push("/");
     } catch (err) {
       console.log(err);
