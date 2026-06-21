@@ -244,10 +244,11 @@ const googleLogin = async (req, res) => {
     });
 
     const payload = ticket.getPayload();
-    const { email, name ,picture } = payload;
+    const { email, name, picture } = payload;
 
     let user = await prisma.user.findUnique({
       where: { email },
+      include: { role: true },
     });
 
     if (!user) {
@@ -269,7 +270,7 @@ const googleLogin = async (req, res) => {
     }
 
     const tokenJwt = jwt.sign(
-      { userId: user.id, role: "citizen" },
+      { userId: user.id, role: user.role?.name || "citizen" },
       process.env.JWT_SECRET,
       { expiresIn: "7d" },
     );
@@ -346,8 +347,15 @@ const completeProfile = async (req, res) => {
       },
     });
 
+    const newToken = jwt.sign(
+      { userId: user.id, role: roleData.name },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" },
+    );
+
     res.json({
       message: "Profil complété avec succès",
+      token: newToken,
       user,
     });
   } catch (error) {
@@ -458,11 +466,9 @@ const updateMe = async (req, res) => {
           .status(400)
           .json({ message: "Mot de passe actuel incorrect" });
       if (newPassword.length < 6)
-        return res
-          .status(400)
-          .json({
-            message: "Le nouveau mot de passe doit faire au moins 6 caractères",
-          });
+        return res.status(400).json({
+          message: "Le nouveau mot de passe doit faire au moins 6 caractères",
+        });
       data.password = await bcrypt.hash(newPassword, 10);
     }
 

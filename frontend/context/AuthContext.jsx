@@ -45,14 +45,23 @@ export const AuthProvider = ({ children }) => {
 
         if (res.data?.user) {
           const freshUser = res.data.user;
-          setUser(freshUser);
 
-          // ✅ FIX: Upsert without duplicating — replace existing entry for this user
+          // Prefer the role stored in localStorage over the JWT role
+          // because JWT may be stale (e.g. minted before completeProfile updated the role)
+          const storedEntry = storedAccounts.find(
+            (a) => a.user?.id === freshUser.id,
+          );
+          const resolvedRole = storedEntry?.user?.role || freshUser.role;
+          const mergedUser = { ...freshUser, role: resolvedRole };
+
+          setUser(mergedUser);
+
+          // Upsert without duplicating — deduplication effect below still handles the Set logic
           setAccounts((prev) => {
             const others = prev.filter(
-              (a) => a.user?.id && a.user.id !== freshUser.id,
+              (a) => a.user?.id && a.user.id !== mergedUser.id,
             );
-            return [...others, { token: storedToken, user: freshUser }];
+            return [...others, { token: storedToken, user: mergedUser }];
           });
         }
       } catch (err) {

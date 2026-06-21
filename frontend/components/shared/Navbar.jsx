@@ -154,7 +154,9 @@ function DropdownItem({ href, icon, label, active, onClick }) {
           : "text-gray-700 hover:bg-gray-50"
       }`}
     >
-      <span className={`shrink-0 ${active ? "text-[#2D5016]" : "text-gray-400"}`}>
+      <span
+        className={`shrink-0 ${active ? "text-[#2D5016]" : "text-gray-400"}`}
+      >
         {icon}
       </span>
       {label}
@@ -164,9 +166,7 @@ function DropdownItem({ href, icon, label, active, onClick }) {
 
 // ── Account switcher list (shared between desktop + mobile) ──────────────────
 function AccountSwitcher({ accounts, user, switchingId, onSwitch }) {
-  const others = accounts.filter(
-    (a) => (a.user?.id || a.id) !== user?.id
-  );
+  const others = accounts.filter((a) => (a.user?.id || a.id) !== user?.id);
   if (others.length === 0) return null;
 
   return (
@@ -203,6 +203,92 @@ function AccountSwitcher({ accounts, user, switchingId, onSwitch }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function AddAccountForm({
+  showAddAccount,
+  setShowAddAccount,
+  addForm,
+  setAddForm,
+  addError,
+  setAddError,
+  addLoading,
+  handleAddAccountSubmit,
+  setUserMenuOpen,
+}) {
+  return (
+    <div className="border-b border-gray-100 py-2 px-4 bg-white">
+      {!showAddAccount ? (
+        <button
+          onClick={() => setShowAddAccount(true)}
+          className="flex items-center gap-2 text-xs font-medium text-gray-500 hover:text-[#2D5016] transition w-full py-1.5"
+        >
+          <Plus size={14} className="text-gray-400" />
+          Ajouter un compte
+        </button>
+      ) : (
+        <form
+          onSubmit={handleAddAccountSubmit}
+          className="flex flex-col gap-2 pt-1 pb-1"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              Nouveau Compte
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setShowAddAccount(false);
+                setAddError("");
+              }}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X size={12} />
+            </button>
+          </div>
+          <input
+            type="email"
+            placeholder="Email"
+            required
+            autoFocus
+            value={addForm.email}
+            onChange={(e) =>
+              setAddForm((f) => ({ ...f, email: e.target.value }))
+            }
+            className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#A7D129] transition"
+          />
+          <input
+            type="password"
+            placeholder="Mot de passe"
+            required
+            value={addForm.password}
+            onChange={(e) =>
+              setAddForm((f) => ({ ...f, password: e.target.value }))
+            }
+            className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#A7D129] transition"
+          />
+          {addError && (
+            <p className="text-[10px] text-red-500 font-medium">{addError}</p>
+          )}
+          <div className="flex gap-2 mt-0.5">
+            <button
+              type="submit"
+              disabled={addLoading}
+              className="flex-1 text-xs font-bold py-1.5 rounded-xl bg-[#2D5016] text-white hover:bg-[#3a6b1e] transition disabled:opacity-50"
+            >
+              {addLoading ? "En cours..." : "Connexion"}
+            </button>
+          </div>
+          <div className="scale-90 origin-top">
+            <GoogleAuth
+              onSuccess={() => setUserMenuOpen(false)}
+              redirect={false}
+            />
+          </div>
+        </form>
+      )}
     </div>
   );
 }
@@ -285,7 +371,7 @@ export default function Navbar() {
         const storedToken = localStorage.getItem("token");
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/api/notifications?limit=5`,
-          { headers: { Authorization: `Bearer ${storedToken}` } }
+          { headers: { Authorization: `Bearer ${storedToken}` } },
         );
         const data = await res.json();
         if (data.success) {
@@ -335,7 +421,7 @@ export default function Navbar() {
       setUserMenuOpen(false);
     } catch (error) {
       setAddError(
-        error?.response?.data?.message || "Email ou mot de passe incorrect"
+        error?.response?.data?.message || "Email ou mot de passe incorrect",
       );
     } finally {
       setAddLoading(false);
@@ -351,10 +437,10 @@ export default function Navbar() {
           {
             method: "PATCH",
             headers: { Authorization: `Bearer ${storedToken}` },
-          }
+          },
         );
         setNotifications((prev) =>
-          prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
+          prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n)),
         );
         setUnreadCount((prev) => Math.max(0, prev - 1));
       } catch {}
@@ -367,79 +453,79 @@ export default function Navbar() {
   const role = user?.role;
 
   // ── Shared add-account form (used inside both desktop + mobile dropdowns) ──
-  const AddAccountForm = () => (
-    <div className="border-b border-gray-100 py-2 px-4 bg-white">
-      {!showAddAccount ? (
-        <button
-          onClick={() => setShowAddAccount(true)}
-          className="flex items-center gap-2 text-xs font-medium text-gray-500 hover:text-[#2D5016] transition w-full py-1.5"
-        >
-          <Plus size={14} className="text-gray-400" />
-          Ajouter un compte
-        </button>
-      ) : (
-        <form
-          onSubmit={handleAddAccountSubmit}
-          className="flex flex-col gap-2 pt-1 pb-1"
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-              Nouveau Compte
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setShowAddAccount(false);
-                setAddError("");
-              }}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <X size={12} />
-            </button>
-          </div>
-          <input
-            type="email"
-            placeholder="Email"
-            required
-            autoFocus
-            value={addForm.email}
-            onChange={(e) =>
-              setAddForm((f) => ({ ...f, email: e.target.value }))
-            }
-            className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#A7D129] transition"
-          />
-          <input
-            type="password"
-            placeholder="Mot de passe"
-            required
-            value={addForm.password}
-            onChange={(e) =>
-              setAddForm((f) => ({ ...f, password: e.target.value }))
-            }
-            className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#A7D129] transition"
-          />
-          {addError && (
-            <p className="text-[10px] text-red-500 font-medium">{addError}</p>
-          )}
-          <div className="flex gap-2 mt-0.5">
-            <button
-              type="submit"
-              disabled={addLoading}
-              className="flex-1 text-xs font-bold py-1.5 rounded-xl bg-[#2D5016] text-white hover:bg-[#3a6b1e] transition disabled:opacity-50"
-            >
-              {addLoading ? "En cours..." : "Connexion"}
-            </button>
-          </div>
-          <div className="scale-90 origin-top">
-            <GoogleAuth
-              onSuccess={() => setUserMenuOpen(false)}
-              redirect={false}
-            />
-          </div>
-        </form>
-      )}
-    </div>
-  );
+  // const AddAccountForm = () => (
+  //   <div className="border-b border-gray-100 py-2 px-4 bg-white">
+  //     {!showAddAccount ? (
+  //       <button
+  //         onClick={() => setShowAddAccount(true)}
+  //         className="flex items-center gap-2 text-xs font-medium text-gray-500 hover:text-[#2D5016] transition w-full py-1.5"
+  //       >
+  //         <Plus size={14} className="text-gray-400" />
+  //         Ajouter un compte
+  //       </button>
+  //     ) : (
+  //       <form
+  //         onSubmit={handleAddAccountSubmit}
+  //         className="flex flex-col gap-2 pt-1 pb-1"
+  //       >
+  //         <div className="flex items-center justify-between">
+  //           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+  //             Nouveau Compte
+  //           </p>
+  //           <button
+  //             type="button"
+  //             onClick={() => {
+  //               setShowAddAccount(false);
+  //               setAddError("");
+  //             }}
+  //             className="text-gray-400 hover:text-gray-600"
+  //           >
+  //             <X size={12} />
+  //           </button>
+  //         </div>
+  //         <input
+  //           type="email"
+  //           placeholder="Email"
+  //           required
+  //           autoFocus
+  //           value={addForm.email}
+  //           onChange={(e) =>
+  //             setAddForm((f) => ({ ...f, email: e.target.value }))
+  //           }
+  //           className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#A7D129] transition"
+  //         />
+  //         <input
+  //           type="password"
+  //           placeholder="Mot de passe"
+  //           required
+  //           value={addForm.password}
+  //           onChange={(e) =>
+  //             setAddForm((f) => ({ ...f, password: e.target.value }))
+  //           }
+  //           className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#A7D129] transition"
+  //         />
+  //         {addError && (
+  //           <p className="text-[10px] text-red-500 font-medium">{addError}</p>
+  //         )}
+  //         <div className="flex gap-2 mt-0.5">
+  //           <button
+  //             type="submit"
+  //             disabled={addLoading}
+  //             className="flex-1 text-xs font-bold py-1.5 rounded-xl bg-[#2D5016] text-white hover:bg-[#3a6b1e] transition disabled:opacity-50"
+  //           >
+  //             {addLoading ? "En cours..." : "Connexion"}
+  //           </button>
+  //         </div>
+  //         <div className="scale-90 origin-top">
+  //           <GoogleAuth
+  //             onSuccess={() => setUserMenuOpen(false)}
+  //             redirect={false}
+  //           />
+  //         </div>
+  //       </form>
+  //     )}
+  //   </div>
+  // );
 
   // ── Shared logout buttons ─────────────────────────────────────────────────
   const LogoutButtons = ({ small = false }) => (
@@ -573,7 +659,7 @@ export default function Navbar() {
                     {activeService ? (
                       (() => {
                         const svc = NAV_SERVICES.find(
-                          (s) => s.label === activeService
+                          (s) => s.label === activeService,
                         );
                         return (
                           <>
@@ -726,7 +812,9 @@ export default function Navbar() {
                                   {notif.body}
                                 </p>
                                 <p className="text-[10px] text-gray-400 mt-1">
-                                  {new Date(notif.createdAt).toLocaleDateString("fr-FR")}
+                                  {new Date(notif.createdAt).toLocaleDateString(
+                                    "fr-FR",
+                                  )}
                                 </p>
                               </div>
                             </div>
@@ -809,7 +897,17 @@ export default function Navbar() {
                     />
 
                     {/* Add account */}
-                    <AddAccountForm />
+                    <AddAccountForm
+                      showAddAccount={showAddAccount}
+                      setShowAddAccount={setShowAddAccount}
+                      addForm={addForm}
+                      setAddForm={setAddForm}
+                      addError={addError}
+                      setAddError={setAddError}
+                      addLoading={addLoading}
+                      handleAddAccountSubmit={handleAddAccountSubmit}
+                      setUserMenuOpen={setUserMenuOpen}
+                    />
 
                     {/* Nav links — role-aware */}
                     <div className="py-1 bg-white">
@@ -942,8 +1040,8 @@ export default function Navbar() {
             )}
 
             {/* Mobile user section */}
-            {!loading && (
-              user ? (
+            {!loading &&
+              (user ? (
                 <div className="border-t border-gray-100 pt-3 mt-2 flex flex-col gap-1">
                   {/* User header */}
                   <div className="flex items-center gap-3 px-2 pb-3">
@@ -972,8 +1070,8 @@ export default function Navbar() {
                       role === "business"
                         ? "/dashboard"
                         : role === "admin"
-                        ? "/admin"
-                        : "/my-space/profile"
+                          ? "/admin"
+                          : "/my-space/profile"
                     }
                     className="flex items-center gap-3 text-sm text-gray-700 px-2 py-2 rounded-lg hover:bg-gray-50"
                   >
@@ -1016,8 +1114,7 @@ export default function Navbar() {
                     S'inscrire
                   </a>
                 </div>
-              )
-            )}
+              ))}
           </motion.div>
         )}
       </AnimatePresence>

@@ -29,7 +29,7 @@ export default function RootLayout({ children }) {
           <AuthProvider>
             <ToastProvider>
               <LayoutShell>{children}</LayoutShell>
-            {/*  <DevTools  /> */  }
+              <DevTools  />
             </ToastProvider>
           </AuthProvider>
         </GoogleOAuthProvider>
