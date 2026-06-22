@@ -10,9 +10,11 @@ export default function MessageDrawer({
   listingTitle,
   listingType,
   listingId,
-  badgeType
+  badgeType,
+  reasons // optionnel: [{ value, label, text }]
 }) {
   const [message, setMessage] = useState('');
+  const [selectedReason, setSelectedReason] = useState('');
   const textareaRef = useRef(null);
   const [mounted, setMounted] = useState(false);
 
@@ -20,11 +22,36 @@ export default function MessageDrawer({
     setMounted(true);
   }, []);
 
-  useEffect(() => {
+useEffect(() => {
     if (isOpen) {
       setMessage(template || '');
+      setSelectedReason('');
     }
   }, [isOpen, template]);
+
+  const PLACEHOLDER_TEXT = '[Complétez votre message ici]';
+
+  const handleReasonSelect = (value) => {
+    const reasonObj = reasons?.find((r) => r.value === value);
+    if (!reasonObj) return;
+
+    const previousReasonObj = reasons?.find((r) => r.value === selectedReason);
+
+    setMessage((prev) => {
+      // Cas 1 : un motif était déjà inséré → on le remplace par le nouveau
+      if (previousReasonObj && prev.includes(previousReasonObj.text)) {
+        return prev.replace(previousReasonObj.text, reasonObj.text);
+      }
+      // Cas 2 : le placeholder est encore présent → on l'utilise
+      if (prev.includes(PLACEHOLDER_TEXT)) {
+        return prev.replace(PLACEHOLDER_TEXT, reasonObj.text);
+      }
+      // Cas 3 : rien à remplacer → on ajoute à la fin
+      return `${prev}\n\n${reasonObj.text}`;
+    });
+
+    setSelectedReason(value);
+  };
 
   useEffect(() => {
     if (isOpen && textareaRef.current) {
@@ -66,8 +93,34 @@ export default function MessageDrawer({
           </button>
         </div>
 
-        {/* Corps */}
+       {/* Corps */}
         <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+
+          {/* Section motif (optionnelle) */}
+          {reasons?.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <label className="text-[11px] text-gray-500 uppercase tracking-wide mb-0.5 font-semibold">
+                Motif (insère un texte type, modifiable ensuite)
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {reasons.map((r) => (
+                  <button
+                    key={r.value}
+                    type="button"
+                    onClick={() => handleReasonSelect(r.value)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors
+                      ${selectedReason === r.value
+                        ? 'bg-[#2D5016] text-white border-[#2D5016]'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                      }`}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Section textarea */}
           <div className="flex flex-col flex-1">
             <label className="text-[11px] text-gray-500 uppercase tracking-wide mb-1.5 font-semibold">

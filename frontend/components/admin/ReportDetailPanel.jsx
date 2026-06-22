@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/context/ToastContext'
 import { reportService } from '@/services/reportService'
 import MessageDrawer from './MessageDrawer'
 
@@ -21,6 +22,15 @@ const REASON_LABELS = {
   OTHER:         'Autre',
 }
 const MODULE_HREF = { JOB: '/jobs', REAL_ESTATE: '/real-estate' }
+
+const CONTACT_REASONS = [
+  { value: 'PHOTOS',      label: '📷 Photos non conformes', text: "Les photos associées à votre annonce ne respectent pas nos critères de qualité (résolution insuffisante, contenu non pertinent ou hors-sujet). Merci de les remplacer par des photos claires et représentatives du bien." },
+  { value: 'DESCRIPTION', label: '📝 Description insuffisante', text: "La description de votre annonce est incomplète ou ne reflète pas fidèlement le bien proposé. Merci de fournir des informations plus détaillées et précises." },
+  { value: 'PRICE',       label: '💰 Prix incohérent', text: "Le prix indiqué pour cette annonce semble incohérent par rapport au marché ou aux caractéristiques du bien. Merci de vérifier et corriger le prix affiché." },
+  { value: 'DUPLICATE',   label: '🔁 Annonce en double', text: "Nous avons constaté que cette annonce est un doublon d'une autre annonce déjà publiée sur la plateforme. Merci de ne conserver qu'une seule annonce active par bien." },
+  { value: 'CATEGORY',    label: '📂 Catégorie incorrecte', text: "Le type de bien sélectionné pour cette annonce ne correspond pas à sa description. Merci de vérifier et corriger la catégorie choisie." },
+  { value: 'OTHER',       label: '💬 Autre motif', text: "Suite à l'examen de votre annonce, nous avons identifié un point nécessitant une correction. Merci de vous référer aux détails ci-dessus ou de nous contacter pour plus d'informations." },
+]
 const fmtDate = (d) =>
   d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
 
@@ -273,6 +283,7 @@ function TabHistory({ detail }) {
  */
 export default function ReportDetailPanel({ reportId, onClose, onRefresh }) {
   const { token } = useAuth()
+  const { toast } = useToast()
 
   const [tab,     setTab]     = useState('infos')
   const [detail,  setDetail]  = useState(null)
@@ -294,9 +305,7 @@ export default function ReportDetailPanel({ reportId, onClose, onRefresh }) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
-  // Feedback temporaire
-  const [toast, setToast] = useState('')
-  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
+
 
   // ── Fetch detail ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -324,9 +333,9 @@ export default function ReportDetailPanel({ reportId, onClose, onRefresh }) {
     setSavingNotes(true)
     try {
       await reportService.updateReport(reportId, { adminNotes: notes }, token)
-      showToast('Notes enregistrées ✅')
+      toast.success('Notes enregistrées')
     } catch (err) {
-      showToast('Erreur : ' + err.message)
+      toast.error('Erreur : ' + err.message)
     } finally {
       setSavingNotes(false)
     }
@@ -339,10 +348,10 @@ export default function ReportDetailPanel({ reportId, onClose, onRefresh }) {
       if (action === 'dismiss') await reportService.dismissReport(reportId, token)
       if (action === 'remove')  await reportService.removeListing(reportId, token)
       if (action === 'suspend') await reportService.suspendOwner(reportId, token)
-      showToast('Action effectuée ✅')
+      toast.success('Action effectuée')
       onRefresh?.()
     } catch (err) {
-      showToast('Erreur : ' + err.message)
+      toast.error('Erreur : ' + err.message)
     } finally {
       setActionLoading(null)
     }
@@ -353,10 +362,10 @@ export default function ReportDetailPanel({ reportId, onClose, onRefresh }) {
     setSendingContact(true)
     try {
       await reportService.contactOwner(reportId, message, token)
-      showToast('Email envoyé ✅')
+      toast.success('Email envoyé')
       setDrawerOpen(false)
     } catch (err) {
-      showToast('Erreur : ' + err.message)
+      toast.error('Erreur : ' + err.message)
     } finally {
       setSendingContact(false)
     }
@@ -521,13 +530,7 @@ export default function ReportDetailPanel({ reportId, onClose, onRefresh }) {
           </div>
         )}
 
-        {/* Toast */}
-        {toast && (
-          <div className="absolute bottom-4 left-4 right-4 bg-gray-900 text-white text-xs font-semibold rounded-xl px-4 py-3 text-center shadow-lg z-50">
-            {toast}
-          </div>
-        )}
-      </aside>
+        </aside>
 
       <MessageDrawer
         isOpen={drawerOpen}
@@ -539,6 +542,7 @@ export default function ReportDetailPanel({ reportId, onClose, onRefresh }) {
         listingType={detail?.report?.targetType}
         listingId={detail?.listingInfo?.id}
         badgeType="REPORT_CONTACT"
+        reasons={CONTACT_REASONS}
       />
     </>
   )

@@ -8,6 +8,7 @@ import { realEstateService } from "@/services/realEstateService";
 import PricingModal from "@/components/shared/PricingModal";
 import axios from "axios";
 import moroccoCities from "morocco-cities";
+import { useToast } from "@/context/ToastContext";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -425,10 +426,10 @@ export default function CreateListingPage() {
 function CreateListingForm() {
   const { token } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [serverError, setServerError] = useState(null);
   const [subcategories, setSubcategories] = useState([]);
   const [geocoding, setGeocoding] = useState(false);
   const [flyTo, setFlyTo] = useState(null);
@@ -553,7 +554,6 @@ function CreateListingForm() {
     }
 
     setSubmitting(true);
-    setServerError(null);
     try {
       const payload = {
         ...form,
@@ -569,7 +569,7 @@ function CreateListingForm() {
       await realEstateService.createListing(payload, token);
       router.push("/dashboard/listings/real-estate?created=1");
     } catch (err) {
-      setServerError(err.message || "Erreur serveur");
+      toast.error(err?.response?.data?.message || err.message || "Erreur serveur");
     } finally {
       setSubmitting(false);
     }
@@ -842,12 +842,6 @@ function CreateListingForm() {
           <FeaturesManager features={form.features} onChange={(v) => set("features", v)} />
         </div>
 
-        {/* ── SERVER ERROR ── */}
-        {serverError && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 text-sm text-red-700">
-            ❌ {serverError}
-          </div>
-        )}
 
         {/* ── SUBMIT ── */}
         <div className="flex gap-3">

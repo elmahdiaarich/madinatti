@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import ProtectedRoute from '@/components/shared/ProtectedRoute';
 import { realEstateService } from '@/services/realEstateService';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
+import { useToast } from '@/context/ToastContext';
 
 // Reuse the same small sub-components from create page
 const LISTING_TYPES = [{ label: 'Vente', value: 'SALE' }, { label: 'Location', value: 'RENT' }];
@@ -48,6 +49,7 @@ function EditForm() {
   const { id } = useParams();
   const { token } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
   const [form, setForm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -103,9 +105,10 @@ function EditForm() {
         longitude: form.longitude ? parseFloat(form.longitude) : undefined,
       };
       await realEstateService.updateMyListing(id, payload, token);
+      toast.success("Annonce mise à jour avec succès !");
       router.push('/dashboard/listings/real-estate');
     } catch (e) {
-      setError(e.message || 'Erreur serveur');
+      toast.error(e?.response?.data?.message || e.message || 'Erreur serveur');
     } finally {
       setSubmitting(false);
     }

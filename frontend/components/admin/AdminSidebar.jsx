@@ -123,13 +123,12 @@ const NAV_ITEMS = [
   { key: 'overview',     label: "Vue d'ensemble", href: '/admin',             icon: IconDashboard  },
   { key: 'emploi',       label: "Offres d'emploi", href: '/admin/jobs',        icon: IconBriefcase  },
   { key: 'immobilier',   label: 'Immobilier',       href: '/admin/real-estate', icon: IconBuilding   },
-  { key: 'categories',   label: 'Catégories',       href: '/admin/categories',  icon: IconCategories },
   { key: 'vehicule',     label: 'Véhicules',        href: '/admin/vehicles',    icon: IconCar        },
+  { key: 'categories',   label: 'Catégories',       href: '/admin/categories',  icon: IconCategories },
   { key: 'signalements', label: 'Signalements',     href: '/admin/reports',     icon: IconFlag       },
   { key: 'entreprises',  label: 'Entreprises',      href: '/admin/businesses',  icon: IconCompany    },
   { key: 'utilisateurs', label: 'Utilisateurs',     href: '/admin/users',       icon: IconUsers      },
 ]
-
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────

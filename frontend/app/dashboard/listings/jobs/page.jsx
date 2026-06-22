@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/shared/ProtectedRoute";
 import { jobsService } from "@/services/jobsService";
 import JobListingFilters from "@/components/jobs/JobListingFilters";
 import ApplicationsDrawer from "@/components/jobs/ApplicationsDrawer";
+import { useToast } from "@/context/ToastContext";
 
 const fmtDate = (d) =>
   d
@@ -118,7 +119,6 @@ function JobCard({ job, onDelete, onViewApplications }) {
       label: "Rejetée",
       className: "bg-red-50 text-red-700 border border-red-200",
     },
-    
   };
   const statusStyle = statusStyles[job.status] ?? statusStyles.PENDING;
 
@@ -273,15 +273,27 @@ export default function BusinessJobsDashboard() {
 
 function DashboardContent() {
   const { token } = useAuth();
+  const { toast } = useToast();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [jobs, setJobs] = useState([]);
   const [allJobs, setAllJobs] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({});
   const [page, setPage] = useState(1);
-  const [justCreated] = useState(searchParams.get("created") === "1");
   const [selectedJob, setSelectedJob] = useState(null);
+
+  useEffect(() => {
+    if (searchParams.get("created") === "1") {
+      toast.success(
+        "Annonce soumise avec succès ! Elle sera visible après validation par l'administrateur.",
+        { title: "Annonce envoyée ✦", duration: 6000 }
+      );
+      // Nettoyer l'URL pour éviter que le toast réapparaisse au refresh ou re-render
+      router.replace(window.location.pathname, { scroll: false });
+    }
+  }, []);
 
   useEffect(() => { loadAll(); }, []);
   useEffect(() => { load(); }, [page, filters]);
@@ -322,8 +334,9 @@ function DashboardContent() {
       await jobsService.deleteMyJob(id, token);
       setJobs((prev) => prev.filter((j) => j.id !== id));
       setAllJobs((prev) => prev.filter((j) => j.id !== id));
+      toast.success("Offre supprimée avec succès");
     } catch (e) {
-      alert("Erreur lors de la suppression");
+      toast.error(e?.response?.data?.message || e.message || "Erreur lors de la suppression");
     }
   };
 
@@ -335,16 +348,6 @@ function DashboardContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-5">
-        {/* Success toast */}
-        {justCreated && (
-          <div className="bg-green-50 border border-green-200 rounded-2xl px-5 py-4 flex items-center gap-3">
-            <span className="text-2xl">✅</span>
-            <div>
-              <p className="font-bold text-green-700 text-sm">Offre soumise avec succès !</p>
-              <p className="text-xs text-green-600">Elle sera visible après validation par l'administrateur.</p>
-            </div>
-          </div>
-        )}
 
         {/* Stats bar */}
         {allJobs.length > 0 && <StatsBar jobs={allJobs} />}

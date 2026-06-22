@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState, useRef } from "react";import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/shared/ProtectedRoute";
 import { realEstateService } from "@/services/realEstateService";
 import ListingDrawer from "@/components/real-estate/ListingDrawer";
 import ListingFilters from "@/components/real-estate/ListingFilters";
+import { useToast } from "@/context/ToastContext";
 
 const INQUIRY_STATUS_STYLES = {
   pending: { label: "Nouveau",  cls: "bg-blue-50 text-blue-700 border-blue-200" },
@@ -360,16 +360,30 @@ export default function BusinessDashboard() {
 
 function DashboardContent() {
   const { token } = useAuth();
+  const { toast } = useToast();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [listings, setListings]       = useState([]);
   const [allListings, setAllListings] = useState([]);
   const [pagination, setPagination]   = useState(null);
   const [loading, setLoading]         = useState(true);
   const [filters, setFilters]         = useState({});
   const [page, setPage]               = useState(1);
-  const [activeInquiryListingId, setActiveInquiryListingId] = useState(null);
+const [activeInquiryListingId, setActiveInquiryListingId] = useState(null);
   const [selectedListing, setSelectedListing]               = useState(null);
-  const [justCreated] = useState(searchParams.get("created") === "1");
+  const toastShown = useRef(false);
+
+ useEffect(() => {
+    if (searchParams.get("created") === "1" && !toastShown.current) {
+      toastShown.current = true;
+      toast.success(
+        "Annonce soumise avec succès ! Elle sera visible après validation par l'administrateur.",
+        { title: "Annonce envoyée ✦", duration: 6000 }
+      );
+      // Nettoyer l'URL pour éviter que le toast réapparaisse au refresh ou re-render
+      router.replace(window.location.pathname, { scroll: false });
+    }
+  }, [searchParams]);
 
   useEffect(() => { loadAll(); }, []);
   useEffect(() => { load(); }, [page, filters]);
@@ -411,8 +425,9 @@ function DashboardContent() {
       setListings((prev) => prev.filter((l) => l.id !== id));
       setAllListings((prev) => prev.filter((l) => l.id !== id));
       if (selectedListing?.id === id) setSelectedListing(null);
+      toast.success("Annonce supprimée avec succès");
     } catch (e) {
-      alert("Erreur lors de la suppression");
+      toast.error(e?.response?.data?.message || e.message || "Erreur lors de la suppression");
     }
   };
 
@@ -424,16 +439,6 @@ function DashboardContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-5">
-        {/* Success toast */}
-        {justCreated && (
-          <div className="bg-green-50 border border-green-200 rounded-2xl px-5 py-4 flex items-center gap-3">
-            <span className="text-2xl">✅</span>
-            <div>
-              <p className="font-bold text-green-700 text-sm">Annonce soumise avec succès !</p>
-              <p className="text-xs text-green-600">Elle sera visible après validation par l'administrateur.</p>
-            </div>
-          </div>
-        )}
 
         {/* Stats bar */}
         {allListings.length > 0 && <StatsBar listings={allListings} />}

@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/shared/ProtectedRoute";
 import { jobsService } from "@/services/jobsService";
 import { cities } from "morocco-cities";
+import { useToast } from "@/context/ToastContext";
 
 // Build region → [city names] map once at module level (same source as publier page)
 const citiesByRegion = cities.reduce((acc, city) => {
@@ -102,6 +103,7 @@ function EditJobForm() {
   const { id } = useParams();
   const { token } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
   const [form, setForm] = useState(null);
   const [categories, setCategories] = useState([]);
@@ -222,9 +224,10 @@ function EditJobForm() {
         ...(form.categorySlug && { categorySlug: form.categorySlug }),
       };
       await jobsService.updateMyJob(id, payload, token);
+      toast.success("Offre mise à jour avec succès !");
       router.push("/dashboard/listings/jobs");
     } catch (e) {
-      setError(e.message || "Erreur serveur");
+      toast.error(e?.response?.data?.message || e.message || "Erreur serveur");
     } finally {
       setSubmitting(false);
     }
@@ -546,7 +549,7 @@ function EditJobForm() {
           </p>
         </div>
 
-        {/* Error */}
+        {/* Error — only shown for validation errors (title/contractType/description) */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 text-sm text-red-700">
             ❌ {error}

@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import axios from 'axios'
+import { useToast } from '@/context/ToastContext'
 
 const inputCls = "w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#A7D129]/40 focus:border-[#2D5016] transition bg-white"
 const disabledCls = "w-full border border-gray-100 rounded-xl px-3 py-2.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
@@ -33,6 +34,7 @@ function Field({ label, hint, children }) {
 
 export default function ProfilePage() {
   const { user, token, updateUser } = useAuth()
+  const { toast } = useToast()
   const isBusiness = user?.role === 'business'
 
   const initials = user?.name
@@ -99,10 +101,11 @@ export default function ProfilePage() {
       updateUser(res.data.user)
       setAvatarFile(null)
       setAvatarPreview(null)
-      setAvatarStatus('ok')
-      setTimeout(() => setAvatarStatus(null), 3000)
+      setAvatarStatus(null)
+      toast.success('Photo de profil mise à jour !')
     } catch {
-      setAvatarStatus('error')
+      setAvatarStatus(null)
+      toast.error('Échec de l\'envoi. Veuillez réessayer.')
     }
   }
 
@@ -151,10 +154,11 @@ export default function ProfilePage() {
         { headers: { Authorization: `Bearer ${token}` } }
       )
       updateUser(res.data.user)
-      setInfoStatus('ok')
-      setTimeout(() => setInfoStatus(null), 3000)
+      setInfoStatus(null)
+      toast.success('Profil mis à jour avec succès !')
     } catch {
-      setInfoStatus('error')
+      setInfoStatus(null)
+      toast.error('Une erreur est survenue. Veuillez réessayer.')
     }
   }
 
@@ -180,8 +184,8 @@ export default function ProfilePage() {
         { headers: { Authorization: `Bearer ${token}` } }
       )
       setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' })
-      setPassStatus('ok')
-      setTimeout(() => setPassStatus(null), 3000)
+      setPassStatus(null)
+      toast.success('Mot de passe modifié avec succès !')
     } catch (err) {
       setPassError(err?.response?.data?.message || 'Mot de passe actuel incorrect.')
       setPassStatus(null)
@@ -267,17 +271,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Avatar feedback */}
-        {avatarStatus === 'ok' && (
-          <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 font-semibold">
-            Photo de profil mise à jour.
-          </div>
-        )}
-        {avatarStatus === 'error' && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
-            Échec de l'envoi. Veuillez réessayer.
-          </div>
-        )}
 
         {/* Hidden file input */}
         <input
@@ -322,16 +315,6 @@ export default function ProfilePage() {
           <input value={user?.email || ''} disabled className={disabledCls} />
         </Field>
 
-        {infoStatus === 'ok' && (
-          <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 font-semibold">
-            Profil mis à jour avec succès.
-          </div>
-        )}
-        {infoStatus === 'error' && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
-            Une erreur est survenue. Veuillez réessayer.
-          </div>
-        )}
 
         <button
           onClick={handleSaveInfo}
@@ -395,11 +378,6 @@ export default function ProfilePage() {
         {passError && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
             {passError}
-          </div>
-        )}
-        {passStatus === 'ok' && (
-          <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 font-semibold">
-            Mot de passe modifié avec succès.
           </div>
         )}
 

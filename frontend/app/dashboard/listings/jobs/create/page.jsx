@@ -8,6 +8,7 @@ import { jobsService } from '@/services/jobsService';
 import ProtectedRoute from '@/components/shared/ProtectedRoute';
 import { cities } from 'morocco-cities';
 import PricingModal from '@/components/shared/PricingModal';
+import { useToast } from '@/context/ToastContext';
 
 // ─── Données statiques ────────────────────────────────────────────────────────
 // CATEGORIES loaded dynamically from API (see useEffect below)
@@ -205,11 +206,11 @@ function ListSection({
 function PublierJobContent() {
   const { user, token } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
   const [step, setStep] = useState(1);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState('');
   const [errors, setErrors] = useState({});
   const [categories, setCategories] = useState([]);
 
@@ -348,7 +349,6 @@ const handleCityChange = (city) => {
   // ── Soumission ────────────────────────────────────────────
   const handleSubmit = async () => {
     setSubmitting(true);
-    setSubmitError('');
     try {
       await jobsService.createJob({
         title:               form.title,
@@ -367,9 +367,13 @@ const handleCityChange = (city) => {
         languages:           form.languages,
         description:         form.descMode === 'paste' ? form.description : buildDescription(),
       }, token);
+      toast.success("Offre soumise avec succ\u00e8s ! Elle sera visible apr\u00e8s validation.", {
+        title: "Annonce envoy\u00e9e \u2726",
+        duration: 6000,
+      });
       router.push('/dashboard/listings/jobs');
     } catch (err) {
-      setSubmitError(err.message || 'Une erreur est survenue');
+      toast.error(err?.response?.data?.message || err.message || 'Une erreur est survenue');
     } finally {
       setSubmitting(false);
     }
@@ -1003,11 +1007,6 @@ const handleCityChange = (city) => {
                 </div>
               </div>
 
-              {submitError && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700 mb-4">
-                  ⚠ {submitError}
-                </div>
-              )}
 
               <div className="flex gap-3">
                 <button

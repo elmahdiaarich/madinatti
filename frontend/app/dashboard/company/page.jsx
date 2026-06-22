@@ -3,9 +3,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Upload, Building, MapPin, Phone, Globe, CheckCircle2 } from "lucide-react";
+import { useToast } from "@/context/ToastContext";
 
 export default function CompanyProfilePage() {
   const { user, token } = useAuth();
+  const { toast } = useToast();
   
   const [formData, setFormData] = useState({
     companyName: "",
@@ -17,7 +19,6 @@ export default function CompanyProfilePage() {
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   
   const fileInputRef = useRef(null);
 
@@ -57,7 +58,6 @@ export default function CompanyProfilePage() {
     if (!token) return;
     
     setLoading(true);
-    setSuccess(false);
 
     try {
       const data = new FormData();
@@ -77,14 +77,13 @@ export default function CompanyProfilePage() {
       });
 
       if (res.ok) {
-        setSuccess(true);
+        toast.success("Profil entreprise mis à jour avec succès !");
         // Ideally we would update the user in AuthContext here too
-        setTimeout(() => setSuccess(false), 3000);
       } else {
-        console.error("Failed to update profile");
+        toast.error("Erreur lors de la mise à jour du profil");
       }
     } catch (error) {
-      console.error("Error updating profile:", error);
+      toast.error(error?.response?.data?.message || error.message || "Une erreur est survenue");
     } finally {
       setLoading(false);
     }
@@ -97,12 +96,6 @@ export default function CompanyProfilePage() {
         <p className="text-gray-500 mt-1">Mettez à jour les informations publiques de votre entreprise.</p>
       </div>
 
-      {success && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3 text-green-700">
-          <CheckCircle2 size={20} />
-          <p className="font-medium">Profil mis à jour avec succès !</p>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="bg-white border border-gray-100 rounded-3xl shadow-sm overflow-hidden">
         <div className="p-8 space-y-8">
