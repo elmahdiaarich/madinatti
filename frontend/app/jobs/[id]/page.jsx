@@ -510,7 +510,7 @@ export default function JobDetailPage() {
                 )}
                 {job.isFeatured && (
                   <span className="px-3 py-1 bg-yellow-400 text-yellow-900 rounded-full text-xs font-bold">
-                    ⭐ A la une
+                    ⭐ Premium
                   </span>
                 )}
                 {job.isSponsored && (

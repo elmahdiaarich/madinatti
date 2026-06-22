@@ -203,13 +203,21 @@ export default function JobCard({ job, initialFavorited = false, onFavoriteToggl
 
   const formatDate = (date) => {
     if (!date) return '';
-    return new Date(date).toLocaleDateString('fr-FR', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
-    });
+    const d = new Date(date);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    if (d.toDateString() === today.toDateString())
+      return `Aujourd'hui à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+    if (d.toDateString() === yesterday.toDateString())
+      return 'Hier';
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   const contract = CONTRACT_LABELS[job.contractType];
   const skills = Array.isArray(job.skills) ? job.skills.slice(0, 5).join(' - ') : null;
+  const dateStr = formatDate(job.publishedAt);
+  const isRecent = dateStr.startsWith("Aujourd'hui") || dateStr === 'Hier';
 
   return (
     <>
@@ -217,7 +225,7 @@ export default function JobCard({ job, initialFavorited = false, onFavoriteToggl
         <Link href={`/jobs/${job.id}`} className="block group">
           <div className="relative bg-[#E8F5D0] hover:bg-[#d8edbb] border border-[#A7D129]/50 rounded-2xl p-5 transition-all duration-200 hover:shadow-md hover:border-[#A7D129]">
 
-            {/* Top-right action buttons - stacked vertically */}
+            {/* Top-right action buttons */}
             <div className="absolute top-3 right-3 z-10 flex flex-col items-center gap-1.5">
               <FavoriteButton
                 jobId={job.id}
@@ -240,20 +248,26 @@ export default function JobCard({ job, initialFavorited = false, onFavoriteToggl
                     <h2 className="font-bold text-gray-900 text-lg leading-snug group-hover:text-[#2D5016] transition-colors line-clamp-2">
                       {job.title}
                     </h2>
-                    <span className="text-xs text-gray-400 shrink-0 mt-1">
-                      {formatDate(job.publishedAt)}
+                    <span className={`text-[15px] shrink-0 mt-1 font-semibold ${isRecent ? 'text-green-600' : 'text-gray-500'}`}>
+                      {dateStr}
                     </span>
                   </div>
-                  <span className="text-[#2D5016] font-semibold text-sm mt-0.5 block">
+                  <span className="text-[#2D5016] font-semibold text-sm mt-0.5 flex items-center gap-1.5">
                     {job.companyName}
+                    {job.isFeatured && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-yellow-400/60 text-yellow-500 bg-yellow-50">
+                        ⭐ Premium
+                      </span>
+                    )}
                   </span>
                 </div>
+
                 {/* Info rows */}
                 <div className="flex flex-col gap-1.5">
                   <InfoRow label="Niveau d'études requis" value={EDUCATION_LABELS[job.educationLevel]} />
                   <InfoRow label="Niveau d'expérience"    value={EXPERIENCE_LABELS[job.experienceLevel]} />
                   <InfoRow label="Contrat proposé"         value={contract?.label || job.contractType} />
-                  <InfoRow label="Ville"               value={job.city} />
+                  <InfoRow label="Ville"                   value={job.city} />
                   <InfoRow
                     label="Salaire"
                     value={formatSalary(job.salaryMin, job.salaryMax)}

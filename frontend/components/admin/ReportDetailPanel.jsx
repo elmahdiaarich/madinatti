@@ -378,7 +378,7 @@ export default function ReportDetailPanel({ reportId, onClose, onRefresh }) {
       {/* Panneau */}
       <aside className="
         fixed right-0 top-0 bottom-0 z-40
-        w-full max-w-[420px] bg-white border-l border-gray-100 shadow-2xl
+        w-full max-w-[500px] bg-white border-l border-gray-100 shadow-2xl
         flex flex-col overflow-hidden
         animate-slide-in
       ">

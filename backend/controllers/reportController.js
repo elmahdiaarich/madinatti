@@ -470,18 +470,28 @@ const contactOwner = async (req, res) => {
     }
 
     // Créer un message interne BusinessMessage (si le propriétaire a un compte)
-    if (ownerId) {
-      await prisma.businessMessage.create({
-        data: {
-          userId:       ownerId,
-          type:         'REPORT_CONTACT',
-          targetType:   report.targetType,
-          targetId:     report.targetId,
-          targetTitle:  listingTitle,
-          adminMessage: message.trim(),
-        },
-      })
-    }
+   if (ownerId) {
+  await prisma.businessMessage.create({
+    data: {
+      userId:       ownerId,
+      type:         'REPORT_CONTACT',
+      targetType:   report.targetType,
+      targetId:     report.targetId,
+      targetTitle:  listingTitle,
+      adminMessage: message.trim(),
+    },
+  })
+
+  // ✅ AJOUT — notification cloche en temps réel
+  const { createNotification } = require('./notificationController')
+  await createNotification(
+    ownerId,
+    'REPORT_CONTACT',
+    'Un message de l\'équipe Madinatti 📬',
+    `L'administration vous a contacté au sujet de votre annonce "${listingTitle}".`,
+    '/dashboard/messages'
+  )
+}
 
     // Envoyer l'email (si échoue en local, on ne bloque pas le processus)
     try {

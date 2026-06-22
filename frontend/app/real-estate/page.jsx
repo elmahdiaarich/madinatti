@@ -8,6 +8,8 @@ import RealEstateCard from "@/components/real-estate/RealEstateCard";
 import RealEstateFilter from "@/components/real-estate/RealEstateFilter";
 import { cities } from "morocco-cities";
 import { useSearchParams } from "next/navigation";
+import BusinessAccountGate from "@/components/shared/BusinessAccountGate";
+
 
 const CATEGORIES = [
   { label: "Tous", listingType: null },
@@ -25,7 +27,6 @@ const PROPERTY_TABS = [
   { label: "Bureaux", value: "OFFICE" },
 ];
 
-// ─── Villes par région (morocco-cities) — used by the alert modal ────────────
 const citiesByRegion = cities.reduce((acc, city) => {
   if (!acc[city.region_name]) acc[city.region_name] = [];
   acc[city.region_name].push(city.name);
@@ -38,7 +39,7 @@ const LISTING_TYPES = [
   { value: "RENT", label: "Location" },
 ];
 
-// ─── ALERT MODAL COMPONENT (mirrors jobs/page.jsx pattern) ───────────────────
+// ─── ALERT MODAL COMPONENT ───────────────────────────────────────────────────
 function AlertModal({ token, onClose }) {
   const [form, setForm] = useState({
     listingType: "",
@@ -58,7 +59,6 @@ function AlertModal({ token, onClose }) {
     ? [...(citiesByRegion[form.region] || [])].sort()
     : [];
 
-  // Fetch real estate categories (already filtered to module: 'immobilier' server-side)
   useEffect(() => {
     realEstateService
       .getCategories()
@@ -110,7 +110,6 @@ function AlertModal({ token, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 animate-slide-up">
-        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-bold text-gray-900">
@@ -140,7 +139,6 @@ function AlertModal({ token, onClose }) {
         ) : (
           <>
             <div className="flex flex-col gap-3 mb-5">
-              {/* Listing type */}
               <div>
                 <label className="text-xs font-semibold text-gray-500 mb-1 block">
                   Type d'annonce
@@ -161,7 +159,6 @@ function AlertModal({ token, onClose }) {
                 </select>
               </div>
 
-              {/* Category (type de bien) */}
               <div>
                 <label className="text-xs font-semibold text-gray-500 mb-1 block">
                   Type de bien
@@ -182,7 +179,6 @@ function AlertModal({ token, onClose }) {
                 </select>
               </div>
 
-              {/* Region (morocco-cities) */}
               <div>
                 <label className="text-xs font-semibold text-gray-500 mb-1 block">
                   Région
@@ -201,7 +197,6 @@ function AlertModal({ token, onClose }) {
                 </select>
               </div>
 
-              {/* City — only shown if region selected and has cities */}
               {form.region && citiesInRegion.length > 0 && (
                 <div>
                   <label className="text-xs font-semibold text-gray-500 mb-1 block">
@@ -224,7 +219,6 @@ function AlertModal({ token, onClose }) {
                 </div>
               )}
 
-              {/* Price range */}
               <div>
                 <label className="text-xs font-semibold text-gray-500 mb-1 block">
                   Prix (MAD)
@@ -299,7 +293,6 @@ export default function RealEstatePage() {
   });
 
   const [fromHero, setFromHero] = useState(hasHeroFilters);
-
   const [listings, setListings] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -307,10 +300,10 @@ export default function RealEstatePage() {
   const [activeProp, setActiveProp] = useState(null);
   const [favoritedIds, setFavoritedIds] = useState(new Set());
   const [showAlertModal, setShowAlertModal] = useState(false);
+  const [showBusinessGate, setShowBusinessGate] = useState(false);
 
   useEffect(() => {
     const load = async () => {
-      console.log(user);
       setLoading(true);
       try {
         const [res, favRes] = await Promise.all([
@@ -334,7 +327,6 @@ export default function RealEstatePage() {
   const handleResetAll = () => {
     setFilters({ page: 1, limit: 12 });
     setFromHero(false);
-    // Clear URL params without navigation
     window.history.replaceState({}, "", "/real-estate");
   };
 
@@ -345,7 +337,7 @@ export default function RealEstatePage() {
       window.history.replaceState({}, "", "/real-estate");
       return;
     }
-    setFromHero(false); // user is now using sidebar filters
+    setFromHero(false);
     setFilters((prev) => {
       const merged = { ...prev, ...newFilters, page: 1 };
       Object.keys(merged).forEach((k) => {
@@ -384,6 +376,8 @@ export default function RealEstatePage() {
   const handlePublishClick = () => {
     if (user.role === "business") {
       router.push("/dashboard/listings/real-estate/create");
+    } else {
+      setShowBusinessGate(true);
     }
   };
 
@@ -391,7 +385,9 @@ export default function RealEstatePage() {
     <div className="min-h-screen bg-gray-50">
       {/* TYPE TABS */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-[1200px] mx-auto px-4 pt-2.5 pb-0 flex flex-col gap-0">
+        <div className="max-w-[1400px] mx-auto px-4 pt-2.5 pb-0 flex flex-col gap-0">
+
+          {/* Row 1: category tabs (Tous / Vente / Location) */}
           <div className="flex gap-1.5 flex-wrap pb-2">
             {CATEGORIES.map((cat) => (
               <button
@@ -406,49 +402,54 @@ export default function RealEstatePage() {
                 {cat.label}
               </button>
             ))}
-            {user?.role == "business" && (
-              <button
-                onClick={handlePublishClick}
-                className="ml-auto inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-[#2D5016] text-white font-bold text-sm shadow-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-150 hover:scale-105 active:scale-100 group shrink-0 cursor-pointer"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  className="w-3.5 h-3.5 fill-current shrink-0"
-                >
-                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                </svg>
-                Publier une annonce
-              </button>
-            )}
-            {user?.role === "citizen" && (
-              <button
-                onClick={() => setShowAlertModal(true)}
-                className="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#A7D129] text-[#2D5016] font-semibold text-sm hover:bg-[#E8F5D0] transition-all duration-150 shrink-0"
-              >
-                🔔 Créer une alerte
-              </button>
-            )}
           </div>
-          <div className="flex gap-1 flex-wrap pb-2.5">
-            {PROPERTY_TABS.map((tab) => (
-              <button
-                key={tab.label}
-                onClick={() => handlePropTab(tab)}
-                className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all duration-150 ${
-                  activeProp === tab.value
-                    ? "bg-gray-800 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+
+          {/* Row 2: property type tabs + action buttons aligned right */}
+          <div className="flex items-center justify-between pb-2.5 gap-2 flex-wrap">
+            <div className="flex gap-1 flex-wrap">
+              {PROPERTY_TABS.map((tab) => (
+                <button
+                  key={tab.label}
+                  onClick={() => handlePropTab(tab)}
+                  className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all duration-150 ${
+                    activeProp === tab.value
+                      ? "bg-gray-800 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Action buttons — right side */}
+            <div className="flex items-center gap-2 shrink-0">
+              {user?.role === "citizen" && (
+                <button
+                  onClick={() => setShowAlertModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#A7D129] text-[#2D5016] font-semibold text-sm hover:bg-[#E8F5D0] transition-all duration-150"
+                >
+                  🔔 Créer une alerte
+                </button>
+              )}
+              {(user?.role === "business" || user?.role === "citizen") && (
+                <button
+                  onClick={handlePublishClick}
+                  className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-[#2D5016] text-white font-bold text-sm shadow-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-150 hover:scale-105 active:scale-100 group cursor-pointer"
+                >
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current shrink-0">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                  </svg>
+                  Publier une annonce
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* MAIN */}
-      <div className="max-w-[1200px] mx-auto px-4 py-6 flex gap-6">
+      <div className="max-w-[1400px] mx-auto px-4 py-6 flex gap-6">
         {/* SIDEBAR */}
         <aside className="w-[260px] shrink-0">
           <div className="sticky top-[88px] overflow-y-auto max-h-[calc(100vh-88px)]">
@@ -488,13 +489,12 @@ export default function RealEstatePage() {
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {[...Array(6)].map((_, i) => (
+<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">              {[...Array(6)].map((_, i) => (
                 <div
                   key={i}
                   className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse"
                 >
-                  <div className="h-[220px] bg-gray-100" />
+                  <div className="h-[260px] bg-gray-100" />
                   <div className="p-4 space-y-3">
                     <div className="h-5 bg-gray-100 rounded w-1/2" />
                     <div className="h-4 bg-gray-100 rounded w-3/4" />
@@ -514,7 +514,8 @@ export default function RealEstatePage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
               {listings.map((l) => (
                 <RealEstateCard
                   key={l.id}
@@ -564,6 +565,19 @@ export default function RealEstatePage() {
       {showAlertModal && (
         <AlertModal token={token} onClose={() => setShowAlertModal(false)} />
       )}
+
+      {/* BUSINESS GATE MODAL */}
+     {showBusinessGate && (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+    style={{ animation: "fadeIn 0.15s ease-out" }}
+    onClick={(e) => { if (e.target === e.currentTarget) setShowBusinessGate(false); }}
+  >
+    <div style={{ animation: "slideUp 0.2s ease-out" }}>
+      <BusinessAccountGate onClose={() => setShowBusinessGate(false)} />
+    </div>
+  </div>
+)}
     </div>
   );
 }

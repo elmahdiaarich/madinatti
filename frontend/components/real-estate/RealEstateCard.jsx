@@ -9,8 +9,8 @@ import ReportModal from '@/components/shared/ReportModal';
 import ShareMenu from '@/components/shared/ShareMenu';
 
 const LISTING_TYPE_LABELS = {
-  SALE: { label: 'Vente',    color: 'bg-orange-500 text-white' },
-  RENT: { label: 'Location', color: 'bg-blue-500 text-white'   },
+  SALE: { label: 'Vente',    color: 'bg-green-600 text-white' },
+  RENT: { label: 'Location', color: 'bg-blue-500 text-white'  },
 };
 
 const PROPERTY_TYPE_LABELS = {
@@ -23,36 +23,115 @@ const PROPERTY_TYPE_LABELS = {
   SHOP:      'Commerce',
 };
 
+// ─── PhotoFrame with thumbnail strip below ───────────────────────────────────
 function PhotoFrame({ images, title }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [imgErr, setImgErr] = useState(false);
-  const cover = images?.find((i) => i.isCover) ?? images?.[0];
+
+  const sortedImages = images && images.length > 0
+    ? [...images].sort((a, b) => (b.isCover ? 1 : 0) - (a.isCover ? 1 : 0))
+    : [];
+
+  const hasMultiple = sortedImages.length > 1;
+  const current = sortedImages[currentIndex];
+
+  const handlePrev = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setImgErr(false);
+    setCurrentIndex((i) => (i - 1 + sortedImages.length) % sortedImages.length);
+  };
+
+  const handleNext = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setImgErr(false);
+    setCurrentIndex((i) => (i + 1) % sortedImages.length);
+  };
+
+  const handleThumb = (e, i) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setImgErr(false);
+    setCurrentIndex(i);
+  };
 
   return (
-    <div className="relative w-full h-[220px] bg-gray-100 overflow-hidden rounded-t-2xl">
-      {cover && !imgErr ? (
-        <img
-          src={cover.url}
-          alt={title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          onError={() => setImgErr(true)}
-        />
-      ) : (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 text-orange-300">
-          <svg className="w-14 h-14 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-          </svg>
-          <span className="text-sm font-medium text-orange-300">Pas de photo</span>
-        </div>
-      )}
+    <div className="rounded-t-2xl overflow-hidden">
+      {/* ── Main image ── */}
+      <div className="relative w-full h-[220px] bg-gray-100">
+        {current && !imgErr ? (
+          <img
+            src={current.url}
+            alt={title}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={() => setImgErr(true)}
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 text-orange-300">
+            <svg className="w-14 h-14 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            <span className="text-sm font-medium text-orange-300">Pas de photo</span>
+          </div>
+        )}
 
-      {images?.length > 1 && (
-        <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1">
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          {images.length}
+        {/* Prev / Next arrows */}
+        {hasMultiple && (
+          <>
+            <button
+              onClick={handlePrev}
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-all duration-150 opacity-0 group-hover:opacity-100 z-10"
+              aria-label="Photo précédente"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button
+              onClick={handleNext}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-all duration-150 opacity-0 group-hover:opacity-100 z-10"
+              aria-label="Photo suivante"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            {/* Counter badge */}
+            <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 z-10">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              {currentIndex + 1}/{sortedImages.length}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ── Thumbnail strip — only shown when multiple images ── */}
+      {hasMultiple && (
+        <div className="flex gap-1 p-1.5 bg-gray-50 border-t border-gray-100">
+          {sortedImages.slice(0, 4).map((img, i) => (
+            <button
+              key={i}
+              onClick={(e) => handleThumb(e, i)}
+              className={`relative h-14 flex-1 rounded overflow-hidden transition-all duration-150 ${
+                i === currentIndex
+                  ? 'ring-2 ring-orange-400 opacity-100'
+                  : 'opacity-55 hover:opacity-80'
+              }`}
+            >
+              <img src={img.url} alt="" className="w-full h-full object-cover" />
+              {i === 3 && sortedImages.length > 4 && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-xs font-bold">
+                  +{sortedImages.length - 4}
+                </div>
+              )}
+            </button>
+          ))}
         </div>
       )}
     </div>
@@ -187,18 +266,34 @@ export default function RealEstateCard({ listing, initialFavorited = false, onFa
   const propertyType = PROPERTY_TYPE_LABELS[listing.propertyType] || listing.propertyType;
   const fmtPrice     = (v) => Number(v).toLocaleString('fr-MA');
 
+  const formatDate = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    if (d.toDateString() === today.toDateString())
+      return `Aujourd'hui à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+    if (d.toDateString() === yesterday.toDateString())
+      return 'Hier';
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  const dateStr = formatDate(listing.createdAt);
+  const isRecent = dateStr.startsWith("Aujourd'hui") || dateStr === 'Hier';
+
   return (
     <>
       <div className="relative">
         <Link href={`/real-estate/${listing.id}`} className="block group">
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-lg hover:border-orange-200 transition-all duration-300">
 
-            {/* Photo */}
+            {/* Photo with thumbnail strip */}
             <div className="relative">
               <PhotoFrame images={listing.images} title={listing.title} />
 
               {/* Badges overlay */}
-              <div className="absolute top-3 left-3 flex gap-2">
+              <div className="absolute top-3 left-3 flex gap-2 z-10">
                 {listingType && (
                   <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${listingType.color}`}>
                     {listingType.label}
@@ -222,19 +317,28 @@ export default function RealEstateCard({ listing, initialFavorited = false, onFa
 
             {/* Content */}
             <div className="p-4">
-              <div className="flex items-baseline justify-between mb-2">
+
+              {/* Price + Premium badge */}
+              <div className="flex items-start justify-between gap-2 mb-2">
                 <span className="text-xl font-extrabold text-orange-600">
                   {fmtPrice(listing.price)} MAD
                   {listing.listingType === 'RENT' && (
                     <span className="text-sm font-medium text-gray-400">/mois</span>
                   )}
                 </span>
+                {listing.isFeatured && (
+                  <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-yellow-400/60 text-yellow-500 bg-yellow-50">
+                    ⭐ Premium
+                  </span>
+                )}
               </div>
 
-              <h2 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 group-hover:text-orange-600 transition-colors mb-2">
+              {/* Title */}
+              <h2 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 mb-2">
                 {listing.title}
               </h2>
 
+              {/* Location */}
               <div className="flex items-center gap-1 text-gray-500 text-xs mb-3">
                 <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -244,6 +348,7 @@ export default function RealEstateCard({ listing, initialFavorited = false, onFa
                 <span className="truncate">{listing.city || listing.location}</span>
               </div>
 
+              {/* Stats row */}
               <div className="flex items-center gap-3 text-xs text-gray-500 border-t border-gray-50 pt-3">
                 {listing.surface && (
                   <div className="flex items-center gap-1">
@@ -272,10 +377,8 @@ export default function RealEstateCard({ listing, initialFavorited = false, onFa
                     <span className="font-semibold text-gray-700">{listing.bathrooms} sdb</span>
                   </div>
                 )}
-                <div className="ml-auto text-[10px] text-gray-300">
-                  {listing.createdAt
-                    ? new Date(listing.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                    : ''}
+                <div className={`ml-auto text-[14px] font-semibold ${isRecent ? 'text-green-600' : 'text-gray-500'}`}>
+                  {dateStr}
                 </div>
               </div>
             </div>
