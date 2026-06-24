@@ -5,15 +5,15 @@ import { carsService } from "@/services/carsService";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import CarCard   from "@/components/cars/CarCard";
+import CarFilter from "@/components/cars/CarFilter";
 import BusinessAccountGate from "@/components/shared/BusinessAccountGate";
 import { cities } from "morocco-cities";
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-
 const LISTING_TYPE_TABS = [
-  { label: "Tous",      value: null },
-  { label: "Vente",     value: "SALE" },
-  { label: "Location",  value: "RENT" },
+  { label: "Tous",     value: null },
+  { label: "Vente",    value: "SALE" },
+  { label: "Location", value: "RENT" },
 ];
 
 const CONDITION_TABS = [
@@ -24,29 +24,29 @@ const CONDITION_TABS = [
 ];
 
 const FUEL_TYPES = [
-  { value: "PETROL",   label: "Essence" },
-  { value: "DIESEL",   label: "Diesel" },
-  { value: "ELECTRIC", label: "Électrique" },
-  { value: "HYBRID",   label: "Hybride" },
-  { value: "LPG",      label: "GPL" },
+  { value: "PETROL",    label: "Essence" },
+  { value: "DIESEL",    label: "Diesel" },
+  { value: "ELECTRIC",  label: "Électrique" },
+  { value: "HYBRID",    label: "Hybride" },
+  { value: "LPG",       label: "GPL" },
 ];
 
 const TRANSMISSIONS = [
-  { value: "MANUAL",        label: "Manuelle" },
-  { value: "AUTOMATIC",     label: "Automatique" },
+  { value: "MANUAL",         label: "Manuelle" },
+  { value: "AUTOMATIC",      label: "Automatique" },
   { value: "SEMI_AUTOMATIC", label: "Semi-auto" },
 ];
 
 const BODY_TYPES = [
-  { value: "SEDAN",      label: "Berline" },
-  { value: "SUV",        label: "SUV" },
-  { value: "HATCHBACK",  label: "Citadine" },
-  { value: "COUPE",      label: "Coupé" },
-  { value: "CONVERTIBLE",label: "Cabriolet" },
-  { value: "WAGON",      label: "Break" },
-  { value: "VAN",        label: "Van" },
-  { value: "PICKUP",     label: "Pickup" },
-  { value: "MINIVAN",    label: "Minivan" },
+  { value: "SEDAN",       label: "Berline" },
+  { value: "SUV",         label: "SUV" },
+  { value: "HATCHBACK",   label: "Citadine" },
+  { value: "COUPE",       label: "Coupé" },
+  { value: "CONVERTIBLE", label: "Cabriolet" },
+  { value: "WAGON",       label: "Break" },
+  { value: "VAN",         label: "Van" },
+  { value: "PICKUP",      label: "Pickup" },
+  { value: "MINIVAN",     label: "Minivan" },
 ];
 
 const SORT_OPTIONS = [
@@ -57,6 +57,10 @@ const SORT_OPTIONS = [
   { value: "mileage_asc",    label: "Km croissant" },
 ];
 
+const FUEL_LABELS  = { PETROL: "Essence", DIESEL: "Diesel", ELECTRIC: "Électrique", HYBRID: "Hybride", LPG: "GPL" };
+const TRANS_LABELS = { MANUAL: "Manuelle", AUTOMATIC: "Automatique", SEMI_AUTOMATIC: "Semi-auto" };
+const COND_LABELS  = { NEW: "Neuf", USED: "Occasion", DAMAGED: "Accidenté" };
+
 const citiesByRegion = cities.reduce((acc, c) => {
   if (!acc[c.region_name]) acc[c.region_name] = [];
   acc[c.region_name].push(c.name);
@@ -64,232 +68,228 @@ const citiesByRegion = cities.reduce((acc, c) => {
 }, {});
 const ALL_REGIONS = Object.keys(citiesByRegion).sort();
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
 const fmtPrice = (v) => Number(v).toLocaleString("fr-MA");
 
 // ── Car Card ──────────────────────────────────────────────────────────────────
 
-function CarCard({ listing, initialFavorited }) {
-  const { user } = useAuth();
-  const [favorited, setFavorited] = useState(initialFavorited);
-  const [favLoading, setFavLoading] = useState(false);
+// function CarCard({ listing, initialFavorited }) {
+//   const { user } = useAuth();
+//   const [favorited, setFavorited] = useState(initialFavorited);
+//   const [favLoading, setFavLoading] = useState(false);
 
-  const cover = Array.isArray(listing.images)
-    ? listing.images.find((i) => i.isCover)?.url ?? listing.images[0]?.url
-    : null;
+//   const cover = Array.isArray(listing.images)
+//     ? listing.images.find((i) => i.isCover)?.url ?? listing.images[0]?.url
+//     : null;
 
-  const handleFav = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!user || favLoading) return;
-    const prev = favorited;
-    setFavorited(!prev);
-    setFavLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      await carsService.toggleFavorite(listing.id, token);
-    } catch {
-      setFavorited(prev);
-    } finally {
-      setFavLoading(false);
-    }
-  };
+//   const handleFav = async (e) => {
+//     e.preventDefault();
+//     e.stopPropagation();
+//     if (!user || favLoading) return;
+//     const prev = favorited;
+//     setFavorited(!prev);
+//     setFavLoading(true);
+//     try {
+//       const token = localStorage.getItem("token");
+//       await carsService.toggleFavorite(listing.id, token);
+//     } catch {
+//       setFavorited(prev);
+//     } finally {
+//       setFavLoading(false);
+//     }
+//   };
 
-  const FUEL_LABELS = { PETROL: "Essence", DIESEL: "Diesel", ELECTRIC: "Électrique", HYBRID: "Hybride", LPG: "GPL" };
-  const TRANS_LABELS = { MANUAL: "Manuelle", AUTOMATIC: "Automatique", SEMI_AUTOMATIC: "Semi-auto" };
-  const COND_LABELS  = { NEW: "Neuf", USED: "Occasion", DAMAGED: "Accidenté" };
+//   return (
+//     <Link href={`/cars/${listing.id}`} className="group block bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200">
+//       <div className="relative h-[200px] bg-gray-100 overflow-hidden">
+//         {cover ? (
+//           <img src={cover} alt={listing.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+//         ) : (
+//           <div className="w-full h-full flex items-center justify-center text-gray-200 text-5xl">🚗</div>
+//         )}
+//         <div className="absolute top-3 left-3 flex gap-1.5 flex-wrap">
+//           <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${listing.listingType === "SALE" ? "bg-[#2D5016] text-white" : "bg-[#A7D129] text-[#2D5016]"}`}>
+//             {listing.listingType === "SALE" ? "Vente" : "Location"}
+//           </span>
+//           {listing.condition && (
+//             <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-white/90 text-gray-700">
+//               {COND_LABELS[listing.condition]}
+//             </span>
+//           )}
+//         </div>
+//         {listing.isFeatured && (
+//           <span className="absolute top-3 right-10 px-2.5 py-1 rounded-full text-[11px] font-bold bg-yellow-400 text-yellow-900">À la une</span>
+//         )}
+//         {user && (
+//           <button onClick={handleFav}
+//             className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+//               favorited ? "bg-[#A7D129] text-[#2D5016]" : "bg-white/80 text-gray-400 hover:bg-[#E8F5D0] hover:text-[#2D5016]"
+//             }`}
+//           >
+//             <svg viewBox="0 0 24 24" className="w-4 h-4" fill={favorited ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2}>
+//               <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+//             </svg>
+//           </button>
+//         )}
+//       </div>
 
-  return (
-    <Link href={`/cars/${listing.id}`} className="group block bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200">
-      <div className="relative h-[200px] bg-gray-100 overflow-hidden">
-        {cover ? (
-          <img src={cover} alt={listing.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-200 text-5xl">🚗</div>
-        )}
-        <div className="absolute top-3 left-3 flex gap-1.5 flex-wrap">
-          <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${listing.listingType === "SALE" ? "bg-blue-600 text-white" : "bg-emerald-600 text-white"}`}>
-            {listing.listingType === "SALE" ? "Vente" : "Location"}
-          </span>
-          {listing.condition && (
-            <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-white/90 text-gray-700">
-              {COND_LABELS[listing.condition]}
-            </span>
-          )}
-        </div>
-        {listing.isFeatured && (
-          <span className="absolute top-3 right-10 px-2.5 py-1 rounded-full text-[11px] font-bold bg-yellow-400 text-yellow-900">À la une</span>
-        )}
-        {user && (
-          <button onClick={handleFav}
-            className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-all ${favorited ? "bg-blue-600 text-white" : "bg-white/80 text-gray-400 hover:bg-blue-50 hover:text-blue-600"}`}
-          >
-            <svg viewBox="0 0 24 24" className="w-4 h-4" fill={favorited ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
-            </svg>
-          </button>
-        )}
-      </div>
+//       <div className="p-4">
+//         <p className="font-bold text-gray-900 text-sm leading-tight line-clamp-1 mb-1 group-hover:text-[#2D5016] transition-colors">
+//           {listing.make} {listing.model} {listing.year}
+//         </p>
+//         <p className="text-xs text-gray-500 line-clamp-1 mb-3">{listing.title}</p>
 
-      <div className="p-4">
-        <p className="font-bold text-gray-900 text-sm leading-tight line-clamp-1 mb-1 group-hover:text-blue-600 transition-colors">
-          {listing.make} {listing.model} {listing.year}
-        </p>
-        <p className="text-xs text-gray-500 line-clamp-1 mb-3">{listing.title}</p>
+//         <div className="flex flex-wrap gap-1.5 mb-3">
+//           {listing.fuelType && (
+//             <span className="px-2 py-0.5 rounded-full bg-[#E8F5D0] text-[#2D5016] text-[11px] font-medium">
+//               {FUEL_LABELS[listing.fuelType] ?? listing.fuelType}
+//             </span>
+//           )}
+//           {listing.transmission && (
+//             <span className="px-2 py-0.5 rounded-full bg-[#E8F5D0] text-[#2D5016] text-[11px] font-medium">
+//               {TRANS_LABELS[listing.transmission] ?? listing.transmission}
+//             </span>
+//           )}
+//           {listing.mileage != null && (
+//             <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[11px] font-medium">
+//               {listing.mileage.toLocaleString("fr-MA")} km
+//             </span>
+//           )}
+//         </div>
 
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {listing.fuelType && (
-            <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[11px] font-medium">
-              {FUEL_LABELS[listing.fuelType] ?? listing.fuelType}
-            </span>
-          )}
-          {listing.transmission && (
-            <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[11px] font-medium">
-              {TRANS_LABELS[listing.transmission] ?? listing.transmission}
-            </span>
-          )}
-          {listing.mileage != null && (
-            <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[11px] font-medium">
-              {listing.mileage.toLocaleString("fr-MA")} km
-            </span>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between">
-          <p className="text-lg font-extrabold text-blue-700">
-            {fmtPrice(listing.price)} MAD
-            {listing.listingType === "RENT" && <span className="text-xs font-normal text-gray-400">/j</span>}
-          </p>
-          {listing.isNegotiable && (
-            <span className="text-[10px] text-emerald-600 font-semibold border border-emerald-200 rounded-full px-2 py-0.5">Négociable</span>
-          )}
-        </div>
-        {listing.city && (
-          <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
-            <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            {listing.city}
-          </p>
-        )}
-      </div>
-    </Link>
-  );
-}
+//         <div className="flex items-center justify-between">
+//           <p className="text-lg font-extrabold text-[#2D5016]">
+//             {fmtPrice(listing.price)} MAD
+//             {listing.listingType === "RENT" && <span className="text-xs font-normal text-gray-400">/j</span>}
+//           </p>
+//           {listing.isNegotiable && (
+//             <span className="text-[10px] text-[#7BA428] font-semibold border border-[#A7D129] rounded-full px-2 py-0.5">Négociable</span>
+//           )}
+//         </div>
+//         {listing.city && (
+//           <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
+//             <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+//               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+//             </svg>
+//             {listing.city}
+//           </p>
+//         )}
+//       </div>
+//     </Link>
+//   );
+// }
 
 // ── Sidebar Filter ─────────────────────────────────────────────────────────────
 
-function CarFilter({ onFilter }) {
-  const [form, setForm] = useState({
-    make: "", model: "", minYear: "", maxYear: "",
-    minPrice: "", maxPrice: "", maxMileage: "",
-    fuelType: "", transmission: "", bodyType: "",
-    region: "", city: "",
-  });
+// function CarFilter({ onFilter }) {
+//   const [form, setForm] = useState({
+//     make: "", model: "", minYear: "", maxYear: "",
+//     minPrice: "", maxPrice: "", maxMileage: "",
+//     fuelType: "", transmission: "", bodyType: "",
+//     region: "", city: "",
+//   });
 
-  const citiesInRegion = form.region ? [...(citiesByRegion[form.region] || [])].sort() : [];
+//   const citiesInRegion = form.region ? [...(citiesByRegion[form.region] || [])].sort() : [];
 
-  const apply = () => {
-    const f = {};
-    Object.entries(form).forEach(([k, v]) => { if (v) f[k] = v; });
-    onFilter(f);
-  };
+//   const apply = () => {
+//     const f = {};
+//     Object.entries(form).forEach(([k, v]) => { if (v) f[k] = v; });
+//     onFilter(f);
+//   };
 
-  const reset = () => {
-    setForm({ make: "", model: "", minYear: "", maxYear: "", minPrice: "", maxPrice: "", maxMileage: "", fuelType: "", transmission: "", bodyType: "", region: "", city: "" });
-    onFilter({});
-  };
+//   const reset = () => {
+//     setForm({ make: "", model: "", minYear: "", maxYear: "", minPrice: "", maxPrice: "", maxMileage: "", fuelType: "", transmission: "", bodyType: "", region: "", city: "" });
+//     onFilter({});
+//   };
 
-  const inp = "w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition bg-white";
-  const lbl = "text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1 block";
+//   const inp = "w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#A7D129] focus:ring-1 focus:ring-[#A7D129] transition bg-white";
+//   const lbl = "text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1 block";
 
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col gap-4">
-      <p className="font-bold text-gray-800 text-sm">Filtres</p>
+//   return (
+//     <div className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col gap-4">
+//       <p className="font-bold text-gray-800 text-sm">Filtres</p>
 
-      <div>
-        <label className={lbl}>Marque</label>
-        <input value={form.make} onChange={(e) => setForm((p) => ({ ...p, make: e.target.value }))} placeholder="Ex: Toyota" className={inp} />
-      </div>
-      <div>
-        <label className={lbl}>Modèle</label>
-        <input value={form.model} onChange={(e) => setForm((p) => ({ ...p, model: e.target.value }))} placeholder="Ex: Corolla" className={inp} />
-      </div>
+//       <div>
+//         <label className={lbl}>Marque</label>
+//         <input value={form.make} onChange={(e) => setForm((p) => ({ ...p, make: e.target.value }))} placeholder="Ex: Toyota" className={inp} />
+//       </div>
+//       <div>
+//         <label className={lbl}>Modèle</label>
+//         <input value={form.model} onChange={(e) => setForm((p) => ({ ...p, model: e.target.value }))} placeholder="Ex: Corolla" className={inp} />
+//       </div>
 
-      <div>
-        <label className={lbl}>Année</label>
-        <div className="flex gap-2">
-          <input type="number" value={form.minYear} onChange={(e) => setForm((p) => ({ ...p, minYear: e.target.value }))} placeholder="De" className={inp} />
-          <input type="number" value={form.maxYear} onChange={(e) => setForm((p) => ({ ...p, maxYear: e.target.value }))} placeholder="À" className={inp} />
-        </div>
-      </div>
+//       <div>
+//         <label className={lbl}>Année</label>
+//         <div className="flex gap-2">
+//           <input type="number" value={form.minYear} onChange={(e) => setForm((p) => ({ ...p, minYear: e.target.value }))} placeholder="De" className={inp} />
+//           <input type="number" value={form.maxYear} onChange={(e) => setForm((p) => ({ ...p, maxYear: e.target.value }))} placeholder="À" className={inp} />
+//         </div>
+//       </div>
 
-      <div>
-        <label className={lbl}>Prix (MAD)</label>
-        <div className="flex gap-2">
-          <input type="number" value={form.minPrice} onChange={(e) => setForm((p) => ({ ...p, minPrice: e.target.value }))} placeholder="Min" className={inp} />
-          <input type="number" value={form.maxPrice} onChange={(e) => setForm((p) => ({ ...p, maxPrice: e.target.value }))} placeholder="Max" className={inp} />
-        </div>
-      </div>
+//       <div>
+//         <label className={lbl}>Prix (MAD)</label>
+//         <div className="flex gap-2">
+//           <input type="number" value={form.minPrice} onChange={(e) => setForm((p) => ({ ...p, minPrice: e.target.value }))} placeholder="Min" className={inp} />
+//           <input type="number" value={form.maxPrice} onChange={(e) => setForm((p) => ({ ...p, maxPrice: e.target.value }))} placeholder="Max" className={inp} />
+//         </div>
+//       </div>
 
-      <div>
-        <label className={lbl}>Kilométrage max</label>
-        <input type="number" value={form.maxMileage} onChange={(e) => setForm((p) => ({ ...p, maxMileage: e.target.value }))} placeholder="Ex: 100000" className={inp} />
-      </div>
+//       <div>
+//         <label className={lbl}>Kilométrage max</label>
+//         <input type="number" value={form.maxMileage} onChange={(e) => setForm((p) => ({ ...p, maxMileage: e.target.value }))} placeholder="Ex: 100000" className={inp} />
+//       </div>
 
-      <div>
-        <label className={lbl}>Carburant</label>
-        <select value={form.fuelType} onChange={(e) => setForm((p) => ({ ...p, fuelType: e.target.value }))} className={inp}>
-          <option value="">Tous</option>
-          {FUEL_TYPES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-        </select>
-      </div>
+//       <div>
+//         <label className={lbl}>Carburant</label>
+//         <select value={form.fuelType} onChange={(e) => setForm((p) => ({ ...p, fuelType: e.target.value }))} className={inp}>
+//           <option value="">Tous</option>
+//           {FUEL_TYPES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+//         </select>
+//       </div>
 
-      <div>
-        <label className={lbl}>Boîte de vitesse</label>
-        <select value={form.transmission} onChange={(e) => setForm((p) => ({ ...p, transmission: e.target.value }))} className={inp}>
-          <option value="">Toutes</option>
-          {TRANSMISSIONS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-        </select>
-      </div>
+//       <div>
+//         <label className={lbl}>Boîte de vitesse</label>
+//         <select value={form.transmission} onChange={(e) => setForm((p) => ({ ...p, transmission: e.target.value }))} className={inp}>
+//           <option value="">Toutes</option>
+//           {TRANSMISSIONS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+//         </select>
+//       </div>
 
-      <div>
-        <label className={lbl}>Carrosserie</label>
-        <select value={form.bodyType} onChange={(e) => setForm((p) => ({ ...p, bodyType: e.target.value }))} className={inp}>
-          <option value="">Toutes</option>
-          {BODY_TYPES.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
-        </select>
-      </div>
+//       <div>
+//         <label className={lbl}>Carrosserie</label>
+//         <select value={form.bodyType} onChange={(e) => setForm((p) => ({ ...p, bodyType: e.target.value }))} className={inp}>
+//           <option value="">Toutes</option>
+//           {BODY_TYPES.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
+//         </select>
+//       </div>
 
-      <div>
-        <label className={lbl}>Région</label>
-        <select value={form.region} onChange={(e) => setForm((p) => ({ ...p, region: e.target.value, city: "" }))} className={inp}>
-          <option value="">Toutes</option>
-          {ALL_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
-        </select>
-      </div>
+//       <div>
+//         <label className={lbl}>Région</label>
+//         <select value={form.region} onChange={(e) => setForm((p) => ({ ...p, region: e.target.value, city: "" }))} className={inp}>
+//           <option value="">Toutes</option>
+//           {ALL_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+//         </select>
+//       </div>
 
-      {form.region && citiesInRegion.length > 0 && (
-        <div>
-          <label className={lbl}>Ville</label>
-          <select value={form.city} onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))} className={inp}>
-            <option value="">Toutes</option>
-            {citiesInRegion.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-      )}
+//       {form.region && citiesInRegion.length > 0 && (
+//         <div>
+//           <label className={lbl}>Ville</label>
+//           <select value={form.city} onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))} className={inp}>
+//             <option value="">Toutes</option>
+//             {citiesInRegion.map((c) => <option key={c} value={c}>{c}</option>)}
+//           </select>
+//         </div>
+//       )}
 
-      <button onClick={apply} className="w-full py-2.5 bg-blue-700 text-white font-bold rounded-xl text-sm hover:bg-blue-800 transition">
-        Appliquer
-      </button>
-      <button onClick={reset} className="w-full py-2 border border-gray-200 text-gray-500 font-semibold rounded-xl text-sm hover:bg-gray-50 transition">
-        Réinitialiser
-      </button>
-    </div>
-  );
-}
+//       <button onClick={apply} className="w-full py-2.5 bg-[#2D5016] text-white font-bold rounded-xl text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition">
+//         Appliquer
+//       </button>
+//       <button onClick={reset} className="w-full py-2 border border-gray-200 text-gray-500 font-semibold rounded-xl text-sm hover:bg-gray-50 transition">
+//         Réinitialiser
+//       </button>
+//     </div>
+//   );
+// }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
@@ -306,13 +306,13 @@ export default function CarsPage() {
     return init;
   });
 
-  const [listings, setListings]     = useState([]);
-  const [pagination, setPagination] = useState(null);
-  const [loading, setLoading]       = useState(true);
+  const [listings, setListings]         = useState([]);
+  const [pagination, setPagination]     = useState(null);
+  const [loading, setLoading]           = useState(true);
   const [favoritedIds, setFavoritedIds] = useState(new Set());
-  const [activeType, setActiveType] = useState(null);
-  const [activeCond, setActiveCond] = useState(null);
-  const [sort, setSort]             = useState("createdAt_desc");
+  const [activeType, setActiveType]     = useState(null);
+  const [activeCond, setActiveCond]     = useState(null);
+  const [sort, setSort]                 = useState("createdAt_desc");
   const [showBusinessGate, setShowBusinessGate] = useState(false);
 
   useEffect(() => {
@@ -379,14 +379,15 @@ export default function CarsPage() {
       {/* TOP NAV BAR */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
         <div className="max-w-[1400px] mx-auto px-4 pt-2.5 pb-0 flex flex-col gap-0">
+
           {/* Row 1: listing type tabs */}
           <div className="flex gap-1.5 flex-wrap pb-2">
             {LISTING_TYPE_TABS.map((t) => (
               <button key={t.label} onClick={() => handleTypeTab(t.value)}
                 className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
                   activeType === t.value
-                    ? "bg-blue-700 text-white shadow-sm"
-                    : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                    ? "bg-[#2D5016] text-white shadow-sm"
+                    : "bg-[#E8F5D0] text-[#2D5016] hover:bg-[#A7D129] hover:text-white"
                 }`}
               >
                 {t.label}
@@ -412,14 +413,14 @@ export default function CarsPage() {
 
             <div className="flex items-center gap-2 shrink-0">
               <select value={sort} onChange={(e) => setSort(e.target.value)}
-                className="border border-gray-200 rounded-full px-3 py-1.5 text-xs font-semibold text-gray-600 outline-none focus:border-blue-400 bg-white"
+                className="border border-gray-200 rounded-full px-3 py-1.5 text-xs font-semibold text-gray-600 outline-none focus:border-[#A7D129] bg-white"
               >
                 {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
 
               {(user?.role === "business" || user?.role === "citizen" || !user) && (
                 <button onClick={handlePublishClick}
-                  className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-blue-700 text-white font-bold text-sm shadow-sm hover:bg-blue-800 transition hover:scale-105 active:scale-100"
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#2D5016] text-white font-bold text-sm shadow-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition hover:scale-105 active:scale-100"
                 >
                   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current shrink-0">
                     <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
@@ -480,7 +481,6 @@ export default function CarsPage() {
             </div>
           )}
 
-          {/* PAGINATION */}
           {pagination && pagination.totalPages > 1 && (
             <div className="flex justify-center gap-1.5 mt-8">
               <button onClick={() => handlePageChange(pagination.page - 1)} disabled={pagination.page === 1}
@@ -490,8 +490,8 @@ export default function CarsPage() {
                 <button key={i} onClick={() => handlePageChange(i + 1)}
                   className={`w-9 h-9 rounded-full text-sm font-medium transition ${
                     pagination.page === i + 1
-                      ? "bg-blue-700 text-white shadow-sm"
-                      : "bg-white text-blue-700 border border-gray-200 hover:border-blue-400"
+                      ? "bg-[#2D5016] text-white shadow-sm"
+                      : "bg-white text-[#2D5016] border border-gray-200 hover:border-[#A7D129]"
                   }`}
                 >{i + 1}</button>
               ))}

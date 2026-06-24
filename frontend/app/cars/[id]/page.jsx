@@ -9,13 +9,11 @@ import MapFrame from "@/components/shared/MapFrame";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import ReportModal from "@/components/shared/ReportModal";
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const FUEL_LABELS     = { PETROL: "Essence", DIESEL: "Diesel", ELECTRIC: "Électrique", HYBRID: "Hybride", LPG: "GPL", OTHER: "Autre" };
-const TRANS_LABELS    = { MANUAL: "Manuelle", AUTOMATIC: "Automatique", SEMI_AUTOMATIC: "Semi-automatique" };
-const BODY_LABELS     = { SEDAN: "Berline", SUV: "SUV", HATCHBACK: "Citadine", COUPE: "Coupé", CONVERTIBLE: "Cabriolet", WAGON: "Break", VAN: "Van", PICKUP: "Pickup", MINIVAN: "Minivan", OTHER: "Autre" };
-const COND_LABELS     = { NEW: "Neuf", USED: "Occasion", DAMAGED: "Accidenté" };
-const TYPE_LABELS     = { SALE: "Vente", RENT: "Location" };
+const FUEL_LABELS  = { PETROL: "Essence", DIESEL: "Diesel", ELECTRIC: "Électrique", HYBRID: "Hybride", LPG: "GPL", OTHER: "Autre" };
+const TRANS_LABELS = { MANUAL: "Manuelle", AUTOMATIC: "Automatique", SEMI_AUTOMATIC: "Semi-automatique" };
+const BODY_LABELS  = { SEDAN: "Berline", SUV: "SUV", HATCHBACK: "Citadine", COUPE: "Coupé", CONVERTIBLE: "Cabriolet", WAGON: "Break", VAN: "Van", PICKUP: "Pickup", MINIVAN: "Minivan", OTHER: "Autre" };
+const COND_LABELS  = { NEW: "Neuf", USED: "Occasion", DAMAGED: "Accidenté" };
+const TYPE_LABELS  = { SALE: "Vente", RENT: "Location" };
 
 const fmtPrice = (v) => Number(v).toLocaleString("fr-MA");
 const fmtDate  = (d) => d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }) : "";
@@ -25,9 +23,7 @@ const fmtDate  = (d) => d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-di
 function Gallery({ images }) {
   const [active, setActive] = useState(0);
   if (!images?.length)
-    return (
-      <div className="w-full h-[380px] bg-gray-100 rounded-2xl flex items-center justify-center text-gray-200 text-7xl">🚗</div>
-    );
+    return <div className="w-full h-[380px] bg-gray-100 rounded-2xl flex items-center justify-center text-gray-200 text-7xl">🚗</div>;
   return (
     <div className="flex flex-col gap-3">
       <div className="relative w-full h-[380px] bg-gray-100 rounded-2xl overflow-hidden">
@@ -40,7 +36,7 @@ function Gallery({ images }) {
         <div className="flex gap-2 overflow-x-auto pb-1">
           {images.map((img, i) => (
             <button key={i} onClick={() => setActive(i)}
-              className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition ${active === i ? "border-blue-500" : "border-transparent hover:border-blue-200"}`}
+              className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition ${active === i ? "border-[#A7D129]" : "border-transparent hover:border-[#E8F5D0]"}`}
             >
               <img src={img.url} alt="" className="w-full h-full object-cover" />
             </button>
@@ -75,15 +71,13 @@ function InquiryForm({ listingId }) {
     const errs = {};
     if (!form.message.trim() || form.message.trim().length < 5)
       errs.message = "Message requis (min 5 caractères)";
-    if (form.contactPhone) {
-      if (!/^(\+212|0)(6|7)\d{8}$/.test(form.contactPhone.replace(/\s/g, "")))
-        errs.contactPhone = "Numéro invalide (ex: 0612345678)";
-    }
+    if (form.contactPhone && !/^(\+212|0)(6|7)\d{8}$/.test(form.contactPhone.replace(/\s/g, "")))
+      errs.contactPhone = "Numéro invalide (ex: 0612345678)";
     return errs;
   };
 
   const handleSend = async () => {
-    if (!user) { return; }
+    if (!user) return;
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setErrors({});
@@ -107,13 +101,13 @@ function InquiryForm({ listingId }) {
     );
 
   const inp = (field) => `w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition ${
-    errors[field] ? "border-red-300 focus:ring-red-200 bg-red-50" : "border-gray-200 focus:ring-blue-300 focus:border-transparent"
+    errors[field] ? "border-red-300 focus:ring-red-200 bg-red-50" : "border-gray-200 focus:ring-[#A7D129] focus:border-transparent"
   }`;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-        <span className="w-1 h-5 rounded-full bg-blue-500 inline-block" />
+        <span className="w-1 h-5 rounded-full bg-[#A7D129] inline-block" />
         <h2 className="font-bold text-gray-900 text-base">Contacter le vendeur</h2>
       </div>
       <div className="px-6 py-5 flex flex-col gap-3">
@@ -144,7 +138,7 @@ function InquiryForm({ listingId }) {
           <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-xl px-3 py-2">❌ Erreur lors de l'envoi.</p>
         )}
         <button onClick={handleSend} disabled={!user || status === "sending"}
-          className="w-full py-3 bg-blue-700 text-white font-bold rounded-xl hover:bg-blue-800 transition disabled:opacity-50"
+          className="w-full py-3 bg-[#2D5016] text-white font-bold rounded-xl hover:bg-[#A7D129] hover:text-[#2D5016] transition disabled:opacity-50"
         >
           {status === "sending" ? "Envoi..." : "Envoyer le message"}
         </button>
@@ -156,16 +150,16 @@ function InquiryForm({ listingId }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function CarDetailPage() {
-  const { id }  = useParams();
+  const { id }   = useParams();
   const { user } = useAuth();
 
-  const [listing, setListing]       = useState(null);
-  const [related, setRelated]       = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState(null);
-  const [isFavorited, setIsFavorited] = useState(false);
-  const [favLoading, setFavLoading] = useState(false);
-  const [showReport, setShowReport] = useState(false);
+  const [listing, setListing]           = useState(null);
+  const [related, setRelated]           = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState(null);
+  const [isFavorited, setIsFavorited]   = useState(false);
+  const [favLoading, setFavLoading]     = useState(false);
+  const [showReport, setShowReport]     = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -203,7 +197,7 @@ export default function CarDetailPage() {
         <span className="text-6xl">🚗</span>
         <h1 className="text-2xl font-bold text-gray-800">Annonce introuvable</h1>
         <p className="text-gray-500 text-sm">Cette annonce n'existe plus ou a été supprimée.</p>
-        <Link href="/cars" className="mt-2 px-6 py-2.5 bg-blue-700 text-white rounded-full text-sm font-semibold hover:bg-blue-800 transition">
+        <Link href="/cars" className="mt-2 px-6 py-2.5 bg-[#2D5016] text-white rounded-full text-sm font-semibold hover:bg-[#A7D129] hover:text-[#2D5016] transition">
           Voir toutes les annonces
         </Link>
       </div>
@@ -235,9 +229,9 @@ export default function CarDetailPage() {
       <div className="bg-white border-b border-gray-100 sticky top-0 z-20 shadow-sm">
         <div className="max-w-[1200px] mx-auto px-4 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-sm text-gray-500 min-w-0">
-            <Link href="/" className="hover:text-blue-600 transition-colors shrink-0">Accueil</Link>
+            <Link href="/" className="hover:text-[#A7D129] transition-colors shrink-0">Accueil</Link>
             <span className="text-gray-300 shrink-0">/</span>
-            <Link href="/cars" className="hover:text-blue-600 transition-colors shrink-0">Automobile</Link>
+            <Link href="/cars" className="hover:text-[#A7D129] transition-colors shrink-0">Automobile</Link>
             <span className="text-gray-300 shrink-0">/</span>
             <span className="text-gray-800 font-medium truncate">{listing.make} {listing.model}</span>
           </div>
@@ -265,12 +259,12 @@ export default function CarDetailPage() {
       </div>
 
       {/* HERO STRIP */}
-      <div className="bg-gradient-to-br from-blue-900 to-blue-700 text-white py-8">
+      <div className="bg-gradient-to-br from-[#2D5016] to-[#7BA428] text-white py-8">
         <div className="max-w-[1200px] mx-auto px-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap gap-2 mb-3">
-                <span className={`px-3 py-1 rounded-full text-xs font-extrabold ${listing.listingType === "SALE" ? "bg-white text-blue-900" : "bg-emerald-400 text-emerald-900"}`}>
+                <span className={`px-3 py-1 rounded-full text-xs font-extrabold ${listing.listingType === "SALE" ? "bg-white text-[#2D5016]" : "bg-[#A7D129] text-[#2D5016]"}`}>
                   {TYPE_LABELS[listing.listingType]}
                 </span>
                 {listing.condition && (
@@ -301,13 +295,15 @@ export default function CarDetailPage() {
                 {listing.listingType === "RENT" && <span className="text-lg font-medium opacity-70">/jour</span>}
               </p>
               {listing.isNegotiable && (
-                <span className="text-xs bg-emerald-400/20 border border-emerald-300/40 text-emerald-200 px-3 py-1 rounded-full font-semibold">Négociable</span>
+                <span className="text-xs bg-white/20 border border-white/30 text-white px-3 py-1 rounded-full font-semibold">Négociable</span>
               )}
               <p className="text-white/50 text-xs">Publié le {fmtDate(listing.publishedAt || listing.createdAt)}</p>
               {user && (
                 <button onClick={handleToggleFavorite}
                   className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all hover:scale-110 active:scale-95 ${
-                    isFavorited ? "bg-blue-400 border-blue-400 text-white" : "bg-white/10 border-white/40 text-white hover:bg-blue-400 hover:border-blue-400"
+                    isFavorited
+                      ? "bg-[#A7D129] border-[#A7D129] text-[#2D5016]"
+                      : "bg-white/10 border-white/40 text-white hover:bg-[#A7D129] hover:border-[#A7D129] hover:text-[#2D5016]"
                   } ${favLoading ? "opacity-60 cursor-not-allowed" : ""}`}
                 >
                   <svg viewBox="0 0 24 24" className="w-5 h-5" fill={isFavorited ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2}>
@@ -328,28 +324,27 @@ export default function CarDetailPage() {
             <Gallery images={images} />
           </section>
 
-          {/* Car specs */}
           <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-              <span className="w-1 h-5 rounded-full bg-blue-500 inline-block" />
+              <span className="w-1 h-5 rounded-full bg-[#A7D129] inline-block" />
               <h2 className="font-bold text-gray-900 text-base">Fiche technique</h2>
             </div>
             <div className="px-6 py-3 grid grid-cols-1 sm:grid-cols-2 gap-x-8">
               <div>
-                <SpecRow label="Marque"       value={listing.make} />
-                <SpecRow label="Modèle"       value={listing.model} />
-                <SpecRow label="Année"        value={listing.year?.toString()} />
-                <SpecRow label="Kilométrage"  value={listing.mileage != null ? `${listing.mileage.toLocaleString("fr-MA")} km` : null} />
-                <SpecRow label="Carburant"    value={FUEL_LABELS[listing.fuelType]} />
-                <SpecRow label="Boîte"        value={TRANS_LABELS[listing.transmission]} />
+                <SpecRow label="Marque"      value={listing.make} />
+                <SpecRow label="Modèle"      value={listing.model} />
+                <SpecRow label="Année"       value={listing.year?.toString()} />
+                <SpecRow label="Kilométrage" value={listing.mileage != null ? `${listing.mileage.toLocaleString("fr-MA")} km` : null} />
+                <SpecRow label="Carburant"   value={FUEL_LABELS[listing.fuelType]} />
+                <SpecRow label="Boîte"       value={TRANS_LABELS[listing.transmission]} />
               </div>
               <div>
-                <SpecRow label="Carrosserie"  value={BODY_LABELS[listing.bodyType]} />
-                <SpecRow label="Couleur"      value={listing.color} />
-                <SpecRow label="Portes"       value={listing.doors?.toString()} />
-                <SpecRow label="Places"       value={listing.seats?.toString()} />
-                <SpecRow label="Cylindrée"    value={listing.engineSize != null ? `${listing.engineSize}L` : null} />
-                <SpecRow label="Puissance"    value={listing.horsePower != null ? `${listing.horsePower} ch` : null} />
+                <SpecRow label="Carrosserie" value={BODY_LABELS[listing.bodyType]} />
+                <SpecRow label="Couleur"     value={listing.color} />
+                <SpecRow label="Portes"      value={listing.doors?.toString()} />
+                <SpecRow label="Places"      value={listing.seats?.toString()} />
+                <SpecRow label="Cylindrée"   value={listing.engineSize != null ? `${listing.engineSize}L` : null} />
+                <SpecRow label="Puissance"   value={listing.horsePower != null ? `${listing.horsePower} ch` : null} />
               </div>
             </div>
 
@@ -358,7 +353,7 @@ export default function CarDetailPage() {
                 <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-3">Options & équipements</p>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(features).map(([k, v]) => (
-                    <span key={k} className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 border border-blue-200 text-blue-700">
+                    <span key={k} className="px-3 py-1 rounded-full text-xs font-semibold bg-[#E8F5D0] border border-[#A7D129] text-[#2D5016]">
                       {k}{v !== true ? `: ${v}` : ""}
                     </span>
                   ))}
@@ -367,10 +362,9 @@ export default function CarDetailPage() {
             )}
           </section>
 
-          {/* Description */}
           <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-              <span className="w-1 h-5 rounded-full bg-blue-500 inline-block" />
+              <span className="w-1 h-5 rounded-full bg-[#A7D129] inline-block" />
               <h2 className="font-bold text-gray-900 text-base">Description</h2>
             </div>
             <div className="px-6 py-5 text-sm text-gray-700 leading-relaxed whitespace-pre-line">
@@ -392,19 +386,19 @@ export default function CarDetailPage() {
         {/* RIGHT */}
         <div className="flex flex-col gap-5">
           {/* Price card */}
-          <div className="bg-blue-800 rounded-2xl p-6 text-white shadow-lg">
+          <div className="bg-[#2D5016] rounded-2xl p-6 text-white shadow-lg">
             <p className="text-3xl font-extrabold mb-1">
               {fmtPrice(listing.price)} MAD
               {listing.listingType === "RENT" && <span className="text-base font-medium opacity-70">/jour</span>}
             </p>
             {listing.isNegotiable && (
-              <p className="text-emerald-300 text-xs font-semibold mb-2">Prix négociable</p>
+              <p className="text-[#A7D129] text-xs font-semibold mb-2">Prix négociable</p>
             )}
             <p className="text-white/50 text-xs mb-4">{listing.make} {listing.model} · {TYPE_LABELS[listing.listingType]}</p>
             <div className="my-4 border-t border-white/10" />
             {listing.contactPhone && (
               <a href={`tel:${listing.contactPhone}`}
-                className="flex items-center justify-center gap-2 w-full py-3 bg-white text-blue-900 font-extrabold rounded-xl text-sm mb-3 hover:bg-blue-50 transition"
+                className="flex items-center justify-center gap-2 w-full py-3 bg-white text-[#2D5016] font-extrabold rounded-xl text-sm mb-3 hover:bg-[#E8F5D0] transition"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
@@ -426,27 +420,27 @@ export default function CarDetailPage() {
           <InquiryForm listingId={listing.id} />
 
           {/* Quick info */}
-          <div className="bg-blue-50 rounded-2xl border border-blue-100 p-5">
-            <p className="text-[10px] uppercase tracking-widest text-blue-400 font-bold mb-3">Infos rapides</p>
+          <div className="bg-[#E8F5D0] rounded-2xl border border-[#A7D129] p-5">
+            <p className="text-[10px] uppercase tracking-widest text-[#7BA428] font-bold mb-3">Infos rapides</p>
             <div className="flex flex-col gap-2.5 text-sm">
               {listing.viewsCount > 0 && (
                 <div className="flex justify-between">
                   <span className="text-gray-500">Vues</span>
-                  <span className="font-bold text-blue-700">{listing.viewsCount.toLocaleString("fr-MA")}</span>
+                  <span className="font-bold text-[#2D5016]">{listing.viewsCount.toLocaleString("fr-MA")}</span>
                 </div>
               )}
               <div className="flex justify-between">
                 <span className="text-gray-500">Référence</span>
-                <span className="font-bold text-blue-700 text-xs font-mono">{listing.id?.slice(0, 8).toUpperCase()}</span>
+                <span className="font-bold text-[#2D5016] text-xs font-mono">{listing.id?.slice(0, 8).toUpperCase()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Publié le</span>
-                <span className="font-bold text-blue-700">{fmtDate(listing.publishedAt || listing.createdAt)}</span>
+                <span className="font-bold text-[#2D5016]">{fmtDate(listing.publishedAt || listing.createdAt)}</span>
               </div>
               {listing.category && (
                 <div className="flex justify-between">
                   <span className="text-gray-500">Catégorie</span>
-                  <span className="font-bold text-blue-700">{listing.category.name}</span>
+                  <span className="font-bold text-[#2D5016]">{listing.category.name}</span>
                 </div>
               )}
             </div>
@@ -456,26 +450,26 @@ export default function CarDetailPage() {
           {related.length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-                <span className="w-1 h-5 rounded-full bg-blue-500 inline-block" />
+                <span className="w-1 h-5 rounded-full bg-[#A7D129] inline-block" />
                 <h3 className="font-bold text-gray-900 text-sm">Même marque</h3>
               </div>
               <div className="p-4 flex flex-col gap-3">
                 {related.map((l) => (
                   <Link key={l.id} href={`/cars/${l.id}`}
-                    className="flex gap-3 group hover:bg-blue-50 p-2 rounded-xl transition"
+                    className="flex gap-3 group hover:bg-[#E8F5D0] p-2 rounded-xl transition"
                   >
-                    <div className="w-16 h-16 rounded-xl overflow-hidden bg-blue-50 shrink-0">
+                    <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#E8F5D0] shrink-0">
                       {l.images?.[0]?.url ? (
                         <img src={l.images[0].url} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-blue-200 text-xl">🚗</div>
+                        <div className="w-full h-full flex items-center justify-center text-[#A7D129] text-xl">🚗</div>
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-gray-800 line-clamp-1 group-hover:text-blue-600 transition">
+                      <p className="text-sm font-bold text-gray-800 line-clamp-1 group-hover:text-[#2D5016] transition">
                         {l.make} {l.model} {l.year}
                       </p>
-                      <p className="text-xs text-blue-600 font-semibold mt-0.5">{fmtPrice(l.price)} MAD</p>
+                      <p className="text-xs text-[#2D5016] font-semibold mt-0.5">{fmtPrice(l.price)} MAD</p>
                       {l.mileage != null && (
                         <p className="text-xs text-gray-400 mt-0.5">{l.mileage.toLocaleString("fr-MA")} km</p>
                       )}
@@ -485,7 +479,7 @@ export default function CarDetailPage() {
               </div>
               <div className="px-5 pb-5">
                 <Link href="/cars"
-                  className="block w-full text-center py-2.5 border-2 border-blue-600 text-blue-600 font-bold rounded-full text-xs hover:bg-blue-600 hover:text-white transition"
+                  className="block w-full text-center py-2.5 border-2 border-[#2D5016] text-[#2D5016] font-bold rounded-full text-xs hover:bg-[#2D5016] hover:text-white transition"
                 >
                   Toutes les annonces
                 </Link>
