@@ -91,7 +91,7 @@ function AlertModal({ token, initialFilters, onClose, apiUrl }) {
       const res = await fetch(`${apiUrl}/api/alerts`, {
         method:  'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ filters }),
+        body:    JSON.stringify({ module: 'emploi', filters }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.message || 'Erreur'); return; }
