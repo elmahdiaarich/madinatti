@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/shared/ProtectedRoute";
-import { realEstateService } from "@/services/realEstateService";
-import LoadingSpinner from "@/components/shared/LoadingSpinner";
+import { carsService } from "@/services/carsService";
+import PricingModal from "@/components/shared/PricingModal";
 import axios from "axios";
 import moroccoCities from "morocco-cities";
 import { useToast } from "@/context/ToastContext";
@@ -17,15 +17,39 @@ const LISTING_TYPES = [
   { label: "Location", value: "RENT" },
 ];
 
-const PROPERTY_TYPE_TO_SLUG = {
-  APARTMENT: "appartement",
-  VILLA:     "villa",
-  HOUSE:     "maison",
-  STUDIO:    "studio",
-  LAND:      "terrain",
-  OFFICE:    "bureau",
-  SHOP:      "commerce",
-};
+const CONDITIONS = [
+  { label: "Occasion", value: "USED" },
+  { label: "Neuf", value: "NEW" },
+  { label: "Accidenté", value: "DAMAGED" },
+];
+
+const FUEL_TYPES = [
+  { label: "Diesel", value: "DIESEL" },
+  { label: "Essence", value: "PETROL" },
+  { label: "Hybride", value: "HYBRID" },
+  { label: "Électrique", value: "ELECTRIC" },
+  { label: "GPL", value: "LPG" },
+  { label: "Autre", value: "OTHER" },
+];
+
+const TRANSMISSIONS = [
+  { label: "Manuelle", value: "MANUAL" },
+  { label: "Automatique", value: "AUTOMATIC" },
+  { label: "Semi-automatique", value: "SEMI_AUTOMATIC" },
+];
+
+const BODY_TYPES = [
+  { label: "Berline", value: "SEDAN" },
+  { label: "SUV", value: "SUV" },
+  { label: "Citadine", value: "HATCHBACK" },
+  { label: "Coupé", value: "COUPE" },
+  { label: "Cabriolet", value: "CONVERTIBLE" },
+  { label: "Break", value: "WAGON" },
+  { label: "Utilitaire / Van", value: "VAN" },
+  { label: "Pickup", value: "PICKUP" },
+  { label: "Monospace", value: "MINIVAN" },
+  { label: "Autre", value: "OTHER" },
+];
 
 const ALL_CITIES = moroccoCities.cities;
 
@@ -39,6 +63,36 @@ function citiesByRegion(region) {
     .map((c) => c.name)
     .sort();
 }
+
+const EMPTY = {
+  title: "",
+  description: "",
+  categoryId: "",
+  listingType: "SALE",
+  condition: "USED",
+  make: "",
+  model: "",
+  year: "",
+  mileage: "",
+  fuelType: "DIESEL",
+  transmission: "MANUAL",
+  bodyType: "SEDAN",
+  color: "",
+  doors: "",
+  seats: "",
+  engineSize: "",
+  horsePower: "",
+  price: "",
+  isNegotiable: false,
+  region: "",
+  city: "",
+  location: "",
+  latitude: "",
+  longitude: "",
+  contactPhone: "",
+  images: [],
+  features: {},
+};
 
 function Field({ label, error, hint, children }) {
   return (
@@ -63,7 +117,7 @@ function Input({ error, ...props }) {
       className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition ${
         error
           ? "border-red-300 focus:ring-red-200 bg-red-50"
-          : "border-gray-200 focus:ring-primary focus:border-transparent"
+          : "border-gray-200 focus:ring-[#2D5016] focus:border-transparent"
       }`}
     />
   );
@@ -76,7 +130,7 @@ function Select({ error, children, ...props }) {
       className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition bg-white ${
         error
           ? "border-red-300 focus:ring-red-200"
-          : "border-gray-200 focus:ring-primary focus:border-transparent"
+          : "border-gray-200 focus:ring-[#2D5016] focus:border-transparent"
       }`}
     >
       {children}
@@ -87,7 +141,7 @@ function Select({ error, children, ...props }) {
 function SectionTitle({ children }) {
   return (
     <div className="flex items-center gap-2 mt-2">
-      <span className="w-1 h-5 rounded-full bg-primary inline-block" />
+      <span className="w-1 h-5 rounded-full bg-[#2D5016] inline-block" />
       <h2 className="font-bold text-gray-900 text-base">{children}</h2>
     </div>
   );
@@ -280,14 +334,14 @@ function ImageUploader({ images, onChange, token, error }) {
             ? "border-primary bg-primary/5 cursor-wait"
             : error
               ? "border-red-300 bg-red-50 hover:border-red-400"
-              : "border-gray-200 hover:border-primary hover:bg-primary/5"
+              : "border-gray-200 hover:border-[#2D5016] hover:bg-[#2D5016]/5"
         }`}
       >
         <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} />
         {uploading ? (
           <div className="flex flex-col items-center gap-2">
-            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-primary font-semibold">Upload en cours...</p>
+            <div className="w-6 h-6 border-2 border-[#2D5016] border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-[#2D5016] font-semibold">Upload en cours...</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 text-gray-500">
@@ -307,14 +361,14 @@ function ImageUploader({ images, onChange, token, error }) {
             <div
               key={i}
               className={`relative group rounded-xl overflow-hidden border-2 w-24 h-24 ${
-                img.isCover ? "border-primary" : "border-gray-200"
+                img.isCover ? "border-[#2D5016]" : "border-gray-200"
               }`}
             >
               <img src={img.url} alt="" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-1">
                 {!img.isCover && (
                   <button type="button" onClick={() => setCover(i)}
-                    className="text-[10px] bg-white text-primary-dark px-2 py-0.5 rounded-full font-bold">
+                    className="text-[10px] bg-white text-gray-800 px-2 py-0.5 rounded-full font-bold">
                     Couverture
                   </button>
                 )}
@@ -324,7 +378,7 @@ function ImageUploader({ images, onChange, token, error }) {
                 </button>
               </div>
               {img.isCover && (
-                <span className="absolute top-1 left-1 text-[9px] bg-primary text-white px-1.5 py-0.5 rounded-full font-bold">
+                <span className="absolute top-1 left-1 text-[9px] bg-[#2D5016] text-white px-1.5 py-0.5 rounded-full font-bold">
                   Couv.
                 </span>
               )}
@@ -356,11 +410,11 @@ function FeaturesManager({ features, onChange }) {
     <div className="flex flex-col gap-2">
       <div className="flex gap-2">
         <input value={key} onChange={(e) => setKey(e.target.value)}
-          placeholder="Équipement (ex: Parking)"
-          className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+          placeholder="Option (ex: Climatisation)"
+          className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D5016]" />
         <input value={val} onChange={(e) => setVal(e.target.value)}
           placeholder="Valeur (optionnel)"
-          className="w-32 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+          className="w-32 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D5016]" />
         <button type="button" onClick={add}
           className="px-3 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition">
           +
@@ -370,10 +424,10 @@ function FeaturesManager({ features, onChange }) {
         <div className="flex flex-wrap gap-2">
           {Object.entries(features).map(([k, v]) => (
             <span key={k}
-              className="flex items-center gap-1 px-3 py-1 bg-primary-mint border border-primary rounded-full text-xs font-semibold text-primary-dark">
+              className="flex items-center gap-1 px-3 py-1 bg-[#E8F5D0] border border-[#A7D129] rounded-full text-xs font-semibold text-[#2D5016]">
               {k}{v !== true ? `: ${v}` : ""}
               <button type="button" onClick={() => remove(k)}
-                className="ml-1 text-red-400 hover:text-red-600 font-bold font-mono">×</button>
+                className="ml-1 text-red-500 hover:text-red-700 font-bold font-mono">×</button>
             </span>
           ))}
         </div>
@@ -382,31 +436,33 @@ function FeaturesManager({ features, onChange }) {
   );
 }
 
-export default function EditListingPage() {
+export default function CreateCarPage() {
   return (
     <ProtectedRoute roles={["business"]}>
-      <EditListingForm />
+      <CreateCarForm />
     </ProtectedRoute>
   );
 }
 
-function EditListingForm() {
-  const { id } = useParams();
+function CreateCarForm() {
   const { token } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  
-  const [form, setForm] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [subcategories, setSubcategories] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [geocoding, setGeocoding] = useState(false);
   const [flyTo, setFlyTo] = useState(null);
+  const [selectedPlan, setSelectedPlan] = useState(null);
 
   const sectionRefs = {
     title: useRef(null),
     description: useRef(null),
+    categoryId: useRef(null),
+    make: useRef(null),
+    model: useRef(null),
+    year: useRef(null),
     price: useRef(null),
     region: useRef(null),
     city: useRef(null),
@@ -419,76 +475,29 @@ function EditListingForm() {
     if (errors[field]) setErrors((p) => ({ ...p, [field]: null }));
   };
 
-  const ERROR_ORDER = ["title", "description", "price", "region", "city", "location", "images"];
+  const ERROR_ORDER = [
+    "title",
+    "description",
+    "categoryId",
+    "make",
+    "model",
+    "year",
+    "price",
+    "region",
+    "city",
+    "location",
+    "images",
+  ];
 
-  // ── Fetch subcategories ───────────────────────────────────────────────────
+  const availableCities = form.region ? citiesByRegion(form.region) : [];
+
+  // Load car categories
   useEffect(() => {
-    axios.get(`${API}/api/categories`).then((r) => {
-      const data = r.data.data || [];
-      setSubcategories(data.filter((c) => c.module === "immobilier"));
+    carsService.getCategories().then((r) => {
+      setCategories(r.data || []);
     });
   }, []);
 
-  // ── Load listing ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await realEstateService.getMyListingById(id, token);
-        const d = res.data;
-        setForm({
-          title: d.title || "",
-          description: d.description || "",
-          categoryId: d.categoryId || "",
-          listingType: d.listingType || "SALE",
-          propertyType: d.propertyType || "APARTMENT",
-          price: d.price?.toString() || "",
-          surface: d.surface?.toString() || "",
-          rooms: d.rooms?.toString() || "",
-          bathrooms: d.bathrooms?.toString() || "",
-          floor: d.floor?.toString() || "",
-          region: d.region || "",
-          city: d.city || "",
-          location: d.location || "",
-          latitude: d.latitude?.toString() || "",
-          longitude: d.longitude?.toString() || "",
-          contactPhone: d.contactPhone || "",
-          images: Array.isArray(d.images) ? d.images : [],
-          features: d.features && typeof d.features === "object" ? d.features : {},
-        });
-        if (d.latitude && d.longitude) {
-          setFlyTo({
-            lat: parseFloat(d.latitude),
-            lng: parseFloat(d.longitude),
-            zoom: 14,
-          });
-        }
-      } catch (e) {
-        toast.error("Annonce introuvable ou accès refusé.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [id, token]);
-
-  // ── Auto-set categoryId based on propertyType ─────────────────────────────
-  useEffect(() => {
-    if (!subcategories.length || !form) return;
-    const slug = PROPERTY_TYPE_TO_SLUG[form.propertyType];
-    const match = subcategories.find((c) => c.slug === slug);
-    if (match && form.categoryId !== match.id) {
-      set("categoryId", match.id);
-    }
-  }, [form?.propertyType, subcategories]);
-
-  const propertyTypeOptions = subcategories.map((c) => ({
-    label: c.name,
-    value: c.id,
-  }));
-
-  const availableCities = form?.region ? citiesByRegion(form.region) : [];
-
-  // ── Shared geocode function ───────────────────────────────────────────────
   const geocodeAddress = useCallback(async (city, address) => {
     if (!city) return;
     setGeocoding(true);
@@ -528,20 +537,24 @@ function EditListingForm() {
     set("city", cityName);
     if (!cityName) return;
     await geocodeAddress(cityName, form.location || "");
-  }, [form?.location, geocodeAddress]);
+  }, [form.location, geocodeAddress]);
 
   useEffect(() => {
-    if (!form?.city || !form?.location.trim()) return;
+    if (!form.city || !form.location.trim()) return;
     const t = setTimeout(() => {
       geocodeAddress(form.city, form.location);
     }, 500);
     return () => clearTimeout(t);
-  }, [form?.location, form?.city, geocodeAddress]);
+  }, [form.location, form.city, geocodeAddress]);
 
   const validate = () => {
     const e = {};
     if (!form.title.trim() || form.title.trim().length < 5) e.title = "Min 5 caractères";
     if (!form.description.trim() || form.description.trim().length < 10) e.description = "Min 10 caractères";
+    if (!form.categoryId) e.categoryId = "Catégorie requise";
+    if (!form.make.trim()) e.make = "Marque requise";
+    if (!form.model.trim()) e.model = "Modèle requis";
+    if (!form.year || Number(form.year) < 1900 || Number(form.year) > new Date().getFullYear() + 1) e.year = "Année invalide";
     if (!form.price || Number(form.price) <= 0) e.price = "Prix invalide";
     if (!form.region) e.region = "Veuillez sélectionner une région";
     if (!form.city) e.city = "Veuillez sélectionner une ville";
@@ -565,17 +578,19 @@ function EditListingForm() {
     try {
       const payload = {
         ...form,
+        plan: selectedPlan,
         price: parseFloat(form.price),
-        surface: form.surface ? parseFloat(form.surface) : undefined,
-        rooms: form.rooms ? parseInt(form.rooms) : undefined,
-        bathrooms: form.bathrooms ? parseInt(form.bathrooms) : undefined,
-        floor: form.floor !== "" ? parseInt(form.floor) : undefined,
+        year: parseInt(form.year),
+        mileage: form.mileage ? parseInt(form.mileage) : undefined,
+        doors: form.doors ? parseInt(form.doors) : undefined,
+        seats: form.seats ? parseInt(form.seats) : undefined,
+        engineSize: form.engineSize ? parseFloat(form.engineSize) : undefined,
+        horsePower: form.horsePower ? parseInt(form.horsePower) : undefined,
         latitude: form.latitude ? parseFloat(form.latitude) : undefined,
         longitude: form.longitude ? parseFloat(form.longitude) : undefined,
       };
-      await realEstateService.updateMyListing(id, payload, token);
-      toast.success("Annonce modifiée avec succès !");
-      router.push("/dashboard/listings/real-estate");
+      await carsService.createListing(payload, token);
+      router.push("/dashboard/listings/cars?created=1");
     } catch (err) {
       toast.error(err?.response?.data?.message || err.message || "Erreur serveur");
     } finally {
@@ -583,52 +598,72 @@ function EditListingForm() {
     }
   };
 
-  if (loading) return <LoadingSpinner message="Chargement de l'annonce..." />;
-  if (!form) return <div className="min-h-screen bg-gray-50 flex items-center justify-center text-red-500 font-semibold">Annonce introuvable.</div>;
-
   return (
     <div className="min-h-screen bg-gray-50">
+      {!selectedPlan && (
+        <PricingModal module="vehicules" onSelect={(planId) => setSelectedPlan(planId)} />
+      )}
+
       {/* Header */}
       <div className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-          <h1 className="font-extrabold text-primary-dark text-lg">Modifier l'annonce</h1>
-          <span className="text-xs bg-yellow-50 border border-yellow-200 text-yellow-700 px-3 py-1 rounded-full font-semibold">
-            Annonce re-soumise à validation
-          </span>
+        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+          <h1 className="font-extrabold text-gray-900 text-lg">Publier un véhicule</h1>
+          <div className="flex items-center gap-2">
+            {selectedPlan && (
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full
+                  ${selectedPlan === 'vip' ? 'bg-[#2D5016] text-[#E8F5D0]'
+                  : selectedPlan === 'pro' ? 'bg-[#A7D129] text-[#2D5016]'
+                  : selectedPlan === 'boost' ? 'bg-yellow-100 text-yellow-700'
+                  : 'bg-gray-100 text-gray-600'}`}>
+                  Plan {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}
+                </span>
+                <button onClick={() => setSelectedPlan(null)} className="text-xs text-gray-400 hover:text-gray-800 underline transition">
+                  Changer
+                </button>
+              </div>
+            )}
+            <span className="text-xs bg-yellow-50 border border-yellow-200 text-yellow-700 px-3 py-1 rounded-full font-semibold whitespace-nowrap">
+              En attente de validation admin
+            </span>
+          </div>
         </div>
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-8 flex flex-col gap-6">
-        {/* General Info */}
+        {/* ── GENERAL INFO ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
-          <SectionTitle>Informations générales</SectionTitle>
+          <SectionTitle>Informations de l'annonce</SectionTitle>
 
           <div ref={sectionRefs.title}>
             <Field label="Titre de l'annonce *" error={errors.title}>
               <Input
                 value={form.title}
                 onChange={(e) => set("title", e.target.value)}
-                placeholder="Ex: Appartement F3 vue mer à Tanger"
+                placeholder="Ex: Peugeot 208 Signature Diesel 1.6 BlueHDi"
                 error={errors.title}
               />
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Type de transaction *">
+          <div className="grid grid-cols-3 gap-4">
+            <Field label="Type d'annonce *">
               <Select value={form.listingType} onChange={(e) => set("listingType", e.target.value)}>
                 {LISTING_TYPES.map((t) => (
                   <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
               </Select>
             </Field>
-            <Field label="Type de bien *">
-              <Select value={form.categoryId} onChange={(e) => set("categoryId", e.target.value)}>
-                {propertyTypeOptions.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </Select>
-            </Field>
+            <div ref={sectionRefs.categoryId} className="col-span-2">
+              <Field label="Catégorie de véhicule *" error={errors.categoryId}>
+                <Select value={form.categoryId} onChange={(e) => set("categoryId", e.target.value)} error={errors.categoryId}>
+                  <option value="">Sélectionner</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
           </div>
 
           <div ref={sectionRefs.description}>
@@ -637,53 +672,121 @@ function EditListingForm() {
                 rows={5}
                 value={form.description}
                 onChange={(e) => set("description", e.target.value)}
-                placeholder="Décrivez le bien en détail..."
+                placeholder="Décrivez l'état mécanique, carrosserie, entretien, options..."
                 className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition resize-none ${
                   errors.description
                     ? "border-red-300 focus:ring-red-200 bg-red-50"
-                    : "border-gray-200 focus:ring-primary"
+                    : "border-gray-200 focus:ring-[#2D5016]"
                 }`}
               />
             </Field>
           </div>
         </div>
 
-        {/* Pricing / Surface */}
+        {/* ── CAR SPECS ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
-          <SectionTitle>Prix & Surface</SectionTitle>
+          <SectionTitle>Fiche technique du véhicule</SectionTitle>
 
-          <div ref={sectionRefs.price} className="grid grid-cols-2 gap-4">
-            <Field label="Prix (MAD) *" error={errors.price}>
-              <Input
-                type="number" min="1"
-                value={form.price}
-                onChange={(e) => set("price", e.target.value)}
-                error={errors.price}
-              />
+          <div className="grid grid-cols-2 gap-4">
+            <div ref={sectionRefs.make}>
+              <Field label="Marque *" error={errors.make}>
+                <Input value={form.make} onChange={(e) => set("make", e.target.value)} placeholder="Ex: Peugeot" error={errors.make} />
+              </Field>
+            </div>
+            <div ref={sectionRefs.model}>
+              <Field label="Modèle *" error={errors.model}>
+                <Input value={form.model} onChange={(e) => set("model", e.target.value)} placeholder="Ex: 208" error={errors.model} />
+              </Field>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div ref={sectionRefs.year}>
+              <Field label="Année *" error={errors.year}>
+                <Input type="number" value={form.year} onChange={(e) => set("year", e.target.value)} placeholder="Ex: 2019" error={errors.year} />
+              </Field>
+            </div>
+            <Field label="Kilométrage (km)">
+              <Input type="number" min="0" value={form.mileage} onChange={(e) => set("mileage", e.target.value)} placeholder="Ex: 85000" />
             </Field>
-            <Field label="Surface (m²)">
-              <Input
-                type="number" min="0"
-                value={form.surface}
-                onChange={(e) => set("surface", e.target.value)}
-              />
+            <Field label="État du véhicule *">
+              <Select value={form.condition} onChange={(e) => set("condition", e.target.value)}>
+                {CONDITIONS.map((c) => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </Select>
             </Field>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
-            <Field label="Pièces">
-              <Input type="number" min="0" value={form.rooms} onChange={(e) => set("rooms", e.target.value)} />
+            <Field label="Carburant *">
+              <Select value={form.fuelType} onChange={(e) => set("fuelType", e.target.value)}>
+                {FUEL_TYPES.map((f) => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </Select>
             </Field>
-            <Field label="Salles de bain">
-              <Input type="number" min="0" value={form.bathrooms} onChange={(e) => set("bathrooms", e.target.value)} />
+            <Field label="Transmission *">
+              <Select value={form.transmission} onChange={(e) => set("transmission", e.target.value)}>
+                {TRANSMISSIONS.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </Select>
             </Field>
-            <Field label="Étage">
-              <Input type="number" min="0" value={form.floor} onChange={(e) => set("floor", e.target.value)} />
+            <Field label="Carrosserie *">
+              <Select value={form.bodyType} onChange={(e) => set("bodyType", e.target.value)}>
+                {BODY_TYPES.map((b) => (
+                  <option key={b.value} value={b.value}>{b.label}</option>
+                ))}
+              </Select>
             </Field>
+          </div>
+
+          <div className="grid grid-cols-4 gap-2">
+            <Field label="Couleur">
+              <Input value={form.color} onChange={(e) => set("color", e.target.value)} placeholder="Ex: Gris" />
+            </Field>
+            <Field label="Portes">
+              <Select value={form.doors} onChange={(e) => set("doors", e.target.value)}>
+                <option value="">Requis</option>
+                <option value="3">3</option>
+                <option value="5">5</option>
+                <option value="2">2 (Coupé)</option>
+              </Select>
+            </Field>
+            <Field label="Places">
+              <Select value={form.seats} onChange={(e) => set("seats", e.target.value)}>
+                <option value="">Requis</option>
+                <option value="5">5</option>
+                <option value="7">7</option>
+                <option value="2">2</option>
+                <option value="9">9</option>
+              </Select>
+            </Field>
+            <Field label="Puissance (ch)">
+              <Input type="number" value={form.horsePower} onChange={(e) => set("horsePower", e.target.value)} placeholder="Ex: 100" />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Cylindrée (L)">
+              <Input type="number" step="0.1" value={form.engineSize} onChange={(e) => set("engineSize", e.target.value)} placeholder="Ex: 1.6" />
+            </Field>
+            <div ref={sectionRefs.price}>
+              <Field label="Prix (MAD) *" error={errors.price}>
+                <div className="flex gap-2">
+                  <Input type="number" min="1" value={form.price} onChange={(e) => set("price", e.target.value)} error={errors.price} placeholder="Ex: 110000" />
+                  <label className="flex items-center gap-1 shrink-0 text-xs text-gray-500 font-semibold cursor-pointer">
+                    <input type="checkbox" checked={form.isNegotiable} onChange={(e) => set("isNegotiable", e.target.checked)} className="rounded text-[#2D5016]" />
+                    Négociable
+                  </label>
+                </div>
+              </Field>
+            </div>
           </div>
         </div>
 
-        {/* Location */}
+        {/* ── LOCALISATION ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
           <SectionTitle>Localisation</SectionTitle>
 
@@ -691,7 +794,7 @@ function EditListingForm() {
             <div ref={sectionRefs.region}>
               <Field label="Région *" error={errors.region}>
                 <Select value={form.region} onChange={(e) => handleRegionChange(e.target.value)} error={errors.region}>
-                  <option value="">Sélectionner une région</option>
+                  <option value="">Sélectionner</option>
                   {REGIONS.map((r) => (
                     <option key={r} value={r}>{r}</option>
                   ))}
@@ -703,14 +806,14 @@ function EditListingForm() {
               <Field label="Ville *" error={errors.city}>
                 <div className="relative">
                   <Select value={form.city} onChange={(e) => handleCityChange(e.target.value)} error={errors.city} disabled={!form.region}>
-                    <option value="">{form.region ? "Sélectionner une ville" : "Choisir une région d'abord"}</option>
+                    <option value="">{form.region ? "Sélectionner une ville" : "Choisir région d'abord"}</option>
                     {availableCities.map((c) => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </Select>
                   {geocoding && (
                     <div className="absolute right-8 top-1/2 -translate-y-1/2">
-                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-[#2D5016] border-t-transparent rounded-full animate-spin" />
                     </div>
                   )}
                 </div>
@@ -719,12 +822,12 @@ function EditListingForm() {
           </div>
 
           <div ref={sectionRefs.location}>
-            <Field label="Adresse / Quartier *" error={errors.location}>
+            <Field label="Adresse / Lieu précis *" error={errors.location}>
               <div className="relative">
-                <Input value={form.location} onChange={(e) => set("location", e.target.value)} error={errors.location} />
+                <Input value={form.location} onChange={(e) => set("location", e.target.value)} placeholder="Ex: Maarif, face au Twin Center" error={errors.location} />
                 {geocoding && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-[#2D5016] border-t-transparent rounded-full animate-spin" />
                   </div>
                 )}
               </div>
@@ -752,35 +855,39 @@ function EditListingForm() {
           </Field>
         </div>
 
-        {/* Contact */}
+        {/* ── CONTACT ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
           <SectionTitle>Contact</SectionTitle>
-          <Field label="Téléphone de contact">
-            <Input value={form.contactPhone} onChange={(e) => set("contactPhone", e.target.value)} />
+          <Field label="Téléphone de contact" hint="Ex: 06XXXXXXXX, 07XXXXXXXX">
+            <Input value={form.contactPhone} onChange={(e) => set("contactPhone", e.target.value)} placeholder="Ex: 0612345678" />
           </Field>
         </div>
 
-        {/* Photos */}
+        {/* ── PHOTOS ── */}
         <div ref={sectionRefs.images} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
-          <SectionTitle>Photos *</SectionTitle>
+          <SectionTitle>Photos du véhicule *</SectionTitle>
           <ImageUploader images={form.images} onChange={(v) => set("images", v)} token={token} error={errors.images} />
         </div>
 
-        {/* Features */}
+        {/* ── ÉQUIPEMENTS ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
-          <SectionTitle>Équipements & extras</SectionTitle>
+          <SectionTitle>Options & Équipements</SectionTitle>
+          <p className="text-xs text-gray-400">
+            Exemples: Climatisation, Jantes alliage, Caméra de recul, Toit ouvrant, GPS...
+          </p>
           <FeaturesManager features={form.features} onChange={(v) => set("features", v)} />
         </div>
 
-        {/* Submit */}
+        {/* ── SUBMIT ── */}
         <div className="flex gap-3">
           <button type="button" onClick={() => router.back()} className="flex-1 py-3.5 border-2 border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition text-sm">
             Annuler
           </button>
-          <button type="button" onClick={handleSubmit} disabled={submitting} className="flex-1 py-3.5 bg-primary text-white font-extrabold rounded-xl hover:bg-primary-sage transition text-sm disabled:opacity-60">
-            {submitting ? "Enregistrement..." : "Enregistrer les modifications"}
+          <button type="button" onClick={handleSubmit} disabled={submitting} className="flex-1 py-3.5 bg-[#2D5016] text-white font-extrabold rounded-xl hover:bg-[#A7D129] hover:text-[#2D5016] transition text-sm disabled:opacity-60">
+            {submitting ? "Publication..." : "Publier le véhicule"}
           </button>
         </div>
+        <p className="text-center text-xs text-gray-400">Votre annonce sera soumise à validation avant d'être publiée.</p>
       </div>
     </div>
   );

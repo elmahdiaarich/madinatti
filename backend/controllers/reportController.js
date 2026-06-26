@@ -29,7 +29,7 @@ const createReport = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Champs requis : targetType, targetId, reason' })
     }
 
-    const validTargets = ['REAL_ESTATE', 'JOB', 'USER']
+    const validTargets = ['REAL_ESTATE', 'JOB', 'USER', 'CAR']
     const validReasons = ['FAKE', 'FRAUD', 'DUPLICATE', 'INAPPROPRIATE', 'OTHER']
     if (!validTargets.includes(targetType)) {
       return res.status(400).json({ success: false, message: 'targetType invalide' })

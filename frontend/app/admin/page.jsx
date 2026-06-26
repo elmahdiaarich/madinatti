@@ -98,7 +98,7 @@ const MODULE_FILTERS = [
   { key: 'tous',       label: 'Tous' },
   { key: 'emploi',     label: 'Emploi' },
   { key: 'immobilier', label: 'Immo' },
-  { key: 'vehicule',   label: 'Véhicules' },
+  { key: 'automobile',   label: 'Véhicules' },
 ]
 
 const STATUS_FILTERS = [

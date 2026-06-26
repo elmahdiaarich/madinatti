@@ -8,6 +8,7 @@ app.use(express.json())
 
 const authRoutes = require('./routes/auth')
 const realEstateRoutes = require('./routes/realEstate');
+const carsRouter = require('./routes/cars');
 
 const googleAuthRoutes = require("./routes/googleAuth")
 
@@ -16,11 +17,14 @@ app.use('/api/auth', authRoutes)
 app.use("/api/auth", googleAuthRoutes)
 
 app.use('/api/real-estate', realEstateRoutes);
+app.use('/api/cars', carsRouter);
+
 
 //to uploas imgs on cloudnary
 app.use('/api/upload', require('./routes/upload'));
 //to get all catigories
 app.use('/api/categories', require('./routes/categories'));
+
 
 app.get('/', (req, res) => {
   res.json({ message: 'Madinatti API is running' })

@@ -17,7 +17,7 @@ export function ToastProvider({ children }) {
   const toast = useCallback(({
     message,
     type = 'success',   // 'success' | 'error' | 'warning' | 'info'
-    duration = 5000,    // ms, 0 = manual only
+    duration = 4000,    // ms, 0 = manual only
     title,
   }) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`

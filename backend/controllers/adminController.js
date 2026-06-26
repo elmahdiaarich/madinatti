@@ -25,66 +25,509 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// =============================================================================
+// Adding a new module (e.g. "services") requires only:
+//   1. Add its Prisma model key to MODULE_REGISTRY below
+//   2. Add its normalizer to NORMALIZERS below
+//   3. Add its status handler to STATUS_HANDLERS below
+//   4. Done — getListings, approveListing, rejectListing,
+//              updateListingStatus, deleteListing all pick it up automatically.
+// =============================================================================
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODULE REGISTRY
+// Maps module slug → { model, cloudinaryFolder, targetType, frontendPath }
+// ─────────────────────────────────────────────────────────────────────────────
+
+const MODULE_REGISTRY = {
+  emploi: {
+    model:             'jobListing',
+    cloudinaryFolder:  null,          
+    targetType:        'JOB',
+    frontendPath:      (id) => `/jobs/${id}`,
+  },
+  immobilier: {
+    model:             'realEstateListing',
+    cloudinaryFolder:  'madinatti/real-estate',
+    targetType:        'REAL_ESTATE',
+    frontendPath:      (id) => `/real-estate/${id}`,
+  },
+  automobile: {
+    model:             'carListing',
+    cloudinaryFolder:  'madinatti/real-estate',
+    targetType:        'CAR',
+    frontendPath:      (id) => `/cars/${id}`,
+  },
+  // ── Add future modules here ────────────────────────────────────────────────
+  // services: {
+  //   model:            'serviceListing',
+  //   cloudinaryFolder: 'madinatti/services',
+  //   targetType:       'SERVICE',
+  //   frontendPath:     (id) => `/services/${id}`,
+  // },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CLOUDINARY HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Move an image from madinatti/temp → targetFolder on Cloudinary.
+ * Returns the original img object unchanged if the move fails (non-blocking).
+ */
+async function moveImage(img, targetFolder) {
+  try {
+    if (!img.url?.includes('madinatti/temp')) return img;
+    const urlParts    = img.url.split('/upload/');
+    const withoutVer  = urlParts[1].replace(/^v\d+\//, '');
+    const oldPublicId = withoutVer.replace(/\.[^/.]+$/, '');
+    const newPublicId = oldPublicId.replace('madinatti/temp', targetFolder);
+    const result      = await cloudinary.uploader.rename(oldPublicId, newPublicId);
+    return { ...img, url: result.secure_url };
+  } catch (err) {
+    console.error('Failed to move image:', img.url, err.message);
+    return img;
+  }
+}
+
+/**
+ * Delete an image from Cloudinary. Logs but never throws (non-blocking).
+ */
+async function destroyImage(img) {
+  try {
+    const url = img?.url || img;
+    if (!url) return;
+    const urlParts = url.split('/upload/');
+    if (urlParts.length !== 2) return;
+    const withoutVer = urlParts[1].replace(/^v\d+\//, '');
+    const publicId   = withoutVer.replace(/\.[^/.]+$/, '');
+    await cloudinary.uploader.destroy(publicId);
+  } catch (err) {
+    console.error('Failed to delete image from Cloudinary:', err.message);
+  }
+}
+
+async function moveImages(images = [], targetFolder) {
+  if (!targetFolder) return images;
+  return Promise.all(images.map((img) => moveImage(img, targetFolder)));
+}
+
+async function destroyImages(images = []) {
+  await Promise.all(images.map(destroyImage));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NORMALIZERS  (raw Prisma row → common API shape)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const NORMALIZERS = {
+  emploi: (j) => ({
+    id:                  j.id,
+    module:              'emploi',
+    title:               j.title,
+    description:         j.description || null,
+    company:             j.companyName,
+    companyName:         j.companyName,
+    companyLogo:         j.companyLogo || null,
+    submittedBy:         j.user?.name || j.companyName,
+    submittedByEmail:    j.user?.email || '',
+    submittedById:       j.user?.id || '',
+    submittedByLogo:     j.user?.companyLogo || j.user?.avatar || null,
+    city:                j.location,
+    location:            j.location,
+    region:              j.region || null,
+    contractType:        j.contractType,
+    remote:              j.remote || null,
+    salaryMin:           j.salaryMin ?? null,
+    salaryMax:           j.salaryMax ?? null,
+    salaryPeriod:        j.salaryPeriod || null,
+    experienceLevel:     j.experienceLevel || null,
+    educationLevel:      j.educationLevel || [],
+    languages:           j.languages || [],
+    skills:              j.skills || [],
+    applicationDeadline: j.applicationDeadline || null,
+    status:              j.status,
+    isFeatured:          j.isFeatured || false,
+    isSponsored:         j.isSponsored || false,
+    viewsCount:          j.viewsCount ?? 0,
+    adminNote:           j.adminNotes || null,
+    deletedByOwner:      j.deletedByOwner ?? false,
+    createdAt:           j.createdAt,
+    updatedAt:           j.updatedAt,
+    publishedAt:         j.publishedAt || null,
+    reviewedAt:          j.reviewedAt || null,
+  }),
+
+  immobilier: (r) => ({
+    id:               r.id,
+    module:           'immobilier',
+    title:            r.title,
+    description:      r.description,
+    company:          r.user?.companyName || r.user?.name || '',
+    submittedBy:      r.user?.companyName || r.user?.name || '',
+    submittedByEmail: r.user?.email || '',
+    submittedById:    r.user?.id || '',
+    submittedByLogo:  r.user?.companyLogo || r.user?.avatar || null,
+    location:         r.location,
+    city:             r.city || r.location,
+    region:           r.region,
+    contractType:     r.listingType,
+    propertyType:     r.propertyType,
+    status:           r.status,
+    isActive:         r.isActive,
+    isFeatured:       r.isFeatured,
+    isSponsored:      r.isSponsored,
+    price:            r.price,
+    surface:          r.surface,
+    rooms:            r.rooms,
+    bathrooms:        r.bathrooms,
+    floor:            r.floor,
+    latitude:         r.latitude,
+    longitude:        r.longitude,
+    contactPhone:     r.contactPhone,
+    images:           r.images,
+    features:         r.features,
+    adminNote:        r.adminNotes || null,
+    viewsCount:       r.viewsCount,
+    category:         r.category || null,
+    categoryId:       r.categoryId,
+    inquiriesCount:   r._count?.inquiries ?? 0,
+    deletedByOwner:   r.deletedByOwner ?? false,
+    reviewedBy:       r.reviewedBy,
+    reviewedAt:       r.reviewedAt,
+    publishedAt:      r.publishedAt,
+    createdAt:        r.createdAt,
+    updatedAt:        r.updatedAt,
+  }),
+
+  automobile: (c) => ({
+    id:               c.id,
+    module:           'automobile',
+    title:            c.title,
+    description:      c.description,
+    company:          c.user?.companyName || c.user?.name || '',
+    submittedBy:      c.user?.companyName || c.user?.name || '',
+    submittedByEmail: c.user?.email || '',
+    submittedById:    c.user?.id || '',
+    submittedByLogo:  c.user?.companyLogo || c.user?.avatar || null,
+    location:         c.location,
+    city:             c.city || c.location,
+    region:           c.region || null,
+    // car-specific
+    make:             c.make,
+    model:            c.model,
+    year:             c.year,
+    mileage:          c.mileage ?? null,
+    fuelType:         c.fuelType,
+    transmission:     c.transmission,
+    bodyType:         c.bodyType,
+    condition:        c.condition,
+    color:            c.color || null,
+    doors:            c.doors ?? null,
+    seats:            c.seats ?? null,
+    engineSize:       c.engineSize ?? null,
+    horsePower:       c.horsePower ?? null,
+    isNegotiable:     c.isNegotiable,
+    listingType:      c.listingType,
+    // shared
+    price:            c.price,
+    contactPhone:     c.contactPhone,
+    images:           c.images,
+    features:         c.features,
+    status:           c.status,
+    isActive:         c.isActive,
+    isFeatured:       c.isFeatured,
+    isSponsored:      c.isSponsored,
+    viewsCount:       c.viewsCount ?? 0,
+    adminNote:        c.adminNotes || null,
+    category:         c.category || null,
+    categoryId:       c.categoryId,
+    inquiriesCount:   c._count?.inquiries ?? 0,
+    deletedByOwner:   c.deletedByOwner ?? false,
+    reviewedBy:       c.reviewedBy,
+    reviewedAt:       c.reviewedAt,
+    publishedAt:      c.publishedAt,
+    createdAt:        c.createdAt,
+    updatedAt:        c.updatedAt,
+  }),
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRISMA SELECT MAPS  (only fetch what the normalizer needs)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const USER_SELECT = {
+  id: true, name: true, email: true,
+  companyName: true, companyLogo: true, avatar: true,
+};
+
+const SELECTS = {
+  emploi: {
+    id: true, title: true, description: true,
+    companyName: true, companyLogo: true,
+    location: true, region: true,
+    contractType: true, remote: true,
+    salaryMin: true, salaryMax: true, salaryPeriod: true,
+    experienceLevel: true, educationLevel: true,
+    languages: true, skills: true, applicationDeadline: true,
+    status: true, isFeatured: true, isSponsored: true,
+    viewsCount: true, adminNotes: true, deletedByOwner: true,
+    createdAt: true, updatedAt: true, publishedAt: true, reviewedAt: true,
+    user: { select: USER_SELECT },
+  },
+
+  immobilier: {
+    id: true, title: true, description: true,
+    location: true, city: true, region: true,
+    listingType: true, propertyType: true,
+    price: true, surface: true, rooms: true, bathrooms: true, floor: true,
+    latitude: true, longitude: true, contactPhone: true,
+    images: true, features: true,
+    status: true, isActive: true, isFeatured: true, isSponsored: true,
+    viewsCount: true, adminNotes: true, deletedByOwner: true,
+    categoryId: true, reviewedAt: true, reviewedBy: true,
+    publishedAt: true, createdAt: true, updatedAt: true,
+    user:     { select: USER_SELECT },
+    category: { select: { id: true, name: true, slug: true } },
+    _count:   { select: { inquiries: true } },
+  },
+
+  automobile: {
+    id: true, title: true, description: true,
+    location: true, city: true, region: true,
+    make: true, model: true, year: true, mileage: true,
+    fuelType: true, transmission: true, bodyType: true, condition: true,
+    color: true, doors: true, seats: true, engineSize: true, horsePower: true,
+    isNegotiable: true, listingType: true,
+    price: true, contactPhone: true,
+    images: true, features: true,
+    status: true, isActive: true, isFeatured: true, isSponsored: true,
+    viewsCount: true, adminNotes: true, deletedByOwner: true,
+    categoryId: true, reviewedAt: true, reviewedBy: true,
+    publishedAt: true, createdAt: true, updatedAt: true,
+    user:     { select: USER_SELECT },
+    category: { select: { id: true, name: true, slug: true } },
+    _count:   { select: { inquiries: true } },
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WHERE CLAUSE BUILDERS  (module-specific search fields)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const WHERE_BUILDERS = {
+  emploi: ({ status, userId, search }) => ({
+    ...(status && { status }),
+    ...(userId && { userId }),
+    ...(search && {
+      OR: [
+        { title:       { contains: search, mode: 'insensitive' } },
+        { companyName: { contains: search, mode: 'insensitive' } },
+        { location:    { contains: search, mode: 'insensitive' } },
+      ],
+    }),
+  }),
+
+  immobilier: ({ status, userId, search }) => ({
+    ...(status && { status }),
+    ...(userId && { userId }),
+    ...(search && {
+      OR: [
+        { title:    { contains: search, mode: 'insensitive' } },
+        { location: { contains: search, mode: 'insensitive' } },
+        { city:     { contains: search, mode: 'insensitive' } },
+      ],
+    }),
+  }),
+
+  automobile: ({ status, userId, search }) => ({
+    ...(status && { status }),
+    ...(userId && { userId }),
+    ...(search && {
+      OR: [
+        { title:    { contains: search, mode: 'insensitive' } },
+        { make:     { contains: search, mode: 'insensitive' } },
+        { model:    { contains: search, mode: 'insensitive' } },
+        { city:     { contains: search, mode: 'insensitive' } },
+        { location: { contains: search, mode: 'insensitive' } },
+      ],
+    }),
+  }),
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ALERT NOTIFIERS  (match and notify subscribers when a listing is approved)
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function notifyJobAlertSubscribers(approvedJob, createNotification) {
+  try {
+    const alerts = await prisma.alert.findMany({
+      where: { module: 'emploi', isActive: true, NOT: [{ userId: approvedJob.userId }] },
+    });
+
+    const notified = new Set([approvedJob.userId]);
+    for (const alert of alerts) {
+      if (notified.has(alert.userId)) continue;
+      const f = alert.filters || {};
+      const matches =
+        (!f.categorySlug  || f.categorySlug  === approvedJob.category?.slug) &&
+        (!f.region        || f.region        === approvedJob.region) &&
+        (!f.city          || f.city          === approvedJob.city) &&
+        (!f.contractType  || f.contractType  === approvedJob.contractType) &&
+        (!f.remote        || f.remote        === approvedJob.remote) &&
+        (!f.keyword       || approvedJob.title.toLowerCase().includes(f.keyword.toLowerCase()));
+
+      if (matches) {
+        await createNotification(
+          alert.userId, 'JOB_ALERT',
+          'Nouvelle offre qui vous correspond 🔔',
+          `Une nouvelle offre "${approvedJob.title}" correspond à votre alerte.`,
+          `/jobs/${approvedJob.id}`,
+        );
+        notified.add(alert.userId);
+      }
+    }
+  } catch (err) {
+    console.error('[notifyJobAlertSubscribers] error:', err);
+  }
+}
+
+async function notifyRealEstateAlertSubscribers(approvedRe, createNotification) {
+  try {
+    const alerts = await prisma.alert.findMany({
+      where: { module: 'immobilier', isActive: true },
+    });
+
+    const notified = new Set([approvedRe.userId]);
+    for (const alert of alerts) {
+      if (notified.has(alert.userId)) continue;
+      const f = alert.filters || {};
+      const matches =
+        (!f.categoryId  || f.categoryId  === approvedRe.categoryId) &&
+        (!f.listingType || f.listingType === approvedRe.listingType) &&
+        (!f.region      || f.region      === approvedRe.region) &&
+        (!f.city        || f.city        === approvedRe.city) &&
+        (!f.minPrice    || Number(approvedRe.price) >= Number(f.minPrice)) &&
+        (!f.maxPrice    || Number(approvedRe.price) <= Number(f.maxPrice));
+
+      if (matches) {
+        await createNotification(
+          alert.userId, 'REALESTATE_ALERT_MATCH',
+          'Nouvelle annonce correspond à votre alerte 🔔',
+          `Une nouvelle annonce "${approvedRe.title}" correspond à votre alerte immobilière.`,
+          `/real-estate/${approvedRe.id}`,
+        );
+        notified.add(alert.userId);
+      }
+    }
+  } catch (err) {
+    console.error('[notifyRealEstateAlertSubscribers] error:', err);
+  }
+}
+
+async function notifyCarAlertSubscribers(approvedCar, createNotification) {
+  try {
+    const alerts = await prisma.alert.findMany({
+      where: { module: 'automobile', isActive: true },
+    });
+
+    const notified = new Set([approvedCar.userId]);
+    for (const alert of alerts) {
+      if (notified.has(alert.userId)) continue;
+      const f = alert.filters || {};
+      const matches =
+        (!f.make         || f.make         === approvedCar.make) &&
+        (!f.bodyType     || f.bodyType     === approvedCar.bodyType) &&
+        (!f.fuelType     || f.fuelType     === approvedCar.fuelType) &&
+        (!f.transmission || f.transmission === approvedCar.transmission) &&
+        (!f.condition    || f.condition    === approvedCar.condition) &&
+        (!f.region       || f.region       === approvedCar.region) &&
+        (!f.city         || f.city         === approvedCar.city) &&
+        (!f.listingType  || f.listingType  === approvedCar.listingType) &&
+        (!f.minPrice     || Number(approvedCar.price) >= Number(f.minPrice)) &&
+        (!f.maxPrice     || Number(approvedCar.price) <= Number(f.maxPrice)) &&
+        (!f.maxMileage   || (approvedCar.mileage != null && approvedCar.mileage <= Number(f.maxMileage))) &&
+        (!f.minYear      || approvedCar.year >= Number(f.minYear)) &&
+        (!f.maxYear      || approvedCar.year <= Number(f.maxYear));
+
+      if (matches) {
+        await createNotification(
+          alert.userId, 'CAR_ALERT_MATCH',
+          'Nouvelle annonce correspond à votre alerte 🔔',
+          `Une nouvelle annonce "${approvedCar.title}" correspond à votre alerte véhicule.`,
+          `/cars/${approvedCar.id}`,
+        );
+        notified.add(alert.userId);
+      }
+    }
+  } catch (err) {
+    console.error('[notifyCarAlertSubscribers] error:', err);
+  }
+}
+
+// Registry so approveListing can look up the right notifier by module
+const ALERT_NOTIFIERS = {
+  emploi:     notifyJobAlertSubscribers,
+  immobilier: notifyRealEstateAlertSubscribers,
+  automobile: notifyCarAlertSubscribers,
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/admin/overview
 // ─────────────────────────────────────────────────────────────────────────────
+
 const getOverview = async (req, res) => {
   try {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
 
     const [
       pendingJobs,
       pendingRealEstate,
+      pendingCars,
       approvedTodayJobs,
       approvedTodayRealEstate,
+      approvedTodayCars,
       openReports,
       totalUsers,
     ] = await Promise.all([
-      // Pending jobs
-      prisma.jobListing.count({ where: { status: "PENDING" } }),
+      prisma.jobListing.count({ where: { status: 'PENDING' } }),
+      prisma.realEstateListing.count({ where: { status: 'PENDING' } }),
+      prisma.carListing.count({ where: { status: 'PENDING' } }),
 
-      // Pending real estate
-      prisma.realEstateListing.count({ where: { status: "PENDING" } }),
-
-      // Approved today — jobs
       prisma.jobListing.count({
-        where: {
-          status: 'APPROVED',
-          publishedAt: { gte: todayStart, lte: todayEnd },
-        },
+        where: { status: 'APPROVED', publishedAt: { gte: todayStart, lte: todayEnd } },
       }),
-
-      // Approved today — real estate
       prisma.realEstateListing.count({
-        where: {
-          status: "APPROVED",
-          publishedAt: { gte: todayStart, lte: todayEnd },
-        },
+        where: { status: 'APPROVED', publishedAt: { gte: todayStart, lte: todayEnd } },
+      }),
+      prisma.carListing.count({
+        where: { status: 'APPROVED', publishedAt: { gte: todayStart, lte: todayEnd } },
       }),
 
-      // Open reports — using Favorite as report placeholder (adjust if you add a Report model)
-      // NOTE: Replace with your Report model if added. Currently returns 0.
+      // Replace Promise.resolve(0) with prisma.report.count(...) once reports go live
       Promise.resolve(0),
-
-      // Total users
       prisma.user.count(),
     ]);
 
     res.json({
       success: true,
       data: {
-        pending: pendingJobs + pendingRealEstate,
-        approvedToday: approvedTodayJobs + approvedTodayRealEstate,
+        pending:      pendingJobs + pendingRealEstate + pendingCars,
+        approvedToday: approvedTodayJobs + approvedTodayRealEstate + approvedTodayCars,
         openReports,
         totalUsers,
+        // Granular breakdown — useful for per-module sidebar badges
+        pendingByModule: {
+          emploi:     pendingJobs,
+          immobilier: pendingRealEstate,
+          automobile: pendingCars,
+        },
       },
     });
   } catch (error) {
-    console.error("admin getOverview error:", error);
-    res.status(500).json({ success: false, message: "Erreur serveur" });
+    console.error('admin getOverview error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
@@ -92,223 +535,48 @@ const getOverview = async (req, res) => {
 // GET /api/admin/listings
 // Query params: module, status, search, userId, page, limit
 // ─────────────────────────────────────────────────────────────────────────────
+
 const getListings = async (req, res) => {
   try {
     const {
-      module: mod = "tous",
-      status = "",
-      search = "",
-      userId = "", // NEW — filter by submitter
-      page = 1,
-      limit = 10,
+      module: mod = 'tous',
+      status  = '',
+      search  = '',
+      userId  = '',
+      page    = 1,
+      limit   = 10,
     } = req.query;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
 
-    // ── Shared where-clause building ────────────────────────────────────────
-    const jobWhere = {
-      ...(status && { status }),
-      ...(userId && { userId }),
-      ...(search && {
-        OR: [
-          { title: { contains: search, mode: "insensitive" } },
-          { companyName: { contains: search, mode: "insensitive" } },
-          { location: { contains: search, mode: "insensitive" } },
-        ],
+    const filters = { status, userId, search };
+
+    // Determine which modules to query
+    const activeModules = mod === 'tous'
+      ? Object.keys(MODULE_REGISTRY)
+      : Object.keys(MODULE_REGISTRY).filter((k) => k === mod);
+
+    // Fetch all active modules in parallel
+    const results = await Promise.all(
+      activeModules.map((moduleKey) => {
+        const { model } = MODULE_REGISTRY[moduleKey];
+        return prisma[model].findMany({
+          where:   WHERE_BUILDERS[moduleKey](filters),
+          orderBy: { createdAt: 'desc' },
+          select:  SELECTS[moduleKey],
+        });
       }),
+    );
 
-    };
+    // Normalize, merge, sort, paginate
+    const all = activeModules
+      .flatMap((moduleKey, i) =>
+        results[i].map((row) => NORMALIZERS[moduleKey](row)),
+      )
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    const reWhere = {
-      ...(status && { status }),
-      ...(userId && { userId }),
-      ...(search && {
-        OR: [
-          { title: { contains: search, mode: "insensitive" } },
-          { location: { contains: search, mode: "insensitive" } },
-          { city: { contains: search, mode: "insensitive" } },
-        ],
-      }),
-    };
-
-    let jobs = [];
-    let realEstate = [];
-
-    if (mod === "tous" || mod === "emploi") {
-      jobs = await prisma.jobListing.findMany({
-  where: jobWhere,
-  orderBy: { createdAt: 'desc' },
-  select: {
-    id:                  true,
-    title:               true,
-    description:         true,
-    companyName:         true,
-    companyLogo:         true,
-    location:            true,
-    region:              true,
-    contractType:        true,
-    remote:              true,
-    salaryMin:           true,
-    salaryMax:           true,
-    salaryPeriod:        true,
-    experienceLevel:     true,
-    educationLevel:      true,
-    languages:           true,
-    skills:              true,
-    applicationDeadline: true,
-    status:              true,
-    isFeatured:          true,
-    isSponsored:         true,
-    viewsCount:          true,
-    adminNotes:          true,
-    createdAt:           true,
-    updatedAt:           true,
-    publishedAt:         true,
-    reviewedAt:          true,
-user: {
-  select: { id: true, name: true, email: true, companyName: true, companyLogo: true, avatar: true },
-}, },
-})
-    }
-
-    if (mod === "tous" || mod === "immobilier") {
-      realEstate = await prisma.realEstateListing.findMany({
-        where: reWhere,
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          location: true,
-          city: true,
-          region: true,
-          listingType: true,
-          propertyType: true,
-          status: true,
-          isActive: true,
-          isFeatured: true,
-          isSponsored: true,
-          price: true,
-          surface: true,
-          rooms: true,
-          bathrooms: true,
-          floor: true,
-          latitude: true,
-          longitude: true,
-          contactPhone: true,
-          images: true,
-          features: true,
-          adminNotes: true,
-          viewsCount: true,
-          createdAt: true,
-          updatedAt: true,
-          publishedAt: true,
-          reviewedAt: true,
-          reviewedBy: true,
-          categoryId: true,
-          user: {
-  select: { id: true, name: true, email: true, companyName: true, companyLogo: true, avatar: true },
-},
-          category: { select: { id: true, name: true, slug: true } },
-          _count: { select: { inquiries: true } },
-        },
-      });
-    }
-
-    // ── Normalize to common shape ────────────────────────────────────────────
-   const normalizeJob = (j) => ({
-  id:                 j.id,
-  module:             'emploi',
-  title:              j.title,
-  company:            j.companyName,
-  companyName:        j.companyName,
-  companyLogo:        j.companyLogo || null,
-  submittedBy:        j.user?.name || j.companyName,
-  submittedByEmail:   j.user?.email || '',
-  submittedById:      j.user?.id || '',
-  submittedByLogo: j.user?.companyLogo || j.user?.avatar || null,
-
-  // localisation — dans JobListing, "location" est la ville/adresse
-  city:               j.location,
-  location:           j.location,
-  region:             j.region || null,
-  // contrat & conditions
-  contractType:       j.contractType,
-  remote:             j.remote || null,
-  // salaire
-  salaryMin:          j.salaryMin ?? null,
-  salaryMax:          j.salaryMax ?? null,
-  salaryPeriod:       j.salaryPeriod || null,
-  // profil recherché
-  experienceLevel:    j.experienceLevel || null,
-  educationLevel:     j.educationLevel  || [],
-  languages:          j.languages       || [],
-  skills:             j.skills          || [],
-  // dates
-  applicationDeadline: j.applicationDeadline || null,
-  createdAt:          j.createdAt,
-  updatedAt:          j.updatedAt,
-  publishedAt:        j.publishedAt || null,
-  reviewedAt:         j.reviewedAt  || null,
-  // misc
-  status:             j.status,
-  isFeatured:         j.isFeatured  || false,
-  isSponsored:        j.isSponsored || false,
-  viewsCount:         j.viewsCount  ?? 0,
-  adminNote:          j.adminNotes  || null,
-  description:        j.description || null,
-  deletedByOwner:     j.deletedByOwner ?? false,
-})
-
-    const normalizeRE = (r) => ({
-      id: r.id,
-      module: "immobilier",
-      title: r.title,
-      description: r.description,
-      company: r.user?.companyName || r.user?.name || "",
-      submittedBy: r.user?.companyName || r.user?.name || "",
-      submittedByEmail: r.user?.email || "",
-      submittedById: r.user?.id || "",
-      submittedByLogo: r.user?.companyLogo || r.user?.avatar || null,
-      location: r.location,
-      city: r.city || r.location,
-      region: r.region,
-      contractType: r.listingType,
-      propertyType: r.propertyType,
-      status: r.status,
-      isActive: r.isActive,
-      isFeatured: r.isFeatured,
-      isSponsored: r.isSponsored,
-      price: r.price,
-      surface: r.surface,
-      rooms: r.rooms,
-      bathrooms: r.bathrooms,
-      floor: r.floor,
-      latitude: r.latitude,
-      longitude: r.longitude,
-      contactPhone: r.contactPhone,
-      images: r.images,
-      features: r.features,
-      adminNote: r.adminNotes || null,
-      viewsCount: r.viewsCount,
-      category: r.category || null,
-      categoryId: r.categoryId,
-      inquiriesCount: r._count?.inquiries ?? 0,
-      reviewedBy: r.reviewedBy,
-      reviewedAt: r.reviewedAt,
-      publishedAt: r.publishedAt,
-      createdAt: r.createdAt,
-      updatedAt: r.updatedAt,
-     });
-
-    // ── Merge, sort, paginate ────────────────────────────────────────────────
-    const all = [
-      ...jobs.map(normalizeJob),
-      ...realEstate.map(normalizeRE),
-    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    const total = all.length;
+    const total    = all.length;
     const paginated = all.slice(skip, skip + take);
 
     res.json({
@@ -316,640 +584,268 @@ user: {
       data: paginated,
       pagination: {
         total,
-        page: parseInt(page),
-        limit: take,
+        page:       parseInt(page),
+        limit:      take,
         totalPages: Math.ceil(total / take),
       },
     });
   } catch (error) {
-    console.error("admin getListings error:", error);
-    res.status(500).json({ success: false, message: "Erreur serveur" });
+    console.error('admin getListings error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Shared helper — match job alerts and notify subscribed citizens.
-// Used by BOTH approval paths (quick "approve" button AND status-panel) so
-// notifications always fire regardless of which UI action the admin uses.
-// ─────────────────────────────────────────────────────────────────────────────
-async function notifyJobAlertSubscribers(approvedJob, createNotification) {
-  try {
-    const matchingAlerts = await prisma.alert.findMany({
-      where: {
-        module: "emploi",
-        isActive: true,
-        NOT: [{ userId: approvedJob.userId }],
-      },
-    });
-
-    const notifiedUserIds = new Set();
-    notifiedUserIds.add(approvedJob.userId);
-
-    for (const alert of matchingAlerts) {
-      if (notifiedUserIds.has(alert.userId)) continue;
-
-      const filters = alert.filters || {};
-      const categoryMatch =
-        !filters.categorySlug ||
-        filters.categorySlug === approvedJob.category?.slug;
-      const regionMatch =
-        !filters.region || filters.region === approvedJob.region;
-      const cityMatch =
-        !filters.city || filters.city === approvedJob.city;
-      const contractMatch =
-        !filters.contractType ||
-        filters.contractType === approvedJob.contractType;
-     const keywordMatch =
-  !filters.keyword ||
-  approvedJob.title.toLowerCase().includes(filters.keyword.toLowerCase());
-const remoteMatch =
-  !filters.remote || filters.remote === approvedJob.remote;
-
-if (
-  categoryMatch &&
-  regionMatch &&
-  cityMatch &&
-  contractMatch &&
-  keywordMatch &&
-  remoteMatch
-) {
-        await createNotification(
-          alert.userId,
-          "JOB_ALERT",
-          "Nouvelle offre qui vous correspond 🔔",
-          `Une nouvelle offre "${approvedJob.title}" correspond à votre alerte.`,
-          `/jobs/${approvedJob.id}`,
-        );
-        notifiedUserIds.add(alert.userId);
-      }
-    }
-  } catch (err) {
-    console.error("[notifyJobAlertSubscribers] error:", err);
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Shared helper — match real estate alerts and notify subscribed citizens.
-// Same rationale as notifyJobAlertSubscribers above.
-// ─────────────────────────────────────────────────────────────────────────────
-async function notifyRealEstateAlertSubscribers(approvedRe, createNotification) {
-  try {
-    const alerts = await prisma.alert.findMany({
-      where: { module: "immobilier", isActive: true },
-    });
-
-    const notifiedUserIds = new Set();
-    notifiedUserIds.add(approvedRe.userId);
-
-    for (const alert of alerts) {
-      if (notifiedUserIds.has(alert.userId)) continue;
-      const f = alert.filters || {};
-      const matches =
-        (!f.categoryId || f.categoryId === approvedRe.categoryId) &&
-        (!f.listingType || f.listingType === approvedRe.listingType) &&
-        (!f.region || f.region === approvedRe.region) &&
-        (!f.city || f.city === approvedRe.city) &&
-        (!f.minPrice || Number(approvedRe.price) >= Number(f.minPrice)) &&
-        (!f.maxPrice || Number(approvedRe.price) <= Number(f.maxPrice));
-
-      if (matches) {
-        await createNotification(
-          alert.userId,
-          "REALESTATE_ALERT_MATCH",
-          "Nouvelle annonce correspond à votre alerte 🔔",
-          `Une nouvelle annonce "${approvedRe.title}" correspond à votre alerte immobilière.`,
-          `/real-estate/${approvedRe.id}`,
-        );
-        notifiedUserIds.add(alert.userId);
-      }
-    }
-  } catch (err) {
-    console.error("[notifyRealEstateAlertSubscribers] error:", err);
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // PATCH /api/admin/listings/:id/approve
-// Détecte si c'est un job ou un bien immo par l'id (essaie les deux)
+// Auto-detects the module by trying each model in registry order.
 // ─────────────────────────────────────────────────────────────────────────────
+
 const approveListing = async (req, res) => {
   try {
-    const { id } = req.params
-    const adminId = req.user.userId
-    const now = new Date()
+    const { id }    = req.params;
+    const adminId   = req.user.userId;
+    const now       = new Date();
     const { createNotification } = require('./notificationController');
 
+    for (const [moduleKey, config] of Object.entries(MODULE_REGISTRY)) {
+      const record = await prisma[config.model].findUnique({ where: { id } });
+      if (!record) continue;
 
-    // Essai job d'abord
-    const job = await prisma.jobListing.findUnique({ where: { id } });
-    if (job) {
-      if (job.status !== "PENDING") {
-        return res.status(400).json({
-          success: false,
-          message: "Cette annonce n'est pas en attente",
-        });
+      if (record.status !== 'PENDING') {
+        return res.status(400).json({ success: false, message: "Cette annonce n'est pas en attente" });
       }
 
-     const approvedJob = await prisma.jobListing.update({
-  where: { id },
-  data: { status: 'APPROVED', publishedAt: now, reviewedAt: now, reviewedBy: adminId, adminNotes: null },
-  include: { category: { select: { slug: true } } }, // ← add this
-});
+      // Move images out of temp/ if this module uses Cloudinary images
+      const images = config.cloudinaryFolder
+        ? await moveImages(record.images || [], config.cloudinaryFolder)
+        : record.images || [];
 
-// Trigger job alerts
-await notifyJobAlertSubscribers(approvedJob, createNotification);
+      const approved = await prisma[config.model].update({
+        where: { id },
+        data: {
+          status:     'APPROVED',
+          publishedAt: now,
+          reviewedAt:  now,
+          reviewedBy:  adminId,
+          adminNotes:  null,
+          ...(config.cloudinaryFolder ? { images } : {}),
+        },
+        include: { category: { select: { slug: true } } },
+      });
 
-// Notify business that their job was approved
+      // Fire alert subscribers (if a notifier is registered for this module)
+      const notifier = ALERT_NOTIFIERS[moduleKey];
+      if (notifier) await notifier(approved, createNotification);
 
-await createNotification(
-  job.userId,
-  'LISTING_APPROVED',
-  'Votre annonce a été approuvée ✅',
-  `Votre offre d'emploi "${job.title}" est maintenant en ligne.`,
-  `/jobs/${job.id}`
-);
-
-return res.json({ success: true, message: 'Offre d\'emploi approuvée' });
-
-
-    }
-
-    // Essai immobilier
-    const re = await prisma.realEstateListing.findUnique({ where: { id } });
-    if (re) {
-      if (re.status !== "PENDING") {
-        return res.status(400).json({
-          success: false,
-          message: "Cette annonce n'est pas en attente",
-        });
-      }
-
-      // Move images from temp/ to real-estate/
-      const images = re.images || [];
-      const movedImages = await Promise.all(
-        images.map(async (img) => {
-          try {
-            // Extract public_id from URL — e.g. "madinatti/temp/abc123"
-            const urlParts = img.url.split("/upload/");
-            const withVersion = urlParts[1]; // e.g. "v1234567/madinatti/temp/abc123.jpg"
-            const withoutVersion = withVersion.replace(/^v\d+\//, ""); // "madinatti/temp/abc123.jpg"
-            const oldPublicId = withoutVersion.replace(/\.[^/.]+$/, ""); // remove extension
-
-            const newPublicId = oldPublicId.replace(
-              "madinatti/temp",
-              "madinatti/real-estate",
-            );
-
-            const result = await cloudinary.uploader.rename(
-              oldPublicId,
-              newPublicId,
-            );
-            return { ...img, url: result.secure_url };
-          } catch (err) {
-            console.error("Failed to move image:", img.url, err.message);
-            return img; // keep original if move fails, don't block approval
-          }
-        }),
+      // Notify the listing owner
+      await createNotification(
+        record.userId,
+        'LISTING_APPROVED',
+        'Votre annonce a été approuvée ✅',
+        `Votre annonce "${record.title}" est maintenant en ligne.`,
+        config.frontendPath(id),
       );
 
-const approvedRe = await prisma.realEstateListing.update({
-  where: { id },
-  data: {
-    status: "APPROVED",
-    publishedAt: now,
-    reviewedAt: now,
-    reviewedBy: adminId,
-    adminNotes: null,
-    images: movedImages,
-  },
-});
-
-await createNotification(
-  re.userId,
-  'LISTING_APPROVED',
-  'Votre annonce a été approuvée ✅',
-  `Votre annonce immobilière "${re.title}" est maintenant en ligne.`,
-  `/real-estate/${re.id}`
-);
-
-// ── Match citizen alerts ──────────────────────────────────────────────────
-await notifyRealEstateAlertSubscribers(approvedRe, createNotification);
-
-return res.json({ success: true, message: 'Annonce immobilière approuvée' });
-
+      return res.json({ success: true, message: 'Annonce approuvée' });
     }
 
-    res.status(404).json({ success: false, message: "Annonce introuvable" });
+    return res.status(404).json({ success: false, message: 'Annonce introuvable' });
   } catch (error) {
-    console.error("admin approveListing error:", error);
-    res.status(500).json({ success: false, message: "Erreur serveur" });
+    console.error('admin approveListing error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PATCH /api/admin/listings/:id/reject
-// Body: { adminNote }
+// Body: { adminNote, messageToSend }
 // ─────────────────────────────────────────────────────────────────────────────
+
 const rejectListing = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { adminNote = "", messageToSend = "" } = req.body;
-    const adminId = req.user.userId;
-    const now = new Date();
-    const { createNotification } = require('./notificationController');
+    const { id }                           = req.params;
+    const { adminNote = '', messageToSend = '' } = req.body;
+    const adminId                          = req.user.userId;
+    const now                              = new Date();
+    const { createNotification }           = require('./notificationController');
 
-    // ── Job ──────────────────────────────────────────────────────────────────
-    const job = await prisma.jobListing.findUnique({ where: { id } });
-    if (job) {
-      await prisma.jobListing.update({
+    for (const [, config] of Object.entries(MODULE_REGISTRY)) {
+      const record = await prisma[config.model].findUnique({ where: { id } });
+      if (!record) continue;
+
+      // Delete temp images on rejection (only for image-based modules)
+      if (config.cloudinaryFolder) {
+        await destroyImages(record.images || []);
+      }
+
+      await prisma[config.model].update({
         where: { id },
-        data: {
-          status: "REJECTED",
-          adminNotes: adminNote,
-          reviewedAt: now,
-          reviewedBy: adminId,
-        },
+        data: { status: 'REJECTED', adminNotes: adminNote, reviewedAt: now, reviewedBy: adminId },
       });
 
-      // Message dashboard entreprise
+      // Dashboard message
       await prisma.businessMessage.create({
         data: {
-          userId:       job.userId,
+          userId:       record.userId,
           type:         'REJECTION',
-          targetType:   'JOB',
+          targetType:   config.targetType,
           targetId:     id,
-          targetTitle:  job.title,
+          targetTitle:  record.title,
           adminMessage: messageToSend || adminNote || '',
         },
       });
 
-      // Notification cloche
+      // Bell notification
       await createNotification(
-        job.userId,
+        record.userId,
         'LISTING_REJECTED',
         'Votre annonce a été refusée ❌',
-        `Votre offre d'emploi "${job.title}" a été refusée. Consultez vos messages pour plus de détails.`,
-        `/dashboard/messages`
+        `Votre annonce "${record.title}" a été refusée. Consultez vos messages pour plus de détails.`,
+        '/dashboard/messages',
       );
 
-      return res.json({ success: true, message: "Offre d'emploi refusée" });
+      return res.json({ success: true, message: 'Annonce refusée' });
     }
 
-    // ── Immobilier ───────────────────────────────────────────────────────────
-    const re = await prisma.realEstateListing.findUnique({ where: { id } });
-    if (re) {
-      // Supprimer images Cloudinary (temp/)
-      const images = re.images || [];
-      await Promise.all(
-        images.map(async (img) => {
-          try {
-            const urlParts = img.url.split("/upload/");
-            const withVersion = urlParts[1];
-            const withoutVersion = withVersion.replace(/^v\d+\//, "");
-            const publicId = withoutVersion.replace(/\.[^/.]+$/, "");
-            await cloudinary.uploader.destroy(publicId);
-          } catch (err) {
-            console.error("Failed to delete image:", img.url, err.message);
-          }
-        }),
-      );
-
-      await prisma.realEstateListing.update({
-        where: { id },
-        data: {
-          status: "REJECTED",
-          adminNotes: adminNote,
-          reviewedAt: now,
-          reviewedBy: adminId,
-        },
-      });
-
-      // Message dashboard entreprise
-      await prisma.businessMessage.create({
-        data: {
-          userId:       re.userId,
-          type:         'REJECTION',
-          targetType:   'REAL_ESTATE',
-          targetId:     id,
-          targetTitle:  re.title,
-          adminMessage: messageToSend || adminNote || '',
-        },
-      });
-
-      // Notification cloche
-      await createNotification(
-        re.userId,
-        'LISTING_REJECTED',
-        'Votre annonce a été refusée ❌',
-        `Votre annonce immobilière "${re.title}" a été refusée. Consultez vos messages pour plus de détails.`,
-        `/dashboard/messages`
-      );
-
-      return res.json({ success: true, message: "Annonce immobilière refusée" });
-    }
-
-    res.status(404).json({ success: false, message: "Annonce introuvable" });
+    return res.status(404).json({ success: false, message: 'Annonce introuvable' });
   } catch (error) {
-    console.error("admin rejectListing error:", error);
-    res.status(500).json({ success: false, message: "Erreur serveur" });
+    console.error('admin rejectListing error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
-// ─────────────────────────────────────────────────────────────────────────────
-// PATCH /api/admin/listings/:id/status
-// Body: { status, adminNotes }
-// ─────────────────────────────────────────────────────────────────────────────
-// ─── handlers ────────────────────────────────────────────────────────────────
 
-async function handleJob(req, res, { id, status, adminNotes, adminId, now }) {
-  const validStatuses = [
-    "PENDING",
-    "APPROVED",
-    "REJECTED",
-    "SUSPENDED",
-    "EXPIRED",
-    "ARCHIVED",
-  ];
-  if (!validStatuses.includes(status)) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message: "Statut invalide pour une offre d'emploi",
-      });
+// ─────────────────────────────────────────────────────────────────────────────
+// STATUS HANDLERS  (used by updateListingStatus — one per module)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const VALID_STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED', 'EXPIRED', 'ARCHIVED'];
+
+/**
+ * Generic status handler shared by all image-based modules.
+ * Pass moduleKey to get the right Cloudinary folder, frontend path, and notifier.
+ */
+async function handleGenericStatus(req, res, { id, status, adminNotes, adminId, now }, moduleKey) {
+  const { createNotification } = require('./notificationController');
+  const config = MODULE_REGISTRY[moduleKey];
+
+  if (!VALID_STATUSES.includes(status)) {
+    return res.status(400).json({ success: false, message: 'Statut invalide' });
   }
 
-  const job = await prisma.jobListing.findUnique({ where: { id } });
-  if (!job)
-    return res
-      .status(404)
-      .json({ success: false, message: "Annonce introuvable" });
+  const record = await prisma[config.model].findUnique({ where: { id } });
+  if (!record) return res.status(404).json({ success: false, message: 'Annonce introuvable' });
 
-  const wasPending = job.status === "PENDING";
+  const wasPending = record.status === 'PENDING';
+  let   images     = record.images || [];
 
-  const updated = await prisma.jobListing.update({
+  // Approve: move images out of temp/
+  if (status === 'APPROVED' && wasPending && config.cloudinaryFolder) {
+    images = await moveImages(images, config.cloudinaryFolder);
+  }
+
+  // Reject: destroy temp images
+  if (status === 'REJECTED' && wasPending && config.cloudinaryFolder) {
+    await destroyImages(images.filter((img) => img.url?.includes('madinatti/temp')));
+  }
+
+  const updated = await prisma[config.model].update({
     where: { id },
     data: {
       status,
       adminNotes: adminNotes || null,
       reviewedAt: now,
       reviewedBy: adminId,
-      ...(status === "APPROVED" && !job.publishedAt
-        ? { publishedAt: now }
-        : {}),
+      ...(config.cloudinaryFolder ? { images } : {}),
+      ...(status === 'APPROVED' && !record.publishedAt ? { publishedAt: now } : {}),
     },
     include: { category: { select: { slug: true } } },
   });
 
-  // ── Notifications — mirrors the quick-approve path so behavior is
-  // identical no matter which admin UI action triggered the transition.
-  const { createNotification } = require("./notificationController");
-
-  if (status === "APPROVED" && wasPending) {
-    await notifyJobAlertSubscribers(updated, createNotification);
+  // Notifications on key transitions
+  if (status === 'APPROVED' && wasPending) {
+    const notifier = ALERT_NOTIFIERS[moduleKey];
+    if (notifier) await notifier(updated, createNotification);
     await createNotification(
-      updated.userId,
-      "LISTING_APPROVED",
-      "Votre annonce a été approuvée ✅",
-      `Votre offre d'emploi "${updated.title}" est maintenant en ligne.`,
-      `/jobs/${updated.id}`,
+      updated.userId, 'LISTING_APPROVED',
+      'Votre annonce a été approuvée ✅',
+      `Votre annonce "${updated.title}" est maintenant en ligne.`,
+      config.frontendPath(updated.id),
     );
-  } else if (status === "REJECTED" && wasPending) {
+  } else if (status === 'REJECTED' && wasPending) {
     await createNotification(
-      updated.userId,
-      "LISTING_REJECTED",
-      "Votre annonce a été refusée ❌",
-      `Votre offre d'emploi "${updated.title}" a été refusée. Consultez vos messages pour plus de détails.`,
-      `/dashboard/messages`,
+      updated.userId, 'LISTING_REJECTED',
+      'Votre annonce a été refusée ❌',
+      `Votre annonce "${updated.title}" a été refusée. Consultez vos messages pour plus de détails.`,
+      '/dashboard/messages',
     );
   }
 
-  return res.json({
-    success: true,
-    message: "Offre d'emploi mise à jour",
-    data: updated,
-  });
+  return res.json({ success: true, message: 'Annonce mise à jour', data: updated });
 }
 
-async function handleRealEstate(
-  req,
-  res,
-  { id, status, adminNotes, adminId, now },
-) {
-  const validStatuses = [
-    "PENDING",
-    "APPROVED",
-    "REJECTED",
-    "SUSPENDED",
-    "EXPIRED",
-    "ARCHIVED",
-  ];
-  if (!validStatuses.includes(status)) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message: "Statut invalide pour une annonce immobilière",
-      });
-  }
-
-  const re = await prisma.realEstateListing.findUnique({ where: { id } });
-  if (!re)
-    return res
-      .status(404)
-      .json({ success: false, message: "Annonce introuvable" });
-
-  const wasPending = re.status === "PENDING";
-
-  let images = re.images || [];
-
-  if (status === "APPROVED" && re.status === "PENDING") {
-    images = await Promise.all(
-      images.map(async (img) => {
-        try {
-          if (!img.url?.includes("madinatti/temp")) return img;
-          const urlParts = img.url.split("/upload/");
-          const withoutVersion = urlParts[1].replace(/^v\d+\//, "");
-          const oldPublicId = withoutVersion.replace(/\.[^/.]+$/, "");
-          const newPublicId = oldPublicId.replace(
-            "madinatti/temp",
-            "madinatti/real-estate",
-          );
-          const result = await cloudinary.uploader.rename(
-            oldPublicId,
-            newPublicId,
-          );
-          return { ...img, url: result.secure_url };
-        } catch (err) {
-          console.error("Failed to move image:", img.url, err.message);
-          return img;
-        }
-      }),
-    );
-  }
-
-  if (status === "REJECTED" && re.status === "PENDING") {
-    await Promise.all(
-      images.map(async (img) => {
-        try {
-          if (!img.url?.includes("madinatti/temp")) return;
-          const urlParts = img.url.split("/upload/");
-          const withoutVersion = urlParts[1].replace(/^v\d+\//, "");
-          const publicId = withoutVersion.replace(/\.[^/.]+$/, "");
-          await cloudinary.uploader.destroy(publicId);
-        } catch (err) {
-          console.error("Failed to delete image:", img.url, err.message);
-        }
-      }),
-    );
-  }
-
-  const updated = await prisma.realEstateListing.update({
-    where: { id },
-    data: {
-      status,
-      adminNotes: adminNotes || null,
-      reviewedAt: now,
-      reviewedBy: adminId,
-      images,
-      ...(status === "APPROVED" && !re.publishedAt ? { publishedAt: now } : {}),
-    },
-  });
-
-  // ── Notifications — mirrors the quick-approve path so behavior is
-  // identical no matter which admin UI action triggered the transition.
-  const { createNotification } = require("./notificationController");
-
-  if (status === "APPROVED" && wasPending) {
-    await createNotification(
-      updated.userId,
-      "LISTING_APPROVED",
-      "Votre annonce a été approuvée ✅",
-      `Votre annonce immobilière "${updated.title}" est maintenant en ligne.`,
-      `/real-estate/${updated.id}`,
-    );
-    await notifyRealEstateAlertSubscribers(updated, createNotification);
-  } else if (status === "REJECTED" && wasPending) {
-    await createNotification(
-      updated.userId,
-      "LISTING_REJECTED",
-      "Votre annonce a été refusée ❌",
-      `Votre annonce immobilière "${updated.title}" a été refusée. Consultez vos messages pour plus de détails.`,
-      `/dashboard/messages`,
-    );
-  }
-
-  return res.json({
-    success: true,
-    message: "Annonce immobilière mise à jour",
-    data: updated,
-  });
-}
-
-// ─── module map ───────────────────────────────────────────────────────────────
-// To add a module: one line here + one handler function above. Nothing else changes.
-
-const MODULE_HANDLERS = {
-  emploi: handleJob,
-  immobilier: handleRealEstate,
-  // vehicules: handleVehicle,
+// Module-specific handlers (thin wrappers — add custom logic per module here if needed)
+const STATUS_HANDLERS = {
+  emploi:     (req, res, ctx) => handleGenericStatus(req, res, ctx, 'emploi'),
+  immobilier: (req, res, ctx) => handleGenericStatus(req, res, ctx, 'immobilier'),
+  automobile: (req, res, ctx) => handleGenericStatus(req, res, ctx, 'automobile'),
+  // services:  (req, res, ctx) => handleGenericStatus(req, res, ctx, 'services'),
 };
 
-// ─── controller ───────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /api/admin/listings/:id/status
+// Body: { status, adminNotes, module }
+// ─────────────────────────────────────────────────────────────────────────────
 
 const updateListingStatus = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id }                    = req.params;
     const { status, adminNotes, module } = req.body;
-    const adminId = req.user.userId;
-    const now = new Date();
+    const adminId                   = req.user.userId;
+    const now                       = new Date();
 
-    const handler = MODULE_HANDLERS[module];
+    const handler = STATUS_HANDLERS[module];
     if (!handler) {
-      return res
-        .status(400)
-        .json({ success: false, message: `Module inconnu : ${module}` });
+      return res.status(400).json({ success: false, message: `Module inconnu : ${module}` });
     }
 
     return await handler(req, res, { id, status, adminNotes, adminId, now });
   } catch (error) {
-    console.error("admin updateListingStatus error:", error);
-    return res.status(500).json({ success: false, message: "Erreur serveur" });
+    console.error('admin updateListingStatus error:', error);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DELETE /api/admin/listings/:id
-// Permanently deletes a listing (job or real estate) and its Cloudinary images.
+// Permanently deletes a listing and its Cloudinary assets.
 // ─────────────────────────────────────────────────────────────────────────────
+
 const deleteListing = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // ── Try job listing first ─────────────────────────────────────────────
-    const job = await prisma.jobListing.findUnique({ where: { id } });
-    if (job) {
-      // Delete company logo from Cloudinary if present
-      if (job.companyLogo) {
-        try {
-          const urlParts = job.companyLogo.split("/upload/");
-          if (urlParts.length === 2) {
-            const withoutVersion = urlParts[1].replace(/^v\d+\//, "");
-            const publicId = withoutVersion.replace(/\.[^/.]+$/, "");
-            await cloudinary.uploader.destroy(publicId);
-          }
-        } catch (err) {
-          console.error(
-            "Failed to delete job logo from Cloudinary:",
-            err.message,
-          );
-        }
+    for (const [, config] of Object.entries(MODULE_REGISTRY)) {
+      const record = await prisma[config.model].findUnique({ where: { id } });
+      if (!record) continue;
+
+      // Destroy all associated Cloudinary images
+      if (config.cloudinaryFolder) {
+        await destroyImages(record.images || []);
       }
 
-      await prisma.jobListing.delete({ where: { id } });
-      return res.json({
-        success: true,
-        message: "Offre d'emploi supprimée définitivement",
-      });
+      // For job listings, also clean up the company logo
+      if (config.model === 'jobListing' && record.companyLogo) {
+        await destroyImage({ url: record.companyLogo });
+      }
+
+      await prisma[config.model].delete({ where: { id } });
+      return res.json({ success: true, message: 'Annonce supprimée définitivement' });
     }
 
-    // ── Try real estate listing ───────────────────────────────────────────
-    const re = await prisma.realEstateListing.findUnique({ where: { id } });
-    if (re) {
-      // Delete all images from Cloudinary
-      const images = re.images || [];
-      await Promise.all(
-        images.map(async (img) => {
-          try {
-            const url = img?.url || img;
-            if (!url) return;
-            const urlParts = url.split("/upload/");
-            if (urlParts.length !== 2) return;
-            const withoutVersion = urlParts[1].replace(/^v\d+\//, "");
-            const publicId = withoutVersion.replace(/\.[^/.]+$/, "");
-            await cloudinary.uploader.destroy(publicId);
-          } catch (err) {
-            console.error(
-              "Failed to delete image from Cloudinary:",
-              err.message,
-            );
-            // don't block deletion if Cloudinary cleanup fails
-          }
-        }),
-      );
-
-      await prisma.realEstateListing.delete({ where: { id } });
-      return res.json({
-        success: true,
-        message: "Annonce immobilière supprimée définitivement",
-      });
-    }
-
-    return res
-      .status(404)
-      .json({ success: false, message: "Annonce introuvable" });
+    return res.status(404).json({ success: false, message: 'Annonce introuvable' });
   } catch (error) {
-    console.error("admin deleteListing error:", error);
-    return res.status(500).json({ success: false, message: "Erreur serveur" });
+    console.error('admin deleteListing error:', error);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
@@ -1177,16 +1073,18 @@ const getBusinesses = async (req, res) => {
         city: b.city || "—",
         isActive: b.isActive,
         plan,
-        joinedAt:         b.createdAt,
-        totalListings:    allListings.length,
-        pendingListings:  allListings.filter((l) => l.status === 'PENDING').length,
-        publishedListings: allListings.filter((l) => l.status === 'APPROVED').length,
-        rejectedListings: allListings.filter((l) => l.status === 'REJECTED').length,
-      }
-    })
- 
-    res.json({ success: true, data: normalized })
+        joinedAt: b.createdAt,
+        totalListings: allListings.length,
+        pendingListings: allListings.filter((l) => l.status === "PENDING")
+          .length,
+        publishedListings: allListings.filter((l) => l.status === "APPROVED")
+          .length,
+        rejectedListings: allListings.filter((l) => l.status === "REJECTED")
+          .length,
+      };
+    });
 
+    res.json({ success: true, data: normalized });
   } catch (error) {
     console.error("admin getBusinesses error:", error);
     res.status(500).json({ success: false, message: "Erreur serveur" });
@@ -1261,16 +1159,20 @@ const createCategory = async (req, res) => {
     if (!mod) {
       return res
         .status(400)
-        .json({ success: false, message: "Le module est requis (emploi | immobilier)" });
+        .json({
+          success: false,
+          message: "Le module est requis (emploi | immobilier)",
+        });
     }
 
     const MODULE_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-if (!MODULE_SLUG_RE.test(mod)) {
-  return res.status(400).json({
-    success: false,
-    message: "Le module doit contenir uniquement des minuscules, chiffres et tirets.",
-  });
-}
+    if (!MODULE_SLUG_RE.test(mod)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Le module doit contenir uniquement des minuscules, chiffres et tirets.",
+      });
+    }
 
     const slug = `${mod}-${toSlug(name.trim())}`;
 
@@ -1423,7 +1325,6 @@ const deleteCategory = async (req, res) => {
   }
 };
 
-
 // ─────────────────────────────────────────────────────────────────────────────
 // DELETE /api/admincategories/module/:module
 // delete full module.
@@ -1435,13 +1336,15 @@ const deleteModule = async (req, res) => {
     // Find all categories in this module
     const cats = await prisma.category.findMany({
       where: { module: mod },
-      include: { _count: { select: { jobListings: true, realEstateListings: true } } },
+      include: {
+        _count: { select: { jobListings: true, realEstateListings: true } },
+      },
     });
 
     const deletable = cats.filter(
-      c => c._count.jobListings === 0 && c._count.realEstateListings === 0
+      (c) => c._count.jobListings === 0 && c._count.realEstateListings === 0,
     );
-    const blocked   = cats.length - deletable.length;
+    const blocked = cats.length - deletable.length;
 
     if (deletable.length === 0) {
       return res.status(409).json({
@@ -1451,7 +1354,7 @@ const deleteModule = async (req, res) => {
     }
 
     await prisma.category.deleteMany({
-      where: { id: { in: deletable.map(c => c.id) } },
+      where: { id: { in: deletable.map((c) => c.id) } },
     });
 
     res.json({
@@ -1484,5 +1387,5 @@ module.exports = {
   updateCategory,
   toggleCategoryActive,
   deleteCategory,
-  deleteModule
+  deleteModule,
 };

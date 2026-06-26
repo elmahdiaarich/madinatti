@@ -1,5 +1,3 @@
-// prisma/seeds/categories.seed.js
-
 const CATEGORIES = [
   // ── Emploi ───────────────────────────────────────────────────────────────
   { name: 'Informatique & Tech',       slug: 'informatique', module: 'emploi' },
@@ -21,12 +19,18 @@ const CATEGORIES = [
   { name: 'Terrain',     slug: 'terrain',     module: 'immobilier' },
   { name: 'Bureau',      slug: 'bureau',      module: 'immobilier' },
   { name: 'Commerce',    slug: 'commerce',    module: 'immobilier' },
+
+  // ── Automobile ───────────────────────────────────────────────────────────
+  { name: 'Voitures',    slug: 'voitures',    module: 'automobile' },
+  { name: 'Motos',       slug: 'motos',       module: 'automobile' },
+  { name: 'Utilitaires', slug: 'utilitaires', module: 'automobile' },
+  { name: 'Camions',     slug: 'camions',     module: 'automobile' },
 ];
 
 async function seedCategories(prisma) {
   console.log('🌱 Seeding categories...');
 
-  const result = { emploi: {}, immobilier: {} };
+  const result = { emploi: {}, immobilier: {}, automobile: {} }; // ← add automobile here
 
   for (const cat of CATEGORIES) {
     const record = await prisma.category.upsert({

@@ -17,6 +17,7 @@ const TARGET_LABELS = {
   REAL_ESTATE: 'annonce immobilière',
   JOB:         'offre d\'emploi',
   USER:        'utilisateur',
+  CAR:         'automobile'
 }
 
 // ─── ReportModal ──────────────────────────────────────────────────────────────

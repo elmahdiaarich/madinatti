@@ -272,7 +272,9 @@ function AlertModal({ token, onClose }) {
   );
 }
 
-export default function RealEstatePage() {
+import LoadingSpinner from "@/components/shared/LoadingSpinner";
+
+function RealEstatePageContent() {
   const { user, token } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -567,17 +569,27 @@ export default function RealEstatePage() {
       )}
 
       {/* BUSINESS GATE MODAL */}
-     {showBusinessGate && (
-  <div
-    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-    style={{ animation: "fadeIn 0.15s ease-out" }}
-    onClick={(e) => { if (e.target === e.currentTarget) setShowBusinessGate(false); }}
-  >
-    <div style={{ animation: "slideUp 0.2s ease-out" }}>
-      <BusinessAccountGate onClose={() => setShowBusinessGate(false)} />
+      {showBusinessGate && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          style={{ animation: "fadeIn 0.15s ease-out" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowBusinessGate(false); }}
+        >
+          <div style={{ animation: "slideUp 0.2s ease-out" }}>
+            <BusinessAccountGate onClose={() => setShowBusinessGate(false)} />
+          </div>
+        </div>
+      )}
     </div>
-  </div>
-)}
-    </div>
+  );
+}
+
+import { Suspense } from "react";
+
+export default function RealEstatePage() {
+  return (
+    <Suspense fallback={<LoadingSpinner message="Chargement des annonces immobilières..." />}>
+      <RealEstatePageContent />
+    </Suspense>
   );
 }
