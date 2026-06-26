@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import RealEstateBody from "@/components/admin/real-estate/RealEstateBody"
 import JobBody from "@/components/admin/jobs/JobBody"
+import VehicleBody from "@/components/admin/vehicles/VehicleBody"
 import RejectModal from './RejectModal'
 import SuspendModal from './SuspendModal'
 import ArchiveModal from './ArchiveModal'
@@ -11,7 +12,7 @@ import ArchiveModal from './ArchiveModal'
 const MODULE_BODIES = {
   immobilier: RealEstateBody,
   emploi: JobBody,
-  // vehicules: VehicleBody, ← future
+  vehicule: VehicleBody,
 }
 
 const IconX = () => (

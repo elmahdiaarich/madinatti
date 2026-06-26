@@ -11,7 +11,6 @@ import { categoriesService } from '@/services/categoriesService';
 const ALL_CITIES = cities.map((c) => ({ name: c.name, region: c.region_name }));
 const REGIONS = [...new Set(ALL_CITIES.map((c) => c.region))].sort();
 
-// ── Module registry ──────────────────────────────────────────────────────────
 const MODULES = [
   {
     label: 'Immobilier',
@@ -44,9 +43,21 @@ const MODULES = [
       ],
     },
   },
+  {
+    label: 'Véhicules',
+    value: 'automobile',
+    href: '/cars',
+    extraField: {
+      key: 'listingType',
+      label: 'Type',
+      options: [
+        { value: 'SALE', label: 'Vente' },
+        { value: 'RENT', label: 'Location' },
+      ],
+    },
+  },
 ];
 
-// ── Reusable searchable dropdown ─────────────────────────────────────────────
 function SelectDropdown({ label, icon: Icon, value, options, onSelect, disabled }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -395,8 +406,8 @@ export default function HeroSearch() {
   const quickTags = [
     { label: 'Appartement à Casablanca', module: 'immobilier', city: 'Casablanca' },
     { label: 'Emploi à Rabat',           module: 'emploi',     city: 'Rabat' },
+    { label: 'Voiture à Casablanca',     module: 'automobile', city: 'Casablanca' },
     { label: 'Villa à Marrakech',        module: 'immobilier', city: 'Marrakech' },
-    { label: 'Stage à Casablanca',       module: 'emploi',     city: 'Casablanca' },
   ];
 
   const handleQuickTag = (tag) => {

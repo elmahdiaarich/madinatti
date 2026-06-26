@@ -2,7 +2,7 @@ const prisma = require('../config/db');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const VALID_MODULES = ['emploi', 'immobilier'];
+const VALID_MODULES = ['emploi', 'immobilier', 'automobile'];
 const MAX_ALERTS    = 5;
 
 /** Returns true if two filter objects are considered identical for a given module. */
@@ -29,11 +29,25 @@ function isDuplicateFilter(existing, incoming, module) {
     );
   }
 
+  if (module === 'automobile') {
+    return (
+      (existing.categoryId   || null) === (incoming.categoryId   || null) &&
+      (existing.listingType  || null) === (incoming.listingType  || null) &&
+      (existing.region       || null) === (incoming.region       || null) &&
+      (existing.city         || null) === (incoming.city         || null) &&
+      (existing.minPrice     || null) === (incoming.minPrice     || null) &&
+      (existing.maxPrice     || null) === (incoming.maxPrice     || null) &&
+      (existing.make          || null) === (incoming.make          || null) &&
+      (existing.model         || null) === (incoming.model         || null) &&
+      (existing.condition     || null) === (incoming.condition     || null)
+    );
+  }
+
   return false;
 }
 
 // ─── GET /api/alerts ──────────────────────────────────────────────────────────
-// Query: ?module=emploi|immobilier   (omit to get ALL alerts)
+// Query: ?module=emploi|immobilier|automobile   (omit to get ALL alerts)
 
 const getMyAlerts = async (req, res) => {
   try {
@@ -58,7 +72,7 @@ const getMyAlerts = async (req, res) => {
 };
 
 // ─── POST /api/alerts ─────────────────────────────────────────────────────────
-// Body: { module: 'emploi'|'immobilier', filters: { ... } }
+// Body: { module: 'emploi'|'immobilier'|'automobile', filters: { ... } }
 
 const createAlert = async (req, res) => {
   try {
@@ -67,7 +81,7 @@ const createAlert = async (req, res) => {
 
     // Validate
     if (!mod || !VALID_MODULES.includes(mod)) {
-      return res.status(400).json({ success: false, message: 'module invalide (emploi | immobilier)' });
+      return res.status(400).json({ success: false, message: 'module invalide (emploi | immobilier | automobile)' });
     }
     if (!filters || typeof filters !== 'object') {
       return res.status(400).json({ success: false, message: 'filters requis' });

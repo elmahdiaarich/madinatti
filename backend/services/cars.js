@@ -220,7 +220,11 @@ async function getListings(query) {
       where,
       skip,
       take,
-      orderBy: { [orderByField]: orderByDir },
+      orderBy: [
+        { isSponsored: 'desc' },   // sponsored first
+        { isFeatured: 'desc' },    // then featured
+        { [orderByField]: orderByDir }, // then user-selected sort
+      ],
       select: {
         id: true, slug: true, title: true,
         listingType: true, condition: true,
@@ -228,7 +232,8 @@ async function getListings(query) {
         fuelType: true, transmission: true, bodyType: true,
         price: true, isNegotiable: true,
         city: true, images: true,
-        isFeatured: true, createdAt: true,
+        isFeatured: true, isSponsored: true, // ← add isSponsored to select
+        createdAt: true,
         user:     { select: { id: true, name: true, avatar: true } },
         category: { select: { id: true, name: true } },
       },

@@ -332,6 +332,7 @@ enum ReportTarget {
   REAL_ESTATE
   JOB
   USER
+  CAR
 }
 
 enum ReportReason {

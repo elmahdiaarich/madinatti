@@ -187,6 +187,30 @@ const IconChart = () => (
   </svg>
 );
 
+const IconCar = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    {/* Car body */}
+    <path d="M3 11 L5 6 Q6 4 8 4 L16 4 Q18 4 19 6 L21 11" />
+    <rect x="2" y="11" width="20" height="6" rx="1.5" />
+    {/* Wheels */}
+    <circle cx="7" cy="17" r="2" />
+    <circle cx="17" cy="17" r="2" />
+    {/* Windows */}
+    <path d="M7.5 4.5 L6.5 9 L11 9 L11 4.5 Z" />
+    <path d="M13 4.5 L13 9 L17.5 9 L16.5 4.5 Z" />
+  </svg>
+);
+
 const IconStar = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -380,6 +404,12 @@ export default function DashboardLayout({ children }) {
       label: "Emploi",
       href: "/dashboard/listings/jobs",
       icon: IconBriefcase,
+    },
+    {
+      key: "cars",
+      label: "voitures",
+      href: "/dashboard/listings/cars",
+      icon: IconCar,
     },
   ];
 

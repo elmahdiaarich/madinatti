@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -8,6 +8,7 @@ import ProtectedRoute from "@/components/shared/ProtectedRoute";
 import { jobsService } from "@/services/jobsService";
 import JobListingFilters from "@/components/jobs/JobListingFilters";
 import ApplicationsDrawer from "@/components/jobs/ApplicationsDrawer";
+import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import { useToast } from "@/context/ToastContext";
 
 const fmtDate = (d) =>
@@ -266,7 +267,9 @@ function JobCard({ job, onDelete, onViewApplications }) {
 export default function BusinessJobsDashboard() {
   return (
     <ProtectedRoute roles={["business"]}>
-      <DashboardContent />
+      <Suspense fallback={<LoadingSpinner message="Chargement du tableau de bord..." />}>
+        <DashboardContent />
+      </Suspense>
     </ProtectedRoute>
   );
 }

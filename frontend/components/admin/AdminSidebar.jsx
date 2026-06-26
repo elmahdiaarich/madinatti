@@ -128,6 +128,7 @@ const NAV_ITEMS = [
   { key: 'signalements', label: 'Signalements',     href: '/admin/reports',     icon: IconFlag       },
   { key: 'entreprises',  label: 'Entreprises',      href: '/admin/businesses',  icon: IconCompany    },
   { key: 'utilisateurs', label: 'Utilisateurs',     href: '/admin/users',       icon: IconUsers      },
+  // { key: 'automobile',   label: 'Automobile',       href: '/admin/cars',       icon: IconUsiers      },
 ]
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT

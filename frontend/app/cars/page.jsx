@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { carsService } from "@/services/carsService";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -8,6 +8,7 @@ import Link from "next/link";
 import CarCard   from "@/components/cars/CarCard";
 import CarFilter from "@/components/cars/CarFilter";
 import BusinessAccountGate from "@/components/shared/BusinessAccountGate";
+import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import { cities } from "morocco-cities";
 
 const LISTING_TYPE_TABS = [
@@ -291,16 +292,302 @@ const fmtPrice = (v) => Number(v).toLocaleString("fr-MA");
 //   );
 // }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+// ─── ALERT MODAL COMPONENT ───────────────────────────────────────────────────
+function AlertModal({ token, onClose }) {
+  const [form, setForm] = useState({
+    listingType: "",
+    categoryId: "",
+    region: "",
+    city: "",
+    minPrice: "",
+    maxPrice: "",
+    make: "",
+    model: "",
+    condition: "",
+  });
+  const [categories, setCategories] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
 
-export default function CarsPage() {
+  const regions = ALL_REGIONS;
+  const citiesInRegion = form.region
+    ? [...(citiesByRegion[form.region] || [])].sort()
+    : [];
+
+  useEffect(() => {
+    carsService
+      .getCategories()
+      .then((d) => {
+        setCategories(d.data || []);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleRegionChange = (region) => {
+    setForm((f) => ({ ...f, region, city: "" }));
+  };
+
+  const handleSave = async () => {
+    setError("");
+    setSaving(true);
+    try {
+      const filters = {
+        ...(form.listingType && { listingType: form.listingType }),
+        ...(form.categoryId && { categoryId: form.categoryId }),
+        ...(form.region && { region: form.region }),
+        ...(form.city && { city: form.city }),
+        ...(form.minPrice && { minPrice: form.minPrice }),
+        ...(form.maxPrice && { maxPrice: form.maxPrice }),
+        ...(form.make && { make: form.make.trim() }),
+        ...(form.model && { model: form.model.trim() }),
+        ...(form.condition && { condition: form.condition }),
+      };
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/alerts`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ module: "automobile", filters }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || "Erreur");
+        return;
+      }
+      setSaved(true);
+      setTimeout(() => onClose(), 2000);
+    } catch {
+      setError("Erreur réseau");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputStyle = "w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#A7D129] focus:ring-1 focus:ring-[#A7D129] transition bg-white";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto animate-slide-up">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">
+              🔔 Créer une alerte
+            </h2>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Soyez notifié dès qu'un véhicule correspond
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+          >
+            ✕
+          </button>
+        </div>
+
+        {saved ? (
+          <div className="flex flex-col items-center gap-2 py-8 text-green-700">
+            <div className="text-4xl">✅</div>
+            <p className="font-semibold">Alerte créée avec succès !</p>
+            <p className="text-xs text-gray-400 text-center">
+              Vous recevrez une notification pour chaque nouvelle annonce
+              correspondante.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-col gap-3 mb-5">
+              <div>
+                <label className="text-xs font-semibold text-gray-500 mb-1 block">
+                  Type d'annonce
+                </label>
+                <select
+                  value={form.listingType}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, listingType: e.target.value }))
+                  }
+                  className={inputStyle}
+                >
+                  <option value="">Tous types</option>
+                  <option value="SALE">Vente</option>
+                  <option value="RENT">Location</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-500 mb-1 block">
+                  Catégorie de véhicule
+                </label>
+                <select
+                  value={form.categoryId}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, categoryId: e.target.value }))
+                  }
+                  className={inputStyle}
+                >
+                  <option value="">Toutes les catégories</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 mb-1 block">
+                    Marque
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Toyota"
+                    value={form.make}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, make: e.target.value }))
+                    }
+                    className={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 mb-1 block">
+                    Modèle
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Corolla"
+                    value={form.model}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, model: e.target.value }))
+                    }
+                    className={inputStyle}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-500 mb-1 block">
+                  État du véhicule
+                </label>
+                <select
+                  value={form.condition}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, condition: e.target.value }))
+                  }
+                  className={inputStyle}
+                >
+                  <option value="">Tous états</option>
+                  <option value="NEW">Neuf</option>
+                  <option value="USED">Occasion</option>
+                  <option value="DAMAGED">Accidenté</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-500 mb-1 block">
+                  Région
+                </label>
+                <select
+                  value={form.region}
+                  onChange={(e) => handleRegionChange(e.target.value)}
+                  className={inputStyle}
+                >
+                  <option value="">Toutes les régions</option>
+                  {regions.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {form.region && citiesInRegion.length > 0 && (
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 mb-1 block">
+                    Ville
+                  </label>
+                  <select
+                    value={form.city}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, city: e.target.value }))
+                    }
+                    className={inputStyle}
+                  >
+                    <option value="">Toutes les villes</option>
+                    {citiesInRegion.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="text-xs font-semibold text-gray-500 mb-1 block">
+                  Prix (MAD)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={form.minPrice}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, minPrice: e.target.value }))
+                    }
+                    className={inputStyle}
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    value={form.maxPrice}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, maxPrice: e.target.value }))
+                    }
+                    className={inputStyle}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <p className="text-red-500 text-xs mb-3 text-center">{error}</p>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-gray-600 font-semibold text-sm hover:bg-gray-50 transition"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 py-2.5 bg-[#2D5016] text-white rounded-xl font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition disabled:opacity-60"
+              >
+                {saving ? "Enregistrement..." : "Créer l'alerte"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page Content ─────────────────────────────────────────────────────────
+function CarsPageContent() {
   const { user, token } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const [filters, setFilters] = useState(() => {
     const init = { page: 1, limit: 12 };
-    ["region", "city", "listingType", "condition", "make", "model", "search"].forEach((k) => {
+    ["region", "city", "listingType", "condition", "make", "model", "search", "categoryId"].forEach((k) => {
       if (searchParams.get(k)) init[k] = searchParams.get(k);
     });
     return init;
@@ -314,6 +601,7 @@ export default function CarsPage() {
   const [activeCond, setActiveCond]     = useState(null);
   const [sort, setSort]                 = useState("createdAt_desc");
   const [showBusinessGate, setShowBusinessGate] = useState(false);
+  const [showAlertModal, setShowAlertModal]     = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -418,6 +706,15 @@ export default function CarsPage() {
                 {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
 
+              {user?.role === "citizen" && (
+                <button
+                  onClick={() => setShowAlertModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#A7D129] text-[#2D5016] font-semibold text-sm hover:bg-[#E8F5D0] transition-all duration-150"
+                >
+                  🔔 Créer une alerte
+                </button>
+              )}
+
               {(user?.role === "business" || user?.role === "citizen" || !user) && (
                 <button onClick={handlePublishClick}
                   className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#2D5016] text-white font-bold text-sm shadow-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition hover:scale-105 active:scale-100"
@@ -510,6 +807,18 @@ export default function CarsPage() {
           <BusinessAccountGate onClose={() => setShowBusinessGate(false)} />
         </div>
       )}
+
+      {showAlertModal && (
+        <AlertModal token={token} onClose={() => setShowAlertModal(false)} />
+      )}
     </div>
+  );
+}
+
+export default function CarsPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner message="Chargement des véhicules..." />}>
+      <CarsPageContent />
+    </Suspense>
   );
 }
