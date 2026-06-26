@@ -12,7 +12,7 @@ import ArchiveModal from './ArchiveModal'
 const MODULE_BODIES = {
   immobilier: RealEstateBody,
   emploi: JobBody,
-  vehicule: VehicleBody,
+  automobile: VehicleBody,
 }
 
 const IconX = () => (
