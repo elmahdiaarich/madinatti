@@ -14,11 +14,22 @@ import {
   MessageSquare,
   LogOut,
   X,
+  Grid3x3,
+  Briefcase,
+  Home,
+  Car,
 } from "lucide-react";
 import GoogleAuth from "../../components/auth/GoogleAuth";
 import Logo from "./logos/Logo";
 
-// ── NAV SERVICES ──────────────────────────────────────────────────────────────
+// ── TOP-LEVEL MODULE LINKS (shown directly in the navbar) ────────────────────
+const MODULE_LINKS = [
+  { label: "Emploi", href: "/jobs", icon: Briefcase },
+  { label: "Immobilier", href: "/real-estate", icon: Home },
+  { label: "Véhicule", href: "/cars", icon: Car },
+];
+
+// ── ALL CATEGORIES (shown inside the "Catégories" left drawer) ───────────────
 const NAV_SERVICES = [
   {
     label: "Emploi",
@@ -55,7 +66,7 @@ const NAV_SERVICES = [
   },
   {
     label: "Automobile",
-    href: "/voitures",
+    href: "/cars",
     categories: ["Voitures occasion", "Voitures neuves", "Motos", "Auto info"],
   },
   {
@@ -293,6 +304,124 @@ function AddAccountForm({
   );
 }
 
+// ── Categories left drawer (replaces the old "Services" mega dropdown) ───────
+function CategoriesDrawer({
+  open,
+  onClose,
+  expandedModule,
+  setExpandedModule,
+  router,
+}) {
+  const handleGo = (href) => {
+    router.push(href);
+    onClose();
+  };
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/40 z-[60]"
+          />
+
+          {/* Panel */}
+          <motion.div
+            initial={{ x: "-100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "-100%" }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="fixed top-0 left-0 h-full w-[320px] bg-white z-[61] shadow-2xl flex flex-col"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+              <div>
+                <p className="text-[11px] text-gray-400 font-medium">
+                  Toutes les catégories
+                </p>
+                <p className="text-sm font-bold text-[#2D5016]">Catégories</p>
+              </div>
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-700 p-1"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Module list (accordion) */}
+            <div className="flex-1 overflow-y-auto py-2">
+              {NAV_SERVICES.map((svc) => {
+                const isExpanded = expandedModule === svc.label;
+                return (
+                  <div key={svc.label} className="border-b border-gray-50">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedModule(isExpanded ? null : svc.label)
+                      }
+                      className="w-full flex items-center justify-between px-5 py-3 text-left"
+                    >
+                      <span
+                        className={`text-sm font-medium ${
+                          isExpanded ? "text-[#2D5016]" : "text-gray-700"
+                        }`}
+                      >
+                        {svc.label}
+                      </span>
+                      <ChevronDown
+                        size={16}
+                        className={`text-gray-400 transition-transform ${
+                          isExpanded ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.15 }}
+                          className="overflow-hidden bg-gray-50/60"
+                        >
+                          <button
+                            onClick={() => handleGo(svc.href)}
+                            className="w-full text-left px-8 py-2 text-xs font-semibold text-[#2D5016] hover:bg-[#E8F5D0] transition-colors"
+                          >
+                            Voir tout — {svc.label} →
+                          </button>
+                          {svc.categories.map((cat) => (
+                            <button
+                              key={cat}
+                              onClick={() => handleGo(svc.href)}
+                              className="w-full flex items-center gap-2 text-left px-8 py-2 text-sm text-gray-600 hover:bg-[#E8F5D0] hover:text-[#2D5016] transition-colors"
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#7BA428] shrink-0" />
+                              {cat}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // NAVBAR
 // ─────────────────────────────────────────────────────────────────────────────
@@ -309,8 +438,6 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const [openServices, setOpenServices] = useState(false);
-  const [activeService, setActiveService] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -323,7 +450,10 @@ export default function Navbar() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
 
-  const dropdownRef = useRef(null);
+  // Categories drawer state
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [expandedModule, setExpandedModule] = useState(null);
+
   const userMenuRef = useRef(null);
   const notifRef = useRef(null);
 
@@ -335,10 +465,6 @@ export default function Navbar() {
 
   useEffect(() => {
     const fn = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setOpenServices(false);
-        setActiveService(null);
-      }
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
         setUserMenuOpen(false);
         setTimeout(() => {
@@ -356,12 +482,12 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    setOpenServices(false);
-    setActiveService(null);
     setUserMenuOpen(false);
     setShowAddAccount(false);
     setMobileOpen(false);
     setNotifOpen(false);
+    setCategoriesOpen(false);
+    setExpandedModule(null);
   }, [pathname]);
 
   useEffect(() => {
@@ -450,82 +576,9 @@ export default function Navbar() {
   };
 
   const isActive = (path) => pathname === path;
+  // A module is "active" whenever the current path is inside it, e.g. /jobs/123 -> Emploi stays highlighted
+  const isModuleActive = (href) => pathname === href || pathname?.startsWith(href + "/");
   const role = user?.role;
-
-  // ── Shared add-account form (used inside both desktop + mobile dropdowns) ──
-  // const AddAccountForm = () => (
-  //   <div className="border-b border-gray-100 py-2 px-4 bg-white">
-  //     {!showAddAccount ? (
-  //       <button
-  //         onClick={() => setShowAddAccount(true)}
-  //         className="flex items-center gap-2 text-xs font-medium text-gray-500 hover:text-[#2D5016] transition w-full py-1.5"
-  //       >
-  //         <Plus size={14} className="text-gray-400" />
-  //         Ajouter un compte
-  //       </button>
-  //     ) : (
-  //       <form
-  //         onSubmit={handleAddAccountSubmit}
-  //         className="flex flex-col gap-2 pt-1 pb-1"
-  //       >
-  //         <div className="flex items-center justify-between">
-  //           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-  //             Nouveau Compte
-  //           </p>
-  //           <button
-  //             type="button"
-  //             onClick={() => {
-  //               setShowAddAccount(false);
-  //               setAddError("");
-  //             }}
-  //             className="text-gray-400 hover:text-gray-600"
-  //           >
-  //             <X size={12} />
-  //           </button>
-  //         </div>
-  //         <input
-  //           type="email"
-  //           placeholder="Email"
-  //           required
-  //           autoFocus
-  //           value={addForm.email}
-  //           onChange={(e) =>
-  //             setAddForm((f) => ({ ...f, email: e.target.value }))
-  //           }
-  //           className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#A7D129] transition"
-  //         />
-  //         <input
-  //           type="password"
-  //           placeholder="Mot de passe"
-  //           required
-  //           value={addForm.password}
-  //           onChange={(e) =>
-  //             setAddForm((f) => ({ ...f, password: e.target.value }))
-  //           }
-  //           className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#A7D129] transition"
-  //         />
-  //         {addError && (
-  //           <p className="text-[10px] text-red-500 font-medium">{addError}</p>
-  //         )}
-  //         <div className="flex gap-2 mt-0.5">
-  //           <button
-  //             type="submit"
-  //             disabled={addLoading}
-  //             className="flex-1 text-xs font-bold py-1.5 rounded-xl bg-[#2D5016] text-white hover:bg-[#3a6b1e] transition disabled:opacity-50"
-  //           >
-  //             {addLoading ? "En cours..." : "Connexion"}
-  //           </button>
-  //         </div>
-  //         <div className="scale-90 origin-top">
-  //           <GoogleAuth
-  //             onSuccess={() => setUserMenuOpen(false)}
-  //             redirect={false}
-  //           />
-  //         </div>
-  //       </form>
-  //     )}
-  //   </div>
-  // );
 
   // ── Shared logout buttons ─────────────────────────────────────────────────
   const LogoutButtons = ({ small = false }) => (
@@ -586,6 +639,31 @@ export default function Navbar() {
           Accueil
         </a>
 
+        {/* Separator before module group */}
+        <span className="h-5 w-px bg-gray-200" />
+
+        {/* MODULE LINKS — Emploi / Immobilier / Véhicule */}
+        {MODULE_LINKS.map((mod) => {
+          const ModIcon = mod.icon;
+          return (
+            <a
+              key={mod.label}
+              href={mod.href}
+              className={`text-sm px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 ${
+                isModuleActive(mod.href)
+                  ? "bg-[#E8F5D0] text-[#2D5016]"
+                  : "text-gray-600 hover:text-[#2D5016]"
+              }`}
+            >
+              <ModIcon size={14} />
+              {mod.label}
+            </a>
+          );
+        })}
+
+        {/* Separator after module group */}
+        <span className="h-5 w-px bg-gray-200" />
+
         <a
           href="/explorer"
           className={`text-sm transition ${
@@ -597,110 +675,6 @@ export default function Navbar() {
           Explorer
         </a>
 
-        {/* SERVICES MEGA DROPDOWN */}
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => {
-              setOpenServices(!openServices);
-              if (!openServices) setActiveService(null);
-            }}
-            className={`text-sm px-3 py-1.5 rounded-lg flex items-center gap-1 transition ${
-              openServices
-                ? "bg-[#E8F5D0] text-[#2D5016]"
-                : "text-gray-600 hover:text-[#2D5016]"
-            }`}
-          >
-            Services
-            <ChevronDown
-              size={14}
-              className={`transition-transform ${openServices ? "rotate-180" : ""}`}
-            />
-          </button>
-
-          <AnimatePresence>
-            {openServices && (
-              <motion.div
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.15 }}
-                className="absolute top-10 left-1/2 -translate-x-1/2 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 overflow-hidden"
-                style={{ width: "620px" }}
-              >
-                <div className="flex">
-                  {/* Left — service list */}
-                  <div className="w-48 border-r border-gray-100 py-2 flex-shrink-0">
-                    {NAV_SERVICES.map((svc) => (
-                      <button
-                        key={svc.label}
-                        type="button"
-                        onMouseEnter={() => setActiveService(svc.label)}
-                        onClick={() => {
-                          router.push(svc.href);
-                          setOpenServices(false);
-                        }}
-                        className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between transition-colors ${
-                          activeService === svc.label
-                            ? "bg-[#E8F5D0] text-[#2D5016] font-medium"
-                            : "text-gray-700 hover:bg-gray-50"
-                        }`}
-                      >
-                        {svc.label}
-                        <ChevronDown
-                          size={12}
-                          className="-rotate-90 text-gray-400"
-                        />
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Right — subcategories */}
-                  <div className="flex-1 p-5 min-h-[300px]">
-                    {activeService ? (
-                      (() => {
-                        const svc = NAV_SERVICES.find(
-                          (s) => s.label === activeService,
-                        );
-                        return (
-                          <>
-                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-                              {svc.label}
-                            </p>
-                            <div className="grid grid-cols-2 gap-1">
-                              {svc.categories.map((cat) => (
-                                <a
-                                  key={cat}
-                                  href={svc.href}
-                                  onClick={() => setOpenServices(false)}
-                                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-[#E8F5D0] hover:text-[#2D5016] transition-colors"
-                                >
-                                  <span className="w-1.5 h-1.5 rounded-full bg-[#7BA428] shrink-0" />
-                                  {cat}
-                                </a>
-                              ))}
-                            </div>
-                            <a
-                              href={svc.href}
-                              onClick={() => setOpenServices(false)}
-                              className="inline-flex items-center gap-1 mt-4 text-xs font-medium text-[#2D5016] hover:underline"
-                            >
-                              Voir tout — {svc.label} →
-                            </a>
-                          </>
-                        );
-                      })()
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-sm text-gray-400">
-                        Survolez un service pour voir ses catégories
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
         <a
           href="/blog"
           className={`text-sm transition ${
@@ -711,6 +685,16 @@ export default function Navbar() {
         >
           Blog
         </a>
+
+        {/* CATEGORIES — opens left drawer (placed last) */}
+        <button
+          type="button"
+          onClick={() => setCategoriesOpen(true)}
+          className="text-sm px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-medium transition text-gray-600 hover:text-[#2D5016]"
+        >
+          <Grid3x3 size={14} />
+          Catégories
+        </button>
 
         {role === "admin" && (
           <a
@@ -1002,6 +986,18 @@ export default function Navbar() {
         )}
       </div>
 
+      {/* CATEGORIES DRAWER (slides from the left) */}
+      <CategoriesDrawer
+        open={categoriesOpen}
+        onClose={() => {
+          setCategoriesOpen(false);
+          setExpandedModule(null);
+        }}
+        expandedModule={expandedModule}
+        setExpandedModule={setExpandedModule}
+        router={router}
+      />
+
       {/* MOBILE MENU */}
       <AnimatePresence>
         {mobileOpen && (
@@ -1018,6 +1014,26 @@ export default function Navbar() {
             >
               Accueil
             </a>
+
+            {/* Module links */}
+            {MODULE_LINKS.map((mod) => {
+              const ModIcon = mod.icon;
+              return (
+                <a
+                  key={mod.label}
+                  href={mod.href}
+                  className={`flex items-center gap-2 text-sm px-2 py-2 rounded-lg hover:bg-gray-50 ${
+                    isModuleActive(mod.href)
+                      ? "text-[#2D5016] font-semibold bg-[#E8F5D0]"
+                      : "text-gray-700"
+                  }`}
+                >
+                  <ModIcon size={14} className="text-gray-400" />
+                  {mod.label}
+                </a>
+              );
+            })}
+
             <a
               href="/explorer"
               className="text-sm text-gray-700 px-2 py-2 rounded-lg hover:bg-gray-50"
@@ -1025,25 +1041,26 @@ export default function Navbar() {
               Explorer
             </a>
 
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2 mt-3 mb-1">
-              Services
-            </p>
-            {NAV_SERVICES.map((s) => (
-              <a
-                key={s.label}
-                href={s.href}
-                className="text-sm text-gray-700 px-2 py-2 rounded-lg hover:bg-gray-50 pl-4"
-              >
-                {s.label}
-              </a>
-            ))}
-
             <a
               href="/blog"
               className="text-sm text-gray-700 px-2 py-2 rounded-lg hover:bg-gray-50 mt-1"
             >
               Blog
             </a>
+
+            {/* Categories drawer trigger (placed last) */}
+            <button
+              type="button"
+              onClick={() => {
+                setMobileOpen(false);
+                setCategoriesOpen(true);
+              }}
+              className="flex items-center gap-2 text-sm text-gray-700 px-2 py-2 rounded-lg hover:bg-gray-50 text-left"
+            >
+              <Grid3x3 size={14} className="text-gray-400" />
+              Catégories
+            </button>
+
 
             {role === "admin" && (
               <a
