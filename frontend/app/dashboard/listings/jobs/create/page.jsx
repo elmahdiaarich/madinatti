@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,9 +8,6 @@ import ProtectedRoute from '@/components/shared/ProtectedRoute';
 import { cities } from 'morocco-cities';
 import PricingModal from '@/components/shared/PricingModal';
 import { useToast } from '@/context/ToastContext';
-
-// ─── Données statiques ────────────────────────────────────────────────────────
-// CATEGORIES loaded dynamically from API (see useEffect below)
 
 const CONTRACT_TYPES = [
   { value: 'CDI',           label: 'CDI',           desc: 'Contrat à durée indéterminée' },
@@ -59,14 +55,12 @@ const WHY_JOIN_SUGGESTIONS = [
   'Formation continue',
 ];
 
-// ─── Villes par région ────────────────────────────────────────────────────────
 const citiesByRegion = cities.reduce((acc, city) => {
   if (!acc[city.region_name]) acc[city.region_name] = [];
   acc[city.region_name].push(city.name);
   return acc;
 }, {});
 
-// ─── Steps config ─────────────────────────────────────────────────────────────
 const STEPS = [
   { id: 1, label: 'Poste',        icon: '📋' },
   { id: 2, label: 'Contrat',      icon: '📄' },
@@ -74,8 +68,6 @@ const STEPS = [
   { id: 4, label: 'Description',  icon: '✍️' },
   { id: 5, label: 'Confirmation', icon: '✅' },
 ];
-
-// ─── Composants réutilisables ─────────────────────────────────────────────────
 
 function StepHeader({ step, title, subtitle }) {
   return (
@@ -140,7 +132,6 @@ function ErrorMsg({ msg }) {
   return <p className="text-red-500 text-xs mt-1 flex items-center gap-1">⚠ {msg}</p>;
 }
 
-// ─── ListSection — composant générique pour missions/profil/avantages/whyJoin ─
 function ListSection({
   label, required, optionalLabel, help,
   items, setItems, placeholderFn,
@@ -202,19 +193,18 @@ function ListSection({
   );
 }
 
-// ─── Page principale ──────────────────────────────────────────────────────────
 function PublierJobContent() {
   const { user, token } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
   const [step, setStep] = useState(1);
-  const [selectedPlan, setSelectedPlan] = useState(null);
+  // ── CHANGED: no longer shown on mount; shown only after clicking Soumettre ──
+  const [showPricingModal, setShowPricingModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [categories, setCategories] = useState([]);
 
-  // ── Fetch categories from API ───────────────────────────────
   useEffect(() => {
     jobsService.getCategories()
       .then((res) => {
@@ -224,31 +214,27 @@ function PublierJobContent() {
   }, []);
 
   const [form, setForm] = useState({
-    // Étape 1 — Poste
     title: '',
     categorySlug: '',
     city: '',
     location: '',
     region: '',
     remote: 'ON_SITE',
-    // Étape 2 — Contrat
     contractType: '',
     salaryMin: '',
     salaryMax: '',
     applicationDeadline: '',
-    // Étape 3 — Profil recherché
-    educationLevel: [],        // ✅ array (multi-select)
+    educationLevel: [],
     experienceLevel: '',
     skills: [],
     skillInput: '',
     languages: [],
-    // Étape 4 — Description
-    descMode: 'paste',         // ✅ 'paste' par défaut | 'guided'
-    description: '',           // mode paste
+    descMode: 'paste',
+    description: '',
     missions: [''],
     profil: [''],
     avantages: [''],
-    whyJoin: [''],             // ✅ nouvelle section
+    whyJoin: [''],
   });
 
   const set = (key, value) => {
@@ -256,7 +242,6 @@ function PublierJobContent() {
     setErrors((prev) => ({ ...prev, [key]: '' }));
   };
 
-  // ── Toggle educationLevel (multi-select) ──────────────────
   const toggleEducationLevel = (value) => {
     set(
       'educationLevel',
@@ -266,7 +251,6 @@ function PublierJobContent() {
     );
   };
 
-  // ── Validation par étape ──────────────────────────────────
   const validate = () => {
     const e = {};
     if (step === 1) {
@@ -293,14 +277,14 @@ function PublierJobContent() {
     return Object.keys(e).length === 0;
   };
 
-const next = () => {
-  if (validate()) {
-    setStep((s) => s + 1);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-};  const back = () => setStep((s) => s - 1);
+  const next = () => {
+    if (validate()) {
+      setStep((s) => s + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+  const back = () => setStep((s) => s - 1);
 
-  // ── Skills ────────────────────────────────────────────────
   const addSkill = () => {
     const s = form.skillInput.trim();
     if (s && !form.skills.includes(s) && form.skills.length < 10) {
@@ -310,7 +294,6 @@ const next = () => {
   };
   const removeSkill = (sk) => set('skills', form.skills.filter((x) => x !== sk));
 
-  // ── Languages ─────────────────────────────────────────────
   const addLanguage = (lang) => {
     if (!form.languages.find((l) => l.language === lang)) {
       set('languages', [...form.languages, { language: lang, level: 'bon niveau' }]);
@@ -321,17 +304,15 @@ const next = () => {
   const setLangLevel = (lang, level) =>
     set('languages', form.languages.map((l) => (l.language === lang ? { ...l, level } : l)));
 
-  // ── Région auto à partir de la ville ──────────────────────
   const handleRegionChange = (region) => {
-  set('region', region);
-  set('city', ''); // reset la ville quand on change de région
-};
+    set('region', region);
+    set('city', '');
+  };
 
-const handleCityChange = (city) => {
-  set('city', city);
-};
+  const handleCityChange = (city) => {
+    set('city', city);
+  };
 
-  // ── Build description (mode guided) ──────────────────────
   const buildDescription = () => {
     const missionsText  = form.missions.filter((m) => m.trim()).map((m) => `- ${m.trim()}`).join('\n');
     const profilText    = form.profil.filter((p) => p.trim()).map((p) => `- ${p.trim()}`).join('\n');
@@ -346,29 +327,36 @@ const handleCityChange = (city) => {
     ].filter(Boolean).join('\n\n');
   };
 
-  // ── Soumission ────────────────────────────────────────────
-  const handleSubmit = async () => {
+  // ── CHANGED: "Soumettre" now opens the pricing modal ──
+  const handleSubmit = () => {
+    setShowPricingModal(true);
+  };
+
+  // ── CHANGED: called when user picks a plan → save listing then redirect ──
+  const handlePlanSelect = async (planId) => {
+    setShowPricingModal(false);
     setSubmitting(true);
     try {
       await jobsService.createJob({
         title:               form.title,
         categorySlug:        form.categorySlug,
-        city: form.city,
-        location: form.location || '',
+        city:                form.city,
+        location:            form.location || '',
         region:              form.region,
         remote:              form.remote,
         contractType:        form.contractType,
         salaryMin:           form.salaryMin ? Number(form.salaryMin) : null,
         salaryMax:           form.salaryMax ? Number(form.salaryMax) : null,
         applicationDeadline: form.applicationDeadline || null,
-        educationLevel:      form.educationLevel,           // ✅ array
+        educationLevel:      form.educationLevel,
         experienceLevel:     form.experienceLevel || null,
         skills:              form.skills,
         languages:           form.languages,
         description:         form.descMode === 'paste' ? form.description : buildDescription(),
+        plan:                planId,
       }, token);
-      toast.success("Offre soumise avec succ\u00e8s ! Elle sera visible apr\u00e8s validation.", {
-        title: "Annonce envoy\u00e9e \u2726",
+      toast.success("Offre soumise avec succès ! Elle sera visible après validation.", {
+        title: "Annonce envoyée ✦",
         duration: 6000,
       });
       router.push('/dashboard/listings/jobs');
@@ -379,17 +367,16 @@ const handleCityChange = (city) => {
     }
   };
 
-  // ── Progression ───────────────────────────────────────────
   const progress = ((step - 1) / (STEPS.length - 1)) * 100;
 
-  // ─── Render ───────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50">
-      {!selectedPlan && (
-        <PricingModal module="jobs" onSelect={(planId) => setSelectedPlan(planId)} />
+      {/* ── CHANGED: modal only shown after clicking Soumettre ── */}
+      {showPricingModal && (
+        <PricingModal module="jobs" onSelect={handlePlanSelect} />
       )}
 
-      {/* Header — compacté */}
+      {/* Header */}
       <div className="bg-gradient-to-r from-[#2D5016] to-[#3d6b1e] text-white py-4 px-4">
         <div className="max-w-3xl mx-auto">
           <div className="flex items-center justify-between gap-3 mb-1">
@@ -399,28 +386,10 @@ const handleCityChange = (city) => {
             >
               ← Retour à mes annonces
             </button>
-
-            {selectedPlan && (
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full
-                  ${selectedPlan === 'vip' ? 'bg-[#2D5016] text-[#E8F5D0]'
-                  : selectedPlan === 'pro' ? 'bg-[#A7D129] text-[#1a3a00]'
-                  : 'bg-white/20 text-white'}`}>
-                  Plan {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}
-                </span>
-                <button
-                  onClick={() => setSelectedPlan(null)}
-                  className="text-xs text-white/50 hover:text-white underline transition"
-                >
-                  Changer
-                </button>
-              </div>
-            )}
           </div>
 
           <h1 className="text-lg font-extrabold tracking-tight leading-tight">Publier une offre d'emploi</h1>
 
-          {/* Progress bar — compacte, juste les pastilles + barre, sans labels texte */}
           {step <= 5 && (
             <div className="mt-3">
               <div className="flex items-center gap-0">
@@ -452,14 +421,13 @@ const handleCityChange = (city) => {
       {/* Content */}
       <div className="max-w-3xl mx-auto px-4 py-8">
 
-        {/* ── Étape 1 : Informations du poste ── */}
+        {/* ── Étape 1 ── */}
         {step === 1 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
             <StepHeader step={1} title="Informations du poste"
               subtitle="Renseignez les informations principales de votre offre" />
 
             <div className="space-y-5">
-              {/* Titre */}
               <div>
                 <FieldLabel required>Titre du poste</FieldLabel>
                 <Input
@@ -470,7 +438,6 @@ const handleCityChange = (city) => {
                 <ErrorMsg msg={errors.title} />
               </div>
 
-              {/* Catégorie */}
               <div>
                 <FieldLabel required>Secteur d'activité</FieldLabel>
                 <div className="grid grid-cols-2 gap-2">
@@ -492,46 +459,39 @@ const handleCityChange = (city) => {
                 <ErrorMsg msg={errors.categorySlug} />
               </div>
 
-             {/* Région */}
-             <div className="grid grid-cols-2 gap-4">
-<div>
-  <FieldLabel required>Région</FieldLabel>
-  <Select
-    value={form.region}
-    onChange={(e) => handleRegionChange(e.target.value)}
-  >
-    <option value="">Choisir une région</option>
-    {Object.keys(citiesByRegion)
-      .sort((a, b) => a.localeCompare(b, 'fr'))
-      .map((region) => (
-        <option key={region} value={region}>{region}</option>
-      ))}
-  </Select>
-  <ErrorMsg msg={errors.region} />
-</div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <FieldLabel required>Région</FieldLabel>
+                  <Select value={form.region} onChange={(e) => handleRegionChange(e.target.value)}>
+                    <option value="">Choisir une région</option>
+                    {Object.keys(citiesByRegion)
+                      .sort((a, b) => a.localeCompare(b, 'fr'))
+                      .map((region) => (
+                        <option key={region} value={region}>{region}</option>
+                      ))}
+                  </Select>
+                  <ErrorMsg msg={errors.region} />
+                </div>
+                <div>
+                  <FieldLabel required>Ville</FieldLabel>
+                  <Select
+                    value={form.city}
+                    onChange={(e) => handleCityChange(e.target.value)}
+                    disabled={!form.region}
+                  >
+                    <option value="">
+                      {form.region ? 'Choisir une ville' : "← Choisissez d'abord une région"}
+                    </option>
+                    {(citiesByRegion[form.region] || [])
+                      .sort((a, b) => a.localeCompare(b, 'fr'))
+                      .map((city) => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                  </Select>
+                  <ErrorMsg msg={errors.city} />
+                </div>
+              </div>
 
-{/* Ville — désactivée jusqu'à ce qu'une région soit choisie */}
-<div>
-  <FieldLabel required>Ville</FieldLabel>
-  <Select
-    value={form.city}
-    onChange={(e) => handleCityChange(e.target.value)}
-    disabled={!form.region}
-  >
-    <option value="">
-      {form.region ? 'Choisir une ville' : '← Choisissez d\'abord une région'}
-    </option>
-    {(citiesByRegion[form.region] || [])
-      .sort((a, b) => a.localeCompare(b, 'fr'))
-      .map((city) => (
-        <option key={city} value={city}>{city}</option>
-      ))}
-  </Select>
-  <ErrorMsg msg={errors.city} />
-</div>
-</div>
-
-              {/* Remote */}
               <div>
                 <FieldLabel required>Mode de travail</FieldLabel>
                 <div className="grid grid-cols-3 gap-3">
@@ -559,14 +519,13 @@ const handleCityChange = (city) => {
           </div>
         )}
 
-        {/* ── Étape 2 : Contrat & Salaire ── */}
+        {/* ── Étape 2 ── */}
         {step === 2 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
             <StepHeader step={2} title="Contrat & Rémunération"
               subtitle="Définissez les conditions de l'offre" />
 
             <div className="space-y-6">
-              {/* Type de contrat */}
               <div>
                 <FieldLabel required>Type de contrat</FieldLabel>
                 <div className="grid grid-cols-3 gap-2">
@@ -589,26 +548,15 @@ const handleCityChange = (city) => {
                 <ErrorMsg msg={errors.contractType} />
               </div>
 
-              {/* Salaire */}
               <div>
                 <FieldLabel>Fourchette salariale <span className="text-gray-400 font-normal">(optionnel)</span></FieldLabel>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Input
-                      type="number"
-                      value={form.salaryMin}
-                      onChange={(e) => set('salaryMin', e.target.value)}
-                      placeholder="Min (ex: 8000)"
-                    />
+                    <Input type="number" value={form.salaryMin} onChange={(e) => set('salaryMin', e.target.value)} placeholder="Min (ex: 8000)" />
                     <p className="text-xs text-gray-400 mt-1">MAD / mois</p>
                   </div>
                   <div>
-                    <Input
-                      type="number"
-                      value={form.salaryMax}
-                      onChange={(e) => set('salaryMax', e.target.value)}
-                      placeholder="Max (ex: 12000)"
-                    />
+                    <Input type="number" value={form.salaryMax} onChange={(e) => set('salaryMax', e.target.value)} placeholder="Max (ex: 12000)" />
                     <p className="text-xs text-gray-400 mt-1">MAD / mois</p>
                   </div>
                 </div>
@@ -617,7 +565,6 @@ const handleCityChange = (city) => {
                 </div>
               </div>
 
-              {/* Date limite */}
               <div>
                 <FieldLabel>Date limite de candidature <span className="text-gray-400 font-normal">(optionnel)</span></FieldLabel>
                 <Input
@@ -633,14 +580,13 @@ const handleCityChange = (city) => {
           </div>
         )}
 
-        {/* ── Étape 3 : Profil recherché ── */}
+        {/* ── Étape 3 ── */}
         {step === 3 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
             <StepHeader step={3} title="Profil recherché"
               subtitle="Définissez les critères du candidat idéal" />
 
             <div className="space-y-6">
-              {/* Niveau d'études — multi-select */}
               <div>
                 <FieldLabel>
                   Niveau d'études{' '}
@@ -664,7 +610,6 @@ const handleCityChange = (city) => {
                 </div>
               </div>
 
-              {/* Niveau d'expérience */}
               <div>
                 <FieldLabel>Niveau d'expérience</FieldLabel>
                 <div className="flex flex-col gap-2">
@@ -685,7 +630,6 @@ const handleCityChange = (city) => {
                 </div>
               </div>
 
-              {/* Compétences */}
               <div>
                 <FieldLabel>Compétences clés <span className="text-gray-400 font-normal">(max 10)</span></FieldLabel>
                 <div className="flex gap-2">
@@ -719,7 +663,6 @@ const handleCityChange = (city) => {
                 )}
               </div>
 
-              {/* Langues */}
               <div>
                 <FieldLabel>Langues requises</FieldLabel>
                 <div className="flex flex-wrap gap-2 mb-3">
@@ -766,13 +709,12 @@ const handleCityChange = (city) => {
           </div>
         )}
 
-        {/* ── Étape 4 : Description ── */}
+        {/* ── Étape 4 ── */}
         {step === 4 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
             <StepHeader step={4} title="Description du poste"
               subtitle="Choisissez la méthode qui vous convient" />
 
-            {/* Toggle mode — "J'ai déjà ma description" en premier / par défaut */}
             <div className="flex gap-2 mb-6 p-1 bg-gray-100 rounded-xl w-fit">
               <button
                 type="button"
@@ -792,7 +734,6 @@ const handleCityChange = (city) => {
               </button>
             </div>
 
-            {/* ── MODE PASTE ── */}
             {form.descMode === 'paste' && (
               <div>
                 <FieldLabel required>Description complète de l'offre</FieldLabel>
@@ -814,11 +755,8 @@ const handleCityChange = (city) => {
               </div>
             )}
 
-            {/* ── MODE GUIDED ── */}
             {form.descMode === 'guided' && (
               <div className="space-y-8">
-
-                {/* MISSIONS */}
                 <ListSection
                   label="Missions principales" required
                   help="Décrivez ce que le candidat va faire au quotidien"
@@ -834,10 +772,7 @@ const handleCityChange = (city) => {
                   addLabel="Ajouter une mission"
                   error={errors.missions}
                 />
-
                 <div className="h-px bg-gray-100" />
-
-                {/* PROFIL */}
                 <ListSection
                   label="Profil recherché" required
                   help="Listez les critères que doit avoir le candidat idéal"
@@ -853,10 +788,7 @@ const handleCityChange = (city) => {
                   addLabel="Ajouter un critère"
                   error={errors.profil}
                 />
-
                 <div className="h-px bg-gray-100" />
-
-                {/* AVANTAGES */}
                 <ListSection
                   label="Ce que vous offrez" optionalLabel
                   help="Mutuelle, télétravail, tickets restaurant, formation..."
@@ -872,10 +804,7 @@ const handleCityChange = (city) => {
                   maxItems={6}
                   addLabel="Ajouter un avantage"
                 />
-
                 <div className="h-px bg-gray-100" />
-
-                {/* POURQUOI NOUS REJOINDRE */}
                 <ListSection
                   label="Pourquoi nous rejoindre ?" optionalLabel
                   help="Culture d'entreprise, ambiance, perspectives d'évolution..."
@@ -887,8 +816,6 @@ const handleCityChange = (city) => {
                   maxItems={6}
                   addLabel="Ajouter une raison"
                 />
-
-                {/* Générer brouillon */}
                 <div className="bg-[#E8F5D0] border border-[#A7D129]/40 rounded-xl p-4 flex items-center justify-between gap-4">
                   <div>
                     <p className="text-sm font-bold text-[#2D5016]">✨ Générer un brouillon</p>
@@ -898,10 +825,7 @@ const handleCityChange = (city) => {
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      set('description', buildDescription());
-                      set('descMode', 'paste');
-                    }}
+                    onClick={() => { set('description', buildDescription()); set('descMode', 'paste'); }}
                     className="shrink-0 px-4 py-2.5 rounded-xl bg-[#2D5016] text-white text-sm font-bold hover:bg-[#A7D129] hover:text-[#2D5016] transition whitespace-nowrap"
                   >
                     Générer →
@@ -914,17 +838,14 @@ const handleCityChange = (city) => {
           </div>
         )}
 
-        {/* ── Étape 5 : Récapitulatif ── */}
+        {/* ── Étape 5 ── */}
         {step === 5 && (
           <div className="space-y-4">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
               <StepHeader step={5} title="Aperçu de votre annonce"
                 subtitle="Vérifiez les informations avant de soumettre" />
 
-              {/* Preview card */}
               <div className="border-2 border-[#A7D129]/40 rounded-2xl overflow-hidden mb-6">
-
-                {/* Header preview */}
                 <div className="bg-gradient-to-r from-[#2D5016] to-[#3d6b1e] p-6 text-white">
                   <div className="flex items-start gap-4">
                     <div className="w-14 h-14 rounded-xl bg-[#E8F5D0] flex items-center justify-center text-[#2D5016] font-extrabold text-xl shrink-0">
@@ -953,7 +874,6 @@ const handleCityChange = (city) => {
                   </div>
                 </div>
 
-                {/* Summary body */}
                 <div className="p-6 text-sm">
                   <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                     <SummaryRow label="Catégorie"
@@ -996,7 +916,6 @@ const handleCityChange = (city) => {
                 </div>
               </div>
 
-              {/* Notice validation */}
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 items-start mb-6">
                 <span className="text-amber-500 text-lg shrink-0">⏳</span>
                 <div>
@@ -1006,7 +925,6 @@ const handleCityChange = (city) => {
                   </p>
                 </div>
               </div>
-
 
               <div className="flex gap-3">
                 <button
@@ -1061,9 +979,7 @@ const handleCityChange = (city) => {
                 onClick={() => {
                   setStep(1);
                   setForm({
-                    title: '', categorySlug: '', city: '',
-    location: '',
-    region: '',
+                    title: '', categorySlug: '', city: '', location: '', region: '',
                     remote: 'ON_SITE', contractType: '', salaryMin: '', salaryMax: '',
                     applicationDeadline: '', educationLevel: [], experienceLevel: '',
                     skills: [], skillInput: '', languages: [],
@@ -1082,8 +998,6 @@ const handleCityChange = (city) => {
     </div>
   );
 }
-
-// ─── Sous-composants ──────────────────────────────────────────────────────────
 
 function NavButtons({ onBack, onNext, nextLabel = 'Suivant →' }) {
   return (
@@ -1118,7 +1032,6 @@ function SummaryRow({ label, value }) {
   );
 }
 
-// ─── Export avec ProtectedRoute ───────────────────────────────────────────────
 export default function PublierJobPage() {
   return (
     <ProtectedRoute roles={['business']}>

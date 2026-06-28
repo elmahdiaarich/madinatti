@@ -454,7 +454,8 @@ function CreateCarForm() {
   const [categories, setCategories] = useState([]);
   const [geocoding, setGeocoding] = useState(false);
   const [flyTo, setFlyTo] = useState(null);
-  const [selectedPlan, setSelectedPlan] = useState(null);
+  // ── CHANGED: no longer shown on mount; shown only after validation passes ──
+  const [showPricingModal, setShowPricingModal] = useState(false);
 
   const sectionRefs = {
     title: useRef(null),
@@ -563,7 +564,8 @@ function CreateCarForm() {
     return e;
   };
 
-  const handleSubmit = async () => {
+  // ── CHANGED: "Publier" now validates first, then opens the pricing modal ──
+  const handleSubmit = () => {
     const e = validate();
     if (Object.keys(e).length) {
       setErrors(e);
@@ -573,12 +575,18 @@ function CreateCarForm() {
       }
       return;
     }
+    // Validation passed → show plan picker
+    setShowPricingModal(true);
+  };
 
+  // ── called when user picks a plan in the modal → save listing then redirect ──
+  const handlePlanSelect = async (planId) => {
+    setShowPricingModal(false);
     setSubmitting(true);
     try {
       const payload = {
         ...form,
-        plan: selectedPlan,
+        plan: planId,
         price: parseFloat(form.price),
         year: parseInt(form.year),
         mileage: form.mileage ? parseInt(form.mileage) : undefined,
@@ -600,8 +608,12 @@ function CreateCarForm() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {!selectedPlan && (
-        <PricingModal module="vehicules" onSelect={(planId) => setSelectedPlan(planId)} />
+      {/* ── CHANGED: modal only shown after clicking Publier + passing validation ── */}
+      {showPricingModal && (
+        <PricingModal
+          module="vehicules"
+          onSelect={handlePlanSelect}
+        />
       )}
 
       {/* Header */}
@@ -609,20 +621,6 @@ function CreateCarForm() {
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
           <h1 className="font-extrabold text-gray-900 text-lg">Publier un véhicule</h1>
           <div className="flex items-center gap-2">
-            {selectedPlan && (
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full
-                  ${selectedPlan === 'vip' ? 'bg-[#2D5016] text-[#E8F5D0]'
-                  : selectedPlan === 'pro' ? 'bg-[#A7D129] text-[#2D5016]'
-                  : selectedPlan === 'boost' ? 'bg-yellow-100 text-yellow-700'
-                  : 'bg-gray-100 text-gray-600'}`}>
-                  Plan {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}
-                </span>
-                <button onClick={() => setSelectedPlan(null)} className="text-xs text-gray-400 hover:text-gray-800 underline transition">
-                  Changer
-                </button>
-              </div>
-            )}
             <span className="text-xs bg-yellow-50 border border-yellow-200 text-yellow-700 px-3 py-1 rounded-full font-semibold whitespace-nowrap">
               En attente de validation admin
             </span>

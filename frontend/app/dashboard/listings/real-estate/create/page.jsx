@@ -27,7 +27,6 @@ const PROPERTY_TYPE_TO_SLUG = {
   SHOP:      "commerce",
 };
 
-// ── Derive regions and grouped cities from the package ────────────────────────
 const ALL_CITIES = moroccoCities.cities;
 
 const REGIONS = [...new Set(ALL_CITIES.map((c) => c.region_name))]
@@ -60,8 +59,6 @@ const EMPTY = {
   images: [],
   features: {},
 };
-
-// ─── UI Primitives ────────────────────────────────────────────────────────────
 
 function Field({ label, error, hint, children }) {
   return (
@@ -116,15 +113,12 @@ function SectionTitle({ children }) {
   );
 }
 
-// ─── Map picker ───────────────────────────────────────────────────────────────
-
 function MapPicker({ latitude, longitude, onChange, flyTo }) {
   const mapRef = useRef(null);
   const leafletMap = useRef(null);
   const markerRef = useRef(null);
   const [ready, setReady] = useState(false);
 
-  // Init map once
   useEffect(() => {
     if (leafletMap.current) return;
 
@@ -136,10 +130,7 @@ function MapPicker({ latitude, longitude, onChange, flyTo }) {
       const defaultLat = latitude ? parseFloat(latitude) : 31.7917;
       const defaultLng = longitude ? parseFloat(longitude) : -7.0926;
 
-      const map = L.map(mapRef.current).setView(
-        [defaultLat, defaultLng],
-        latitude ? 13 : 6,
-      );
+      const map = L.map(mapRef.current).setView([defaultLat, defaultLng], latitude ? 13 : 6);
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors",
@@ -154,10 +145,7 @@ function MapPicker({ latitude, longitude, onChange, flyTo }) {
       });
 
       if (latitude && longitude) {
-        markerRef.current = L.marker(
-          [parseFloat(latitude), parseFloat(longitude)],
-          { icon },
-        ).addTo(map);
+        markerRef.current = L.marker([parseFloat(latitude), parseFloat(longitude)], { icon }).addTo(map);
       }
 
       map.on("click", (e) => {
@@ -198,7 +186,6 @@ function MapPicker({ latitude, longitude, onChange, flyTo }) {
     }
   }, []);
 
-  // Fly to city coords when `flyTo` changes
   useEffect(() => {
     if (!flyTo || !leafletMap.current || !window.L) return;
     const { lat, lng, zoom = 12 } = flyTo;
@@ -228,9 +215,7 @@ function MapPicker({ latitude, longitude, onChange, flyTo }) {
         className="w-full h-64 rounded-xl border border-gray-200 overflow-hidden"
         style={{ position: "relative", zIndex: 0 }}
       />
-      {!ready && (
-        <p className="text-xs text-gray-400">Chargement de la carte...</p>
-      )}
+      {!ready && <p className="text-xs text-gray-400">Chargement de la carte...</p>}
       {latitude && longitude ? (
         <p className="text-xs text-green-600 font-semibold">
           📍 Position sélectionnée : {parseFloat(latitude).toFixed(5)},{" "}
@@ -244,8 +229,6 @@ function MapPicker({ latitude, longitude, onChange, flyTo }) {
     </div>
   );
 }
-
-// ─── Image uploader ───────────────────────────────────────────────────────────
 
 function ImageUploader({ images, onChange, token, error }) {
   const [uploading, setUploading] = useState(false);
@@ -365,8 +348,6 @@ function ImageUploader({ images, onChange, token, error }) {
   );
 }
 
-// ─── Features manager ─────────────────────────────────────────────────────────
-
 function FeaturesManager({ features, onChange }) {
   const [key, setKey] = useState("");
   const [val, setVal] = useState("");
@@ -413,8 +394,6 @@ function FeaturesManager({ features, onChange }) {
   );
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
-
 export default function CreateListingPage() {
   return (
     <ProtectedRoute roles={["business"]}>
@@ -433,7 +412,8 @@ function CreateListingForm() {
   const [subcategories, setSubcategories] = useState([]);
   const [geocoding, setGeocoding] = useState(false);
   const [flyTo, setFlyTo] = useState(null);
-  const [selectedPlan, setSelectedPlan] = useState(null);
+  // ── CHANGED: no longer shown on mount; shown only after validation passes ──
+  const [showPricingModal, setShowPricingModal] = useState(false);
 
   const sectionRefs = {
     title: useRef(null),
@@ -454,7 +434,6 @@ function CreateListingForm() {
 
   const availableCities = form.region ? citiesByRegion(form.region) : [];
 
-  // ── Fetch immobilier subcategories ────────────────────────────────────────
   useEffect(() => {
     axios.get(`${API}/api/categories`).then((r) => {
       const data = r.data.data || [];
@@ -462,7 +441,6 @@ function CreateListingForm() {
     });
   }, []);
 
-  // ── Auto-set categoryId based on propertyType ─────────────────────────────
   useEffect(() => {
     if (!subcategories.length) return;
     const slug = PROPERTY_TYPE_TO_SLUG[form.propertyType];
@@ -475,14 +453,11 @@ function CreateListingForm() {
     value: c.id,
   }));
 
-  // ── Shared geocode function (city + optional address/quartier) ────────────
   const geocodeAddress = useCallback(async (city, address) => {
     if (!city) return;
     setGeocoding(true);
     try {
-      const q = encodeURIComponent(
-        `${address ? address + ", " : ""}${city}, Maroc`
-      );
+      const q = encodeURIComponent(`${address ? address + ", " : ""}${city}, Maroc`);
       const res = await fetch(
         `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
         { headers: { "Accept-Language": "fr" } }
@@ -492,44 +467,33 @@ function CreateListingForm() {
         const lat = parseFloat(data[0].lat).toFixed(6);
         const lng = parseFloat(data[0].lon).toFixed(6);
         setForm((p) => ({ ...p, latitude: lat, longitude: lng }));
-        setFlyTo({
-          lat: parseFloat(lat),
-          lng: parseFloat(lng),
-          zoom: address ? 15 : 12,
-        });
+        setFlyTo({ lat: parseFloat(lat), lng: parseFloat(lng), zoom: address ? 15 : 12 });
       }
     } catch {
-      // Geocoding failed silently — user can still click the map manually
+      // ignore
     } finally {
       setGeocoding(false);
     }
   }, []);
 
-  // ── When region changes → reset city + coords ─────────────────────────────
   const handleRegionChange = (region) => {
     setForm((p) => ({ ...p, region, city: "", latitude: "", longitude: "" }));
     setFlyTo(null);
     if (errors.region) setErrors((p) => ({ ...p, region: null }));
   };
 
-  // ── When city changes → geocode city only ────────────────────────────────
   const handleCityChange = useCallback(async (cityName) => {
     set("city", cityName);
     if (!cityName) return;
-    // Pass current location value so we already have it if filled
     await geocodeAddress(cityName, form.location || "");
   }, [form.location, geocodeAddress]);
 
-  // ── When address/quartier changes → debounced re-geocode ─────────────────
   useEffect(() => {
     if (!form.city || !form.location.trim()) return;
-    const t = setTimeout(() => {
-      geocodeAddress(form.city, form.location);
-    }, 500);
+    const t = setTimeout(() => { geocodeAddress(form.city, form.location); }, 500);
     return () => clearTimeout(t);
   }, [form.location, form.city, geocodeAddress]);
 
-  // ── Validation ────────────────────────────────────────────────────────────
   const validate = () => {
     const e = {};
     if (!form.title.trim() || form.title.trim().length < 5) e.title = "Min 5 caractères";
@@ -542,7 +506,8 @@ function CreateListingForm() {
     return e;
   };
 
-  const handleSubmit = async () => {
+  // ── CHANGED: validates first, then opens pricing modal ──
+  const handleSubmit = () => {
     const e = validate();
     if (Object.keys(e).length) {
       setErrors(e);
@@ -552,12 +517,17 @@ function CreateListingForm() {
       }
       return;
     }
+    setShowPricingModal(true);
+  };
 
+  // ── CHANGED: called when user picks a plan → save listing then redirect ──
+  const handlePlanSelect = async (planId) => {
+    setShowPricingModal(false);
     setSubmitting(true);
     try {
       const payload = {
         ...form,
-        plan: selectedPlan,
+        plan: planId,
         price: parseFloat(form.price),
         surface: form.surface ? parseFloat(form.surface) : undefined,
         rooms: form.rooms ? parseInt(form.rooms) : undefined,
@@ -577,37 +547,18 @@ function CreateListingForm() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {!selectedPlan && (
-        <PricingModal module="immobilier" onSelect={(planId) => setSelectedPlan(planId)} />
+      {/* ── CHANGED: modal only shown after clicking Publier + passing validation ── */}
+      {showPricingModal && (
+        <PricingModal module="immobilier" onSelect={handlePlanSelect} />
       )}
 
       {/* Header */}
       <div className="bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
           <h1 className="font-extrabold text-primary-dark text-lg">Publier une annonce</h1>
-
-          <div className="flex items-center gap-2">
-            {selectedPlan && (
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full
-                  ${selectedPlan === 'vip' ? 'bg-primary-dark text-primary-mint'
-                  : selectedPlan === 'pro' ? 'bg-primary text-white'
-                  : selectedPlan === 'boost' ? 'bg-yellow-100 text-yellow-700'
-                  : 'bg-gray-100 text-gray-600'}`}>
-                  Plan {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}
-                </span>
-                <button
-                  onClick={() => setSelectedPlan(null)}
-                  className="text-xs text-gray-400 hover:text-primary-dark underline transition"
-                >
-                  Changer
-                </button>
-              </div>
-            )}
-            <span className="text-xs bg-yellow-50 border border-yellow-200 text-yellow-700 px-3 py-1 rounded-full font-semibold whitespace-nowrap">
-              En attente de validation admin
-            </span>
-          </div>
+          <span className="text-xs bg-yellow-50 border border-yellow-200 text-yellow-700 px-3 py-1 rounded-full font-semibold whitespace-nowrap">
+            En attente de validation admin
+          </span>
         </div>
       </div>
 
@@ -619,12 +570,8 @@ function CreateListingForm() {
 
           <div ref={sectionRefs.title}>
             <Field label="Titre de l'annonce *" error={errors.title}>
-              <Input
-                value={form.title}
-                onChange={(e) => set("title", e.target.value)}
-                placeholder="Ex: Appartement F3 vue mer à Tanger"
-                error={errors.title}
-              />
+              <Input value={form.title} onChange={(e) => set("title", e.target.value)}
+                placeholder="Ex: Appartement F3 vue mer à Tanger" error={errors.title} />
             </Field>
           </div>
 
@@ -669,21 +616,13 @@ function CreateListingForm() {
 
           <div ref={sectionRefs.price} className="grid grid-cols-2 gap-4">
             <Field label="Prix (MAD) *" error={errors.price}>
-              <Input
-                type="number" min="1"
-                value={form.price}
+              <Input type="number" min="1" value={form.price}
                 onChange={(e) => set("price", e.target.value)}
-                placeholder="Ex: 1500000"
-                error={errors.price}
-              />
+                placeholder="Ex: 1500000" error={errors.price} />
             </Field>
             <Field label="Surface (m²)">
-              <Input
-                type="number" min="0"
-                value={form.surface}
-                onChange={(e) => set("surface", e.target.value)}
-                placeholder="Ex: 90"
-              />
+              <Input type="number" min="0" value={form.surface}
+                onChange={(e) => set("surface", e.target.value)} placeholder="Ex: 90" />
             </Field>
           </div>
 
@@ -707,19 +646,12 @@ function CreateListingForm() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
           <SectionTitle>Localisation</SectionTitle>
 
-          {/* Row 1: Region + City */}
           <div className="grid grid-cols-2 gap-4">
             <div ref={sectionRefs.region}>
               <Field label="Région *" error={errors.region}>
-                <Select
-                  value={form.region}
-                  onChange={(e) => handleRegionChange(e.target.value)}
-                  error={errors.region}
-                >
+                <Select value={form.region} onChange={(e) => handleRegionChange(e.target.value)} error={errors.region}>
                   <option value="">Sélectionner une région</option>
-                  {REGIONS.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
+                  {REGIONS.map((r) => (<option key={r} value={r}>{r}</option>))}
                 </Select>
               </Field>
             </div>
@@ -727,18 +659,12 @@ function CreateListingForm() {
             <div ref={sectionRefs.city}>
               <Field label="Ville *" error={errors.city}>
                 <div className="relative">
-                  <Select
-                    value={form.city}
-                    onChange={(e) => handleCityChange(e.target.value)}
-                    error={errors.city}
-                    disabled={!form.region}
-                  >
+                  <Select value={form.city} onChange={(e) => handleCityChange(e.target.value)}
+                    error={errors.city} disabled={!form.region}>
                     <option value="">
                       {form.region ? "Sélectionner une ville" : "Choisir une région d'abord"}
                     </option>
-                    {availableCities.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
+                    {availableCities.map((c) => (<option key={c} value={c}>{c}</option>))}
                   </Select>
                   {geocoding && (
                     <div className="absolute right-8 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -750,25 +676,12 @@ function CreateListingForm() {
             </div>
           </div>
 
-          {/* Row 2: Address / Quartier — now also triggers geocoding */}
           <div ref={sectionRefs.location}>
-            <Field
-              label="Adresse / Quartier *"
-              error={errors.location}
-              hint={
-                form.city
-                  ? "La carte se met à jour automatiquement selon l'adresse saisie."
-                  : undefined
-              }
-            >
+            <Field label="Adresse / Quartier *" error={errors.location}
+              hint={form.city ? "La carte se met à jour automatiquement selon l'adresse saisie." : undefined}>
               <div className="relative">
-                <Input
-                  value={form.location}
-                  onChange={(e) => set("location", e.target.value)}
-                  placeholder="Ex: Quartier Maarif, Bd Zerktouni"
-                  error={errors.location}
-                />
-                {/* Geocoding spinner on the address field */}
+                <Input value={form.location} onChange={(e) => set("location", e.target.value)}
+                  placeholder="Ex: Quartier Maarif, Bd Zerktouni" error={errors.location} />
                 {geocoding && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                     <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -778,11 +691,8 @@ function CreateListingForm() {
             </Field>
           </div>
 
-          {/* Map */}
-          <Field
-            label="Position sur la carte"
-            hint="La carte se centre automatiquement sur la ville et l'adresse saisies. Cliquez pour affiner la position exacte (optionnel)."
-          >
+          <Field label="Position sur la carte"
+            hint="La carte se centre automatiquement sur la ville et l'adresse saisies. Cliquez pour affiner la position exacte (optionnel).">
             <MapPicker
               latitude={form.latitude}
               longitude={form.longitude}
@@ -791,10 +701,7 @@ function CreateListingForm() {
                 const lat_n = parseFloat(lat);
                 const lng_n = parseFloat(lng);
                 if (lat_n < 27.6 || lat_n > 35.9 || lng_n < -13.2 || lng_n > -1.0) {
-                  setErrors((p) => ({
-                    ...p,
-                    map: "Position hors du Maroc. Veuillez sélectionner un emplacement au Maroc.",
-                  }));
+                  setErrors((p) => ({ ...p, map: "Position hors du Maroc. Veuillez sélectionner un emplacement au Maroc." }));
                   return;
                 }
                 setErrors((p) => ({ ...p, map: null }));
@@ -803,9 +710,7 @@ function CreateListingForm() {
               }}
             />
             {errors.map && (
-              <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
-                <span>⚠</span> {errors.map}
-              </p>
+              <p className="text-xs text-red-500 flex items-center gap-1 mt-1"><span>⚠</span> {errors.map}</p>
             )}
           </Field>
         </div>
@@ -814,23 +719,15 @@ function CreateListingForm() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
           <SectionTitle>Contact</SectionTitle>
           <Field label="Téléphone de contact" hint="Formats acceptés : 06XXXXXXXX, 07XXXXXXXX, +212XXXXXXXXX">
-            <Input
-              value={form.contactPhone}
-              onChange={(e) => set("contactPhone", e.target.value)}
-              placeholder="Ex: 0612345678"
-            />
+            <Input value={form.contactPhone} onChange={(e) => set("contactPhone", e.target.value)}
+              placeholder="Ex: 0612345678" />
           </Field>
         </div>
 
         {/* ── PHOTOS ── */}
         <div ref={sectionRefs.images} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
           <SectionTitle>Photos *</SectionTitle>
-          <ImageUploader
-            images={form.images}
-            onChange={(v) => set("images", v)}
-            token={token}
-            error={errors.images}
-          />
+          <ImageUploader images={form.images} onChange={(v) => set("images", v)} token={token} error={errors.images} />
         </div>
 
         {/* ── ÉQUIPEMENTS ── */}
@@ -842,22 +739,14 @@ function CreateListingForm() {
           <FeaturesManager features={form.features} onChange={(v) => set("features", v)} />
         </div>
 
-
         {/* ── SUBMIT ── */}
         <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="flex-1 py-3.5 border-2 border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition text-sm"
-          >
+          <button type="button" onClick={() => router.back()}
+            className="flex-1 py-3.5 border-2 border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition text-sm">
             Annuler
           </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="flex-1 py-3.5 bg-primary text-white font-extrabold rounded-xl hover:bg-primary-sage transition text-sm disabled:opacity-60"
-          >
+          <button type="button" onClick={handleSubmit} disabled={submitting}
+            className="flex-1 py-3.5 bg-primary text-white font-extrabold rounded-xl hover:bg-primary-sage transition text-sm disabled:opacity-60">
             {submitting ? "Publication..." : "Publier l'annonce"}
           </button>
         </div>
