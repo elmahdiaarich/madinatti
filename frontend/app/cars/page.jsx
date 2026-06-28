@@ -9,6 +9,7 @@ import CarCard   from "@/components/cars/CarCard";
 import CarFilter from "@/components/cars/CarFilter";
 import BusinessAccountGate from "@/components/shared/BusinessAccountGate";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
+import InlineRegisterSection from "@/components/cars/InlineRegisterSection";
 import { cities } from "morocco-cities";
 
 const LISTING_TYPE_TABS = [
@@ -654,7 +655,12 @@ function CarsPageContent() {
   };
 
   const handlePublishClick = () => {
-    if (!user) { router.push("/login"); return; }
+    if (!user) {
+      document
+        .getElementById("inline-register")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
     if (user.role === "business") {
       router.push("/dashboard/listings/cars/create");
     } else {
@@ -810,6 +816,13 @@ function CarsPageContent() {
 
       {showAlertModal && (
         <AlertModal token={token} onClose={() => setShowAlertModal(false)} />
+      )}
+
+      {/* INLINE REGISTER — visiteurs only */}
+      {!user && (
+        <div className="max-w-[1200px] mx-auto px-4 pb-10">
+          <InlineRegisterSection id="inline-register" />
+        </div>
       )}
     </div>
   );

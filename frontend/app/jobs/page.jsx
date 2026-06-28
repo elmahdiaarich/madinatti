@@ -486,7 +486,7 @@ export default function JobsPage() {
 
       {/* FORMULAIRE D'INSCRIPTION — visiteurs uniquement */}
       {isVisitor && (
-        <div id="inscription" className="max-w-[1000px] mx-auto px-4 py-12">
+        <div id="inscription" className="max-w-[1200px] mx-auto px-4 py-12">
           <div className="flex items-center gap-4 mb-8">
             <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#A7D129]/40 to-[#A7D129]/40" />
             <span className="text-xs font-bold uppercase tracking-widest text-[#7BA428]">

@@ -8,6 +8,7 @@ import { carsService } from "@/services/carsService";
 import MapFrame from "@/components/shared/MapFrame";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import ReportModal from "@/components/shared/ReportModal";
+import InlineRegisterSection from "@/components/cars/InlineRegisterSection";
 
 const FUEL_LABELS  = { PETROL: "Essence", DIESEL: "Diesel", ELECTRIC: "Électrique", HYBRID: "Hybride", LPG: "GPL", OTHER: "Autre" };
 const TRANS_LABELS = { MANUAL: "Manuelle", AUTOMATIC: "Automatique", SEMI_AUTOMATIC: "Semi-automatique" };
@@ -113,7 +114,7 @@ function InquiryForm({ listingId }) {
       <div className="px-6 py-5 flex flex-col gap-3">
         {!user && (
           <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-            <Link href="/login" className="font-bold underline">Connectez-vous</Link> pour envoyer un message.
+            <Link href="/auth/login" className="font-bold underline">Connectez-vous</Link> pour envoyer un message.
           </p>
         )}
         <div>
@@ -271,7 +272,7 @@ export default function CarDetailPage() {
                   <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-semibold">{COND_LABELS[listing.condition]}</span>
                 )}
                 {listing.isFeatured && (
-                  <span className="px-3 py-1 bg-yellow-400 text-yellow-900 rounded-full text-xs font-bold">⭐ À la une</span>
+                  <span className="px-3 py-1 bg-yellow-400 text-yellow-900 rounded-full text-xs font-bold">⭐ Premium</span>
                 )}
               </div>
               <h1 className="text-2xl md:text-3xl font-extrabold leading-tight mb-1">
@@ -488,6 +489,13 @@ export default function CarDetailPage() {
           )}
         </div>
       </div>
+
+      {/* INLINE REGISTER — visiteurs only, full width, centered */}
+      {!user && (
+        <div className="max-w-[1200px] mx-auto px-4 pb-10">
+          <InlineRegisterSection id="inscription-cars" />
+        </div>
+      )}
 
       {showReport && (
         <ReportModal isOpen={showReport} targetType="CAR" targetId={id} onClose={() => setShowReport(false)} />

@@ -341,7 +341,7 @@ export default function RealEstateDetailPage() {
                 )}
                 <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-semibold">{propertyType}</span>
                 {listing.isFeatured && (
-                  <span className="px-3 py-1 bg-yellow-400 text-yellow-900 rounded-full text-xs font-bold">⭐ À la une</span>
+                  <span className="px-3 py-1 bg-yellow-400 text-yellow-900 rounded-full text-xs font-bold"> ⭐ Premium</span>
                 )}
               </div>
               <h1 className="text-2xl md:text-3xl font-extrabold leading-tight mb-2">{listing.title}</h1>
@@ -461,15 +461,13 @@ export default function RealEstateDetailPage() {
             city={listing.city}
           />
 
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex gap-3 items-start">
+         <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex gap-3 items-start">
             <span className="text-amber-500 text-xl shrink-0">⚠️</span>
             <p className="text-xs text-amber-800 leading-relaxed">
               <strong>Conseil sécurité !</strong> Ne versez aucune somme d'argent avant d'avoir visité le bien et signé un contrat officiel.
               Méfiez-vous des annonces avec des prix anormalement bas. En cas de doute, signalez l'annonce via le formulaire de contact.
             </p>
           </div>
-
-          {isVisitor && <InlineRegisterSection id="inscription-realstate" />}
         </div>
 
         {/* RIGHT */}
@@ -572,6 +570,13 @@ export default function RealEstateDetailPage() {
           )}
         </div>
       </div>
+
+      {/* INLINE REGISTER — visiteurs only, full width, centered */}
+      {isVisitor && (
+        <div className="max-w-[1200px] mx-auto px-4 pb-10">
+          <InlineRegisterSection id="inscription-realstate" />
+        </div>
+      )}
 
       {/* Report Modal */}
       {showReport && (

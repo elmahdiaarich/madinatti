@@ -9,6 +9,7 @@ import RealEstateFilter from "@/components/real-estate/RealEstateFilter";
 import { cities } from "morocco-cities";
 import { useSearchParams } from "next/navigation";
 import BusinessAccountGate from "@/components/shared/BusinessAccountGate";
+import InlineRegisterSection from "@/components/real-estate/InlineRegisterSection";
 
 
 const CATEGORIES = [
@@ -376,6 +377,12 @@ function RealEstatePageContent() {
   };
 
   const handlePublishClick = () => {
+    if (!user) {
+      document
+        .getElementById("inline-register")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
     if (user.role === "business") {
       router.push("/dashboard/listings/real-estate/create");
     } else {
@@ -434,7 +441,7 @@ function RealEstatePageContent() {
                   🔔 Créer une alerte
                 </button>
               )}
-              {(user?.role === "business" || user?.role === "citizen") && (
+              {(!user || user?.role === "business" || user?.role === "citizen") && (
                 <button
                   onClick={handlePublishClick}
                   className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-[#2D5016] text-white font-bold text-sm shadow-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-150 hover:scale-105 active:scale-100 group cursor-pointer"
@@ -568,7 +575,7 @@ function RealEstatePageContent() {
         <AlertModal token={token} onClose={() => setShowAlertModal(false)} />
       )}
 
-      {/* BUSINESS GATE MODAL */}
+   {/* BUSINESS GATE MODAL */}
       {showBusinessGate && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
@@ -578,6 +585,13 @@ function RealEstatePageContent() {
           <div style={{ animation: "slideUp 0.2s ease-out" }}>
             <BusinessAccountGate onClose={() => setShowBusinessGate(false)} />
           </div>
+        </div>
+      )}
+
+      {/* INLINE REGISTER — visiteurs only */}
+      {!user && (
+        <div className="max-w-[1200px] mx-auto px-4 pb-10">
+          <InlineRegisterSection id="inline-register" />
         </div>
       )}
     </div>
