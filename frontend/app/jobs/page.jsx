@@ -117,6 +117,27 @@ function AlertModal({ token, initialFilters, onClose, apiUrl }) {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
         </div>
 
+        {/* WHATSAPP PREVIEW BUBBLE */}
+        {!saved && (
+          <div
+            className="mb-5 rounded-2xl p-3 flex items-start gap-2"
+            style={{ background: '#E7FCE3' }}
+          >
+            <div className="w-8 h-8 rounded-full bg-[#25D366] flex items-center justify-center shrink-0">
+              <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347" />
+              </svg>
+            </div>
+            <div className="bg-white rounded-xl rounded-tl-none px-3 py-2 shadow-sm flex-1">
+              <p className="text-[11px] text-gray-400 font-semibold mb-0.5">Madinatti • maintenant</p>
+              <p className="text-xs text-gray-700 leading-snug">
+                🔔 Nouvelle offre correspondant à votre alerte : <strong>Développeur React</strong> — CDI, Casablanca
+              </p>
+              <p className="text-[10px] text-gray-300 text-right mt-1">12:41 ✓✓</p>
+            </div>
+          </div>
+        )}
+
         {saved ? (
           <div className="flex flex-col items-center gap-2 py-8 text-green-700">
             <div className="text-4xl">✅</div>
@@ -225,6 +246,11 @@ function AlertModal({ token, initialFilters, onClose, apiUrl }) {
                 {saving ? 'Enregistrement...' : "Créer l'alerte"}
               </button>
             </div>
+
+            <p className="text-[11px] text-gray-400 text-center mt-3 leading-snug">
+              📩 Vous recevrez ces alertes par email, et aussi par{' '}
+              <span className="text-[#25D366] font-semibold">WhatsApp</span> si votre numéro est vérifié dans votre profil.
+            </p>
           </>
         )}
       </div>
@@ -372,12 +398,21 @@ export default function JobsPage() {
           {/* Right-side action buttons */}
           <div className="ml-auto flex items-center gap-2 shrink-0">
             {userRole === 'citizen' && (
-              <button
-                onClick={() => setShowAlertModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#A7D129] text-[#2D5016] font-semibold text-sm hover:bg-[#E8F5D0] transition-all duration-150"
-              >
-                🔔 Créer une alerte
-              </button>
+              <div className="relative inline-flex">
+                <button
+                  onClick={() => setShowAlertModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#A7D129] text-[#2D5016] font-semibold text-sm hover:bg-[#E8F5D0] transition-all duration-150"
+                >
+                  🔔 Créer une alerte
+                </button>
+                <span className="absolute -top-2 -right-2 flex items-center gap-1 bg-[#25D366] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-75 animate-ping" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
+                  </span>
+                  WhatsApp
+                </span>
+              </div>
             )}
             <button
               onClick={handlePublishClick}

@@ -20,6 +20,7 @@ const {
 const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
 const { upload }     = require('../config/cloudinary');
+const { createListingLimiter, applyLimiter } = require('../middlewares/rateLimiter');
 
 // ── Public ───────────────────────────────────────────────────────────────────
 router.get('/',              getJobs);
@@ -50,15 +51,16 @@ router.get('/cv/download', async (req, res) => {
     res.status(500).json({ message: 'Erreur: ' + e.message })
   }
 })
+
 router.get('/my-applications', authMiddleware, roleMiddleware('business'), getBusinessApplications);
 
 // ── Candidature (citoyen) ────────────────────────────────────────────────────
-router.post('/:id/apply',        authMiddleware, roleMiddleware('citizen'), upload.single('cv'), applyToJob);
+router.post('/:id/apply', applyLimiter, authMiddleware, roleMiddleware('citizen'), upload.single('cv'), applyToJob);
 
 // ── Candidatures d'une offre (business) ─────────────────────────────────────
 router.get( '/:id/applications', authMiddleware, roleMiddleware('business'), getJobApplications);
 
-// ── Changer statut d'une candidature (business: viewed | accepted) ───────────
+// ── Changer statut d'une candidature (business) ──────────────────────────────
 router.patch('/applications/:appId/status', authMiddleware, roleMiddleware('business'), updateApplicationStatus);
 
 // ── Détail d'une offre ───────────────────────────────────────────────────────
@@ -68,7 +70,7 @@ router.get('/:id', getJobById);
 router.post('/:id/favorite', authMiddleware, toggleFavorite);
 
 // ── Business only ────────────────────────────────────────────────────────────
-router.post('/',    authMiddleware, roleMiddleware('business'), createJob);
+router.post('/',    createListingLimiter, authMiddleware, roleMiddleware('business'), createJob);
 router.put('/:id',  authMiddleware, roleMiddleware('business'), updateJob);
 router.delete('/:id', authMiddleware, deleteJob);
 

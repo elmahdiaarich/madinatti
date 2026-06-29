@@ -3,18 +3,19 @@ const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
 const ctrl = require('../controllers/realEstate');
+const { createListingLimiter, inquiryLimiter } = require('../middlewares/rateLimiter');
 
 // ── PUBLIC ───────────────────────────────────────────────────────────────────
 router.get('/categories', ctrl.getCategories);
 router.get('/', ctrl.getListings);
 
 // ── AUTHENTICATED ────────────────────────────────────────────────────────────
-router.post('/inquiries', authMiddleware, ctrl.createInquiry);
+router.post('/inquiries', inquiryLimiter, authMiddleware, ctrl.createInquiry);
 router.get('/favorites/me', authMiddleware, ctrl.getUserFavorites);
 router.post('/favorites/:id/toggle', authMiddleware, ctrl.toggleFavorite);
 
 // ── BUSINESS ─────────────────────────────────────────────────────────────────
-router.post('/', authMiddleware, roleMiddleware('business'), ctrl.createListing);
+router.post('/', createListingLimiter, authMiddleware, roleMiddleware('business'), ctrl.createListing);
 router.get('/business/my-listings', authMiddleware, roleMiddleware('business'), ctrl.getMyListings);
 router.get('/business/my-listings/:id', authMiddleware, roleMiddleware('business'), ctrl.getMyListingById);
 router.patch('/business/my-listings/:id', authMiddleware, roleMiddleware('business'), ctrl.updateMyListing);
