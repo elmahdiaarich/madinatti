@@ -191,19 +191,21 @@ export async function getBusinesses(token = null) {
 
 export async function getSidebarCounts(token = null) {
   try {
-    const [overview, emploiRes, immoRes] = await Promise.all([
+    const [overview, emploiRes, immoRes, autoRes, reportStats] = await Promise.all([
       apiFetch('/api/admin/overview', {}, token),
       apiFetch('/api/admin/listings?module=emploi&status=PENDING&limit=1', {}, token),
       apiFetch('/api/admin/listings?module=immobilier&status=PENDING&limit=1', {}, token),
+      apiFetch('/api/admin/listings?module=automobile&status=PENDING&limit=1', {}, token),
+      apiFetch('/api/admin/reports/stats', {}, token),
     ])
 
-    const openReports = mockReports.filter((r) => r.status === 'OPEN').length
+    const openReports = reportStats.data?.byStatus?.pending ?? 0
 
     return {
       overview:     0,
       emploi:       emploiRes.pagination?.total ?? 0,
       immobilier:   immoRes.pagination?.total   ?? 0,
-      vehicule:     0,
+      vehicule:     autoRes.pagination?.total   ?? 0,
       signalements: openReports,
       entreprises:  0,
       utilisateurs: 0,

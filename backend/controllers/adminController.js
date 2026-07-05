@@ -129,7 +129,7 @@ const NORMALIZERS = {
     company:             j.companyName,
     companyName:         j.companyName,
     companyLogo:         j.companyLogo || null,
-    submittedBy:         j.user?.name || j.companyName,
+    submittedBy:         j.user?.companyName || j.companyName || j.user?.name,
     submittedByEmail:    j.user?.email || '',
     submittedById:       j.user?.id || '',
     submittedByLogo:     j.user?.companyLogo || j.user?.avatar || null,

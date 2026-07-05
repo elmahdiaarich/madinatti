@@ -926,7 +926,7 @@ Profil :
         languages:           job.languages,
         status:              'APPROVED',
         isFeatured:          job.isFeatured ?? false,
-        publishedAt:         new Date(),
+        publishedAt:         new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000),
         applicationDeadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       },
     })

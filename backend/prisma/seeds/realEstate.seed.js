@@ -291,7 +291,7 @@ async function seedRealEstate(prisma, roles, categories) {
         status:       data.status,
         isActive:     true,
         isFeatured:   data.isFeatured ?? false,
-        publishedAt:  data.publishedAt,
+        publishedAt:  new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000),
       },
     });
 

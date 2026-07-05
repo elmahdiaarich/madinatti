@@ -262,7 +262,7 @@ export default function CarCard({ listing, initialFavorited = false, onFavoriteT
                     <span className="font-semibold text-gray-700">{TRANS_LABELS[listing.transmission] ?? listing.transmission}</span>
                   </div>
                 )}
-                <div className={`ml-auto text-[11px] font-semibold ${isRecent ? 'text-green-600' : 'text-gray-400'}`}>
+                <div className={`ml-auto text-[14px] font-semibold ${isRecent ? 'text-green-600' : 'text-gray-400'}`}>
                   {dateStr}
                 </div>
               </div>

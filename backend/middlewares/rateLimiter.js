@@ -8,7 +8,7 @@ const handler = (req, res) => {
   });
 };
 
-// ── AUTH — Login (strict) ─────────────────────────────────────────────────────
+// ── AUTH — Login  ─────────────────────────────────────────────────────
 // 5 tentatives par IP toutes les 15 minutes
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -18,7 +18,7 @@ const loginLimiter = rateLimit({
   handler,
 });
 
-// ── AUTH — Register (modéré) ──────────────────────────────────────────────────
+// ── AUTH — Register  ──────────────────────────────────────────────────
 // 10 inscriptions par IP par heure
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -28,8 +28,8 @@ const registerLimiter = rateLimit({
   handler,
 });
 
-// ── AUTH — Forgot Password (strict) ──────────────────────────────────────────
-// 3 demandes par IP par heure (évite le spam d'emails)
+// ── AUTH — Forgot Password  ──────────────────────────────────────────
+// 3 demandes par IP par heure 
 const forgotPasswordLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 3,
@@ -38,7 +38,7 @@ const forgotPasswordLimiter = rateLimit({
   handler,
 });
 
-// ── LISTINGS — Création (modéré) ──────────────────────────────────────────────
+// ── LISTINGS — Création  ──────────────────────────────────────────────
 // 20 créations par IP par heure (jobs, real estate, cars)
 const createListingLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -48,7 +48,7 @@ const createListingLimiter = rateLimit({
   handler,
 });
 
-// ── CANDIDATURES — Apply (modéré) ─────────────────────────────────────────────
+// ── CANDIDATURES — Apply  ─────────────────────────────────────────────
 // 10 candidatures par IP par heure
 const applyLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -58,7 +58,7 @@ const applyLimiter = rateLimit({
   handler,
 });
 
-// ── INQUIRIES — Contact propriétaire (modéré) ─────────────────────────────────
+// ── INQUIRIES — Contact propriétaire  ─────────────────────────────────
 // 15 messages par IP par heure
 const inquiryLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -78,7 +78,7 @@ const reportLimiter = rateLimit({
   handler,
 });
 
-// ── CHAT — Messages (modéré) ──────────────────────────────────────────────────
+// ── CHAT — Messages  ──────────────────────────────────────────────────
 // 20 messages par IP par heure
 const chatLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,

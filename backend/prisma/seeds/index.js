@@ -14,22 +14,22 @@ async function main() {
   await seedPlans(prisma);
   const categories = await seedCategories(prisma);
 
-  // // ── Job categories (module: emploi, keyed by slug) ─────────────────────────
-  // const jobCategories = {
-  //   catInfo:         categories.emploi['informatique'],
-  //   catMarketing:    categories.emploi['marketing'],
-  //   catFinance:      categories.emploi['finance'],
-  //   catRH:           categories.emploi['rh'],
-  //   catBTP:          categories.emploi['btp'],
-  //   catVente:        categories.emploi['vente'],
-  //   catSante:        categories.emploi['sante'],
-  //   catLogistique:   categories.emploi['logistique'],
-  //   catJuridique:    categories.emploi['juridique'],
-  //   catEnseignement: categories.emploi['enseignement'],
-  // };
+  // ── Job categories (module: emploi, keyed by slug) ─────────────────────────
+  const jobCategories = {
+    catInfo:         categories.emploi['informatique'],
+    catMarketing:    categories.emploi['marketing'],
+    catFinance:      categories.emploi['finance'],
+    catRH:           categories.emploi['rh'],
+    catBTP:          categories.emploi['btp'],
+    catVente:        categories.emploi['vente'],
+    catSante:        categories.emploi['sante'],
+    catLogistique:   categories.emploi['logistique'],
+    catJuridique:    categories.emploi['juridique'],
+    catEnseignement: categories.emploi['enseignement'],
+  };
 
-  // await seedJobs(prisma, roles, jobCategories);
-  // await seedRealEstate(prisma, roles, categories);
+  await seedJobs(prisma, roles, jobCategories);
+  await seedRealEstate(prisma, roles, categories);
   await seedCars(prisma, roles, categories);    // add this line
 
 }

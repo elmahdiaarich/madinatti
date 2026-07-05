@@ -121,7 +121,7 @@ const IconChevron = ({ left }) => (
 
 const NAV_ITEMS = [
   { key: 'overview',     label: "Vue d'ensemble", href: '/admin',             icon: IconDashboard  },
-  { key: 'emploi',       label: "Offres d'emploi", href: '/admin/jobs',        icon: IconBriefcase  },
+  { key: 'emploi',       label: "Emploi", href: '/admin/jobs',        icon: IconBriefcase  },
   { key: 'immobilier',   label: 'Immobilier',       href: '/admin/real-estate', icon: IconBuilding   },
   { key: 'vehicule',     label: 'Véhicules',        href: '/admin/vehicles',    icon: IconCar        },
   { key: 'categories',   label: 'Catégories',       href: '/admin/categories',  icon: IconCategories },

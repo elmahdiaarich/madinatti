@@ -23,7 +23,7 @@ const {
 router.post('/google', googleLogin);
 
 router.post('/register', registerLimiter, upload.single('companyLogo'), register)
-router.post('/login', loginLimiter, login)
+router.post('/login', login)
 router.post('/logout', authMiddleware, logout)
 router.post('/forgot-password', forgotPasswordLimiter, forgotPassword)
 router.post('/reset-password', resetPassword)
