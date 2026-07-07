@@ -1130,6 +1130,7 @@ const getCategories = async (req, res) => {
           select: {
             jobListings: true,
             realEstateListings: true,
+            carListings: true,
           },
         },
       },
@@ -1297,6 +1298,7 @@ const deleteCategory = async (req, res) => {
           select: {
             jobListings: true,
             realEstateListings: true,
+            carListings: true,
           },
         },
       },
@@ -1308,7 +1310,7 @@ const deleteCategory = async (req, res) => {
     }
 
     const totalListings =
-      cat._count.jobListings + cat._count.realEstateListings;
+      cat._count.jobListings + cat._count.realEstateListings + cat._count.carListings;
     if (totalListings > 0) {
       return res.status(409).json({
         success: false,
@@ -1337,12 +1339,12 @@ const deleteModule = async (req, res) => {
     const cats = await prisma.category.findMany({
       where: { module: mod },
       include: {
-        _count: { select: { jobListings: true, realEstateListings: true } },
+        _count: { select: { jobListings: true, realEstateListings: true, carListings: true } },
       },
     });
 
     const deletable = cats.filter(
-      (c) => c._count.jobListings === 0 && c._count.realEstateListings === 0,
+      (c) => c._count.jobListings === 0 && c._count.realEstateListings === 0 && c._count.carListings === 0,
     );
     const blocked = cats.length - deletable.length;
 
