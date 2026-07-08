@@ -72,6 +72,7 @@ model User {
   messages          BusinessMessage[]
   carListings    CarListing[]
   carInquiries   CarInquiry[]
+  touristicListings  TouristicListing[]
 }
 
 model Role {
@@ -151,6 +152,7 @@ model Category {
   jobListings        JobListing[]
   realEstateListings RealEstateListing[]
   carListings    CarListing[]
+  touristicListings  TouristicListing[]
 }
 
 enum EducationLevel {
@@ -333,6 +335,7 @@ enum ReportTarget {
   JOB
   USER
   CAR
+  TOURISM
 }
 
 enum ReportReason {
@@ -545,4 +548,37 @@ model CarInquiry {
 
   @@index([listingId])
   @@index([userId])
+}
+
+//// ── tourisme Models ────────────────────────────────────────────────────────────────
+model TouristicListing {
+  id            String    @id @default(uuid())
+  categoryId    String
+  name          String
+  slug          String?   @unique
+  description   String?
+  neighborhood  String?
+  city          String?
+  region        String?
+  location      String?
+  latitude      Decimal?
+  longitude     Decimal?
+  contactPhone  String?
+  contactEmail  String?
+  images        Json?     // [{ url, isCover }]  — same shape as RealEstateListing/CarListing
+  attributes    Json?     // category-specific fields: rating, priceRange, hours, cuisine, roomCount...
+  isActive      Boolean   @default(true)
+  isFeatured    Boolean   @default(false)
+  viewsCount    Int       @default(0)
+  createdBy     String?   // admin who added it — audit only, no ownership logic
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  category      Category  @relation(fields: [categoryId], references: [id])
+  creator       User?     @relation(fields: [createdBy], references: [id])
+
+  @@index([categoryId])
+  @@index([city])
+  @@index([isActive])
+  @@index([createdAt])
 }

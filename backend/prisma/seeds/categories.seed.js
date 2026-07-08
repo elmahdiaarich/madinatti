@@ -25,12 +25,30 @@ const CATEGORIES = [
   { name: 'Motos',       slug: 'motos',       module: 'automobile' },
   { name: 'Utilitaires', slug: 'utilitaires', module: 'automobile' },
   { name: 'Camions',     slug: 'camions',     module: 'automobile' },
+
+  // ── Tourisme ─────────────────────────────────────────────────────────────
+  { name: 'Hôtels',                   slug: 'hotels',              module: 'tourisme' },
+  { name: 'Privé (Appart & Maison)',  slug: 'prive',               module: 'tourisme' },
+  { name: 'Wellness SPA',             slug: 'wellness-spa',        module: 'tourisme' },
+  { name: 'Hammam',                   slug: 'hammam',              module: 'tourisme' },
+  { name: 'Mosquée',                  slug: 'mosquee',             module: 'tourisme' },
+  { name: 'Musée',                    slug: 'musee',               module: 'tourisme' },
+  { name: 'Cinéma',                   slug: 'cinema',              module: 'tourisme' },
+  { name: 'Restaurant',               slug: 'restaurant',          module: 'tourisme' },
+  { name: 'Café',                     slug: 'cafe',                module: 'tourisme' },
+  { name: 'Jardin',                   slug: 'jardin',              module: 'tourisme' },
+  { name: 'Forêt',                    slug: 'foret',               module: 'tourisme' },
+  { name: 'Terrains de proximité',    slug: 'terrains-proximite',  module: 'tourisme' },
+  { name: 'Piscine Publique',         slug: 'piscine-publique',    module: 'tourisme' },
+  { name: 'Plage',                    slug: 'plage',               module: 'tourisme' },
+  { name: 'Hôpitaux',                 slug: 'hopitaux',            module: 'tourisme' },
+  { name: 'Zoo',                      slug: 'zoo',                 module: 'tourisme' }
 ];
 
 async function seedCategories(prisma) {
   console.log('🌱 Seeding categories...');
 
-  const result = { emploi: {}, immobilier: {}, automobile: {} }; // ← add automobile here
+  const result = { emploi: {}, immobilier: {}, automobile: {}, tourisme: {} };
 
   for (const cat of CATEGORIES) {
     const record = await prisma.category.upsert({

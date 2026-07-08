@@ -4,8 +4,8 @@ const { seedPlans }      = require('./plans.seed');
 const { seedCategories } = require('./categories.seed');
 const { seedJobs }       = require('./jobs.seed');
 const { seedRealEstate } = require('./realEstate.seed');
-const { seedCars } = require('./cars.seed');   // add this import
-
+const { seedCars }       = require('./cars.seed');
+const { seedTourismListings } = require('./tourism.seed'); // 1. Import the tourism seeder
 
 const prisma = new PrismaClient();
 
@@ -28,10 +28,13 @@ async function main() {
     catEnseignement: categories.emploi['enseignement'],
   };
 
-  await seedJobs(prisma, roles, jobCategories);
-  await seedRealEstate(prisma, roles, categories);
-  await seedCars(prisma, roles, categories);    // add this line
+  // Run existing module seeders
+  // await seedJobs(prisma, roles, jobCategories);
+  // await seedRealEstate(prisma, roles, categories);
+  // await seedCars(prisma, roles, categories);
 
+  // 2. Execute Tourism listings, passing the roles and newly created categories
+  await seedTourismListings(prisma, roles, categories); 
 }
 
 main()
