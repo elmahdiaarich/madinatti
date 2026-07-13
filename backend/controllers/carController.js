@@ -14,7 +14,7 @@ const LISTING_TYPES   = ['SALE', 'RENT'];
 const CONDITIONS      = ['NEW', 'USED', 'DAMAGED'];
 const FUEL_TYPES      = ['PETROL', 'DIESEL', 'HYBRID', 'ELECTRIC', 'LPG', 'OTHER'];
 const TRANSMISSIONS   = ['MANUAL', 'AUTOMATIC', 'SEMI_AUTOMATIC'];
-const BODY_TYPES      = ['SEDAN', 'SUV', 'HATCHBACK', 'COUPE', 'CONVERTIBLE', 'PICKUP', 'VAN', 'MINIVAN', 'TRUCK', 'OTHER'];
+const BODY_TYPES      = ['SEDAN', 'SUV', 'HATCHBACK', 'COUPE', 'CONVERTIBLE', 'WAGON', 'PICKUP', 'VAN', 'MINIVAN', 'OTHER'];
 const INQUIRY_STATUSES = ['pending', 'read', 'replied', 'closed'];
 
 // ── Validators ────────────────────────────────────────────────────────────────

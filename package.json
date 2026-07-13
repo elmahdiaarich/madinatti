@@ -2,9 +2,11 @@
   "name": "madinatti",
   "version": "1.0.0",
   "scripts": {
-    "dev": "concurrently --names \"FRONT,BACK\" --prefix-colors \"cyan,green\" \"npm run dev --prefix frontend\" \"npm run dev --prefix backend\""
+    "dev": "concurrently --names \"FRONT,BACK\" --prefix-colors \"cyan,green\" \"npm run dev --prefix frontend\" \"npm run dev --prefix backend\"",
+    "test:e2e:cars": "playwright test tests/car-listings.e2e.spec.js"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "concurrently": "^10.0.3"
   }
 }
