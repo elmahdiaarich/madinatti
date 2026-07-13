@@ -19,7 +19,7 @@ import {
   Landmark, Clapperboard, UtensilsCrossed, Coffee, Trees,
   Dumbbell, Waves, Umbrella, Cross, PawPrint, Map,
 } from "lucide-react";
-
+// Replace lines 23-76 in frontend/constants/tourismCategories.js with this corrected configuration:
 export const TOURISM_CATEGORIES = {
   hotels: {
     label: "Hôtels",
@@ -28,21 +28,21 @@ export const TOURISM_CATEGORIES = {
     detail: ["description"],
     filters: ["rating"],
   },
-  "prive-appart-maison": {
+  prive: { // Matches database 'prive'
     label: "Privé (Appartement + maison)",
     icon: Key,
     card: ["name", "neighborhood"],
     detail: ["description"],
     filters: ["location"],
   },
-  wellness: {
+  "wellness-spa": { // Matches database 'wellness-spa'
     label: "Wellness / SPA",
     icon: Sparkles,
     card: ["name", "contactPhone", "hours"],
     detail: ["description", "priceRange"],
     filters: ["priceRange"],
   },
-  hamam: {
+  hammam: { // Matches database 'hammam'
     label: "Hammam",
     icon: Droplet,
     card: ["name", "photoCount"],
@@ -62,12 +62,24 @@ export const TOURISM_CATEGORIES = {
   cafe: { label: "Café", icon: Coffee, card: ["name", "hours"], detail: ["description", "priceRange"], filters: ["priceRange"] },
   jardin: { label: "Jardin", icon: Trees, card: ["name", "neighborhood"], detail: ["description", "hours"], filters: [] },
   foret: { label: "Forêt", icon: Trees, card: ["name", "neighborhood"], detail: ["description"], filters: [] },
-  terrains: { label: "Terrains de proximité", icon: Dumbbell, card: ["name", "neighborhood"], detail: ["description", "priceRange"], filters: [] },
-  piscine: { label: "Piscine publique", icon: Waves, card: ["name", "hours"], detail: ["description", "priceRange"], filters: ["priceRange"] },
+  "terrains-proximite": { // Matches database 'terrains-proximite'
+    label: "Terrains de proximité",
+    icon: Dumbbell,
+    card: ["name", "neighborhood"],
+    detail: ["description", "priceRange"],
+    filters: [],
+  },
+  "piscine-publique": { // Matches database 'piscine-publique'
+    label: "Piscine publique",
+    icon: Waves,
+    card: ["name", "hours"],
+    detail: ["description", "priceRange"],
+    filters: ["priceRange"],
+  },
   plage: { label: "Plage", icon: Umbrella, card: ["name", "neighborhood"], detail: ["description"], filters: [] },
   hopitaux: { label: "Hôpitaux", icon: Cross, card: ["name", "contactPhone"], detail: ["description"], filters: [] },
   zoo: { label: "Zoo", icon: PawPrint, card: ["name", "hours"], detail: ["description", "priceRange"], filters: ["priceRange"] },
-  carte: {
+  "carte-touristique": { // Matches database 'carte-touristique'
     label: "Carte touristique de la ville",
     icon: Map,
     cardVariant: "map",

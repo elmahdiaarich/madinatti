@@ -27,38 +27,39 @@ const CATEGORIES = [
   { name: 'Camions',     slug: 'camions',     module: 'automobile' },
 
   // ── Tourisme ─────────────────────────────────────────────────────────────
-  { name: 'Hôtels',                   slug: 'hotels',              module: 'tourisme' },
-  { name: 'Privé (Appart & Maison)',  slug: 'prive',               module: 'tourisme' },
-  { name: 'Wellness SPA',             slug: 'wellness-spa',        module: 'tourisme' },
-  { name: 'Hammam',                   slug: 'hammam',              module: 'tourisme' },
-  { name: 'Mosquée',                  slug: 'mosquee',             module: 'tourisme' },
-  { name: 'Musée',                    slug: 'musee',               module: 'tourisme' },
-  { name: 'Cinéma',                   slug: 'cinema',              module: 'tourisme' },
-  { name: 'Restaurant',               slug: 'restaurant',          module: 'tourisme' },
-  { name: 'Café',                     slug: 'cafe',                module: 'tourisme' },
-  { name: 'Jardin',                   slug: 'jardin',              module: 'tourisme' },
-  { name: 'Forêt',                    slug: 'foret',               module: 'tourisme' },
-  { name: 'Terrains de proximité',    slug: 'terrains-proximite',  module: 'tourisme' },
-  { name: 'Piscine Publique',         slug: 'piscine-publique',    module: 'tourisme' },
-  { name: 'Plage',                    slug: 'plage',               module: 'tourisme' },
-  { name: 'Hôpitaux',                 slug: 'hopitaux',            module: 'tourisme' },
-  { name: 'Zoo',                      slug: 'zoo',                 module: 'tourisme' }
+  { name: 'Hôtels',                   slug: 'hotels',              module: 'tourisme', displayType: 'PLACE' },
+  { name: 'Privé (Appart & Maison)',  slug: 'prive',               module: 'tourisme', displayType: 'PLACE' },
+  { name: 'Wellness SPA',             slug: 'wellness-spa',        module: 'tourisme', displayType: 'PLACE' },
+  { name: 'Hammam',                   slug: 'hammam',              module: 'tourisme', displayType: 'PLACE' },
+  { name: 'Magazine Touristique',     slug: 'magazine',            module: 'tourisme', displayType: 'DOCUMENT' },
+  { name: 'Mosquée',                  slug: 'mosquee',             module: 'tourisme', displayType: 'PLACE' },
+  { name: 'Musée',                    slug: 'musee',               module: 'tourisme', displayType: 'PLACE' },
+  { name: 'Cinéma',                   slug: 'cinema',              module: 'tourisme', displayType: 'PLACE' },
+  { name: 'Restaurant',               slug: 'restaurant',          module: 'tourisme', displayType: 'PLACE' },
+  { name: 'Café',                     slug: 'cafe',                module: 'tourisme', displayType: 'PLACE' },
+  { name: 'Jardin',                   slug: 'jardin',              module: 'tourisme', displayType: 'PLACE' },
+  { name: 'Forêt',                    slug: 'foret',               module: 'tourisme', displayType: 'PLACE' },
+  { name: 'Terrains de proximité',    slug: 'terrains-proximite',  module: 'tourisme', displayType: 'PLACE' },
+  { name: 'Piscine Publique',         slug: 'piscine-publique',    module: 'tourisme', displayType: 'PLACE' },
+  { name: 'Plage',                    slug: 'plage',               module: 'tourisme', displayType: 'PLACE' },
+  { name: 'Hôpitaux',                 slug: 'hopitaux',            module: 'tourisme', displayType: 'PLACE' },
+  { name: 'Zoo',                      slug: 'zoo',                 module: 'tourisme', displayType: 'PLACE' },
+  { name: 'Carte Touristique de la Ville', slug: 'carte-touristique', module: 'tourisme', displayType: 'DOCUMENT' },
 ];
 
 async function seedCategories(prisma) {
   console.log('🌱 Seeding categories...');
-
   const result = { emploi: {}, immobilier: {}, automobile: {}, tourisme: {} };
 
   for (const cat of CATEGORIES) {
     const record = await prisma.category.upsert({
       where:  { slug: cat.slug },
-      update: { name: cat.name, module: cat.module, isActive: true },
-      create: { name: cat.name, slug: cat.slug, module: cat.module, isActive: true },
+      update: { name: cat.name, module: cat.module, isActive: true, displayType: cat.displayType },
+      create: { name: cat.name, slug: cat.slug, module: cat.module, isActive: true, displayType: cat.displayType },
     });
 
     result[cat.module][cat.slug] = record;
-    console.log(`  ✅ [${cat.module}] ${record.name} (${record.slug})`);
+    console.log(`  ... [${cat.module}] ${record.name} (${record.slug})`);
   }
 
   console.log('🎉 Done seeding categories!\n');

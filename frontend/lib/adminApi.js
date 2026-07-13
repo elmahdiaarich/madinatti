@@ -209,6 +209,7 @@ export async function getSidebarCounts(token = null) {
       signalements: openReports,
       entreprises:  0,
       utilisateurs: 0,
+      tourisme:     0,
     }
   } catch {
     return { overview: 0, emploi: 0, immobilier: 0, vehicule: 0, signalements: 0, entreprises: 0, utilisateurs: 0 }

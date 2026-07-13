@@ -142,12 +142,18 @@ model Favorite {
   @@unique([userId, itemId, itemType])
   @@index([userId])
 }
+//for tourisme listings
+enum CategoryDisplayType {
+  PLACE
+  DOCUMENT
+}
 
 model Category {
   id                 String              @id @default(uuid())
   name               String
   slug               String              @unique
   module             String              // "emploi" | "immobilier" | "vehicule"
+  displayType CategoryDisplayType @default(PLACE)   // ← new
   isActive           Boolean             @default(true)
   jobListings        JobListing[]
   realEstateListings RealEstateListing[]
@@ -565,6 +571,9 @@ model TouristicListing {
   longitude     Decimal?
   contactPhone  String?
   contactEmail  String?
+  fileUrl        String?     // the PDF
+  publishedAt    DateTime?   // magazine issue date, or map's last update
+  downloadsCount Int         @default(0)
   images        Json?     // [{ url, isCover }]  — same shape as RealEstateListing/CarListing
   attributes    Json?     // category-specific fields: rating, priceRange, hours, cuisine, roomCount...
   isActive      Boolean   @default(true)

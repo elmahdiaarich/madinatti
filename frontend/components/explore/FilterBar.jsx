@@ -1,71 +1,101 @@
 // frontend/components/explore/FilterBar.jsx
 "use client";
 
-import { TOURISM_CATEGORIES } from "@/constants/tourismCategories";
+import { MapPin, Star, Tag } from "lucide-react";
+import { cities as MOROCCO_CITIES } from "morocco-cities";
+import SearchableDropdown from "./SearchableDropdown";
 
 const PRICE_RANGES = [
-  { value: "", label: "Tous les prix" },
   { value: "low", label: "Économique" },
   { value: "mid", label: "Moyen" },
   { value: "high", label: "Premium" },
 ];
 
 const RATINGS = [
-  { value: "", label: "Toutes les notes" },
   { value: "4", label: "4+" },
   { value: "3", label: "3+" },
 ];
 
-// Works out which filter widgets to show: only the ones declared for the
-// active category, or the union of all filters when "Tous" is selected.
-function getActiveFilterKeys(activeCategory) {
-  if (activeCategory === "all") {
-    const all = new Set();
-    Object.values(TOURISM_CATEGORIES).forEach((cfg) => (cfg.filters || []).forEach((f) => all.add(f)));
-    return [...all];
-  }
-  return TOURISM_CATEGORIES[activeCategory]?.filters || [];
+// Deduplicated, alphabetically sorted city names from the package.
+const CITY_OPTIONS = [...new Set(MOROCCO_CITIES.map((c) => c.name))].sort((a, b) =>
+  a.localeCompare(b)
+);
+
+// The "Ville" dropdown uses the official (accented) morocco-cities names,
+// but real listing data may store city names without accents / different
+// casing (e.g. "Kenitra" vs "Kénitra"). Normalize before matching so the
+// dependent "Quartier" dropdown actually finds its options.
+export function normalizeCityKey(value) {
+  return (value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
-export default function FilterBar({ activeCategory, filters, onChange }) {
-  const keys = getActiveFilterKeys(activeCategory);
-  if (keys.length === 0) return null;
+/**
+ * neighborhoodsByCity: { [normalizedCityKey]: string[] } — distinct
+ * neighborhoods available for each city, derived from listing data by the
+ * parent (the "morocco-cities" package itself has no neighborhood data).
+ */
+export default function FilterBar({ filters, onChange, neighborhoodsByCity = {} }) {
+  const set = (key, value) => {
+    const next = { ...filters, [key]: value || undefined };
+    // Changing city invalidates whatever neighborhood was selected.
+    if (key === "city") next.neighborhood = undefined;
+    onChange(next);
+  };
 
-  const set = (key, value) => onChange({ ...filters, [key]: value || undefined });
+  const neighborhoodOptions = filters.city
+    ? neighborhoodsByCity[normalizeCityKey(filters.city)] || []
+    : [];
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {keys.includes("rating") && (
-        <select
-          value={filters.rating || ""}
-          onChange={(e) => set("rating", e.target.value)}
-          className="rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-black/80"
-        >
-          {RATINGS.map((r) => (
-            <option key={r.value} value={r.value}>{r.label}</option>
-          ))}
-        </select>
-      )}
-      {keys.includes("priceRange") && (
-        <select
-          value={filters.priceRange || ""}
-          onChange={(e) => set("priceRange", e.target.value)}
-          className="rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-black/80"
-        >
-          {PRICE_RANGES.map((p) => (
-            <option key={p.value} value={p.value}>{p.label}</option>
-          ))}
-        </select>
-      )}
-      {keys.includes("location") && (
-        <input
-          type="text"
-          placeholder="Quartier / localisation"
-          value={filters.location || ""}
-          onChange={(e) => set("location", e.target.value)}
-          className="rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-black/80"
-        />
-      )}
-    </div>
+    <>
+      <SearchableDropdown
+        label="Évaluation"
+        icon={Star}
+        value={filters.rating}
+        options={RATINGS}
+        onSelect={(v) => set("rating", v)}
+        searchable={false}
+        emptyLabel="Toutes les notes"
+        width="w-40"
+      />
+
+      <SearchableDropdown
+        label="Ville"
+        icon={MapPin}
+        value={filters.city}
+        options={CITY_OPTIONS}
+        onSelect={(v) => set("city", v)}
+        emptyLabel="Toutes les villes"
+        placeholder="Tapez pour chercher une ville..."
+        width="w-44"
+      />
+
+      <SearchableDropdown
+        label="Quartier"
+        icon={MapPin}
+        value={filters.neighborhood}
+        options={neighborhoodOptions}
+        onSelect={(v) => set("neighborhood", v)}
+        disabled={!filters.city || neighborhoodOptions.length === 0}
+        emptyLabel={filters.city ? "Tous les quartiers" : "Choisissez une ville d'abord"}
+        placeholder="Tapez pour chercher un quartier..."
+        width="w-44"
+      />
+
+      <SearchableDropdown
+        label="Prix"
+        icon={Tag}
+        value={filters.priceRange}
+        options={PRICE_RANGES}
+        onSelect={(v) => set("priceRange", v)}
+        searchable={false}
+        emptyLabel="Tous les prix"
+        width="w-40"
+      />
+    </>
   );
 }

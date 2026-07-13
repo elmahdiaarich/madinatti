@@ -7,7 +7,9 @@ const touristicController = require('../controllers/touristicController');
 // -------------------------------------------------------------
 // PUBLIC ROUTES (Anyone can browse tourism listings)
 // -------------------------------------------------------------
+// Replace lines 10-11 in backend/routes/tourism.js with this:
 router.get('/', touristicController.getAllListings);
+router.get('/neighborhoods', touristicController.getDistinctNeighborhoods); // MUST go before /:id
 router.get('/:id', touristicController.getListingById);
 
 // -------------------------------------------------------------
@@ -16,5 +18,9 @@ router.get('/:id', touristicController.getListingById);
 router.post('/', authMiddleware, roleMiddleware('admin'), touristicController.createTouristicListing);
 router.put('/:id', authMiddleware, roleMiddleware('admin'), touristicController.updateTouristicListing);
 router.delete('/:id', authMiddleware, roleMiddleware('admin'), touristicController.deleteTouristicListing);
+
+//download route
+router.patch('/:id/download', touristicController.trackDownload);
+
 
 module.exports = router;

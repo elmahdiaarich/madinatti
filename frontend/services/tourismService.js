@@ -19,6 +19,14 @@ export const tourismService = {
     const response = await axios.get(`${API_URL}/${id}`);
     return response.data;
   },
+  trackDownload: async (id) => {                          // ← added
+    const response = await axios.patch(`${API_URL}/${id}/download`);
+    return response.data;
+  },
+  getNeighborhoods: async () => {
+    const response = await axios.get(`${API_URL}/neighborhoods`);
+    return response.data;
+  },
   create: async (listingData) => {
     const response = await axios.post(API_URL, listingData, getAuthHeaders());
     return response.data;

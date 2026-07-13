@@ -106,6 +106,14 @@ const IconLogout = () => (
   </svg>
 )
 
+const IconCompass = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+  </svg>
+)
+
 // Chevron left/right for the collapse button
 const IconChevron = ({ left }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
@@ -124,12 +132,13 @@ const NAV_ITEMS = [
   { key: 'emploi',       label: "Emploi", href: '/admin/jobs',        icon: IconBriefcase  },
   { key: 'immobilier',   label: 'Immobilier',       href: '/admin/real-estate', icon: IconBuilding   },
   { key: 'vehicule',     label: 'Véhicules',        href: '/admin/vehicles',    icon: IconCar        },
+  { key: 'tourisme',     label: 'Tourisme',         href: '/admin/tourism',     icon: IconCompass    }, // <-- Added
   { key: 'categories',   label: 'Catégories',       href: '/admin/categories',  icon: IconCategories },
   { key: 'signalements', label: 'Signalements',     href: '/admin/reports',     icon: IconFlag       },
   { key: 'entreprises',  label: 'Entreprises',      href: '/admin/businesses',  icon: IconCompany    },
   { key: 'utilisateurs', label: 'Utilisateurs',     href: '/admin/users',       icon: IconUsers      },
-  // { key: 'automobile',   label: 'Automobile',       href: '/admin/cars',       icon: IconUsiers      },
 ]
+
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────

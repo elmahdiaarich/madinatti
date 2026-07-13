@@ -69,11 +69,30 @@ const NAV_SERVICES = [
     href: "/cars",
     categories: ["Voitures occasion", "Voitures neuves", "Motos", "Auto info"],
   },
-  {
-    label: "Tourisme",
-    href: "/tourisme",
-    categories: ["Hôtels", "Restaurants", "Cafés", "Musées", "Spas & Hammams"],
-  },
+{
+  label: "Tourisme",
+  href: "/tourisme",
+  categories: [
+    "Hôtels",
+    "Privé (Appartement + Maison)",
+    "Wellness / SPA",
+    "Hammam",
+    "Magazine des touristes",
+    "Mosquée",
+    "Musée",
+    "Cinéma",
+    "Restaurant",
+    "Café",
+    "Jardin",
+    "Forêt",
+    "Terrains de proximité",
+    "Piscine publique",
+    "Plage",
+    "Hôpitaux",
+    "Zoo",
+    "Carte touristique de la ville",
+  ],
+},
   {
     label: "Santé",
     href: "/sante",
@@ -312,8 +331,11 @@ function CategoriesDrawer({
   setExpandedModule,
   router,
 }) {
-  const handleGo = (href) => {
-    router.push(href);
+  const handleGo = (href, category) => {
+    const url = category
+      ? `${href}?category=${encodeURIComponent(category)}`
+      : href;
+    router.push(url);
     onClose();
   };
 
@@ -401,7 +423,7 @@ function CategoriesDrawer({
                           {svc.categories.map((cat) => (
                             <button
                               key={cat}
-                              onClick={() => handleGo(svc.href)}
+                              onClick={() => handleGo(svc.href, cat)}
                               className="w-full flex items-center gap-2 text-left px-8 py-2 text-sm text-gray-600 hover:bg-[#E8F5D0] hover:text-[#2D5016] transition-colors"
                             >
                               <span className="w-1.5 h-1.5 rounded-full bg-[#7BA428] shrink-0" />
@@ -577,7 +599,8 @@ export default function Navbar() {
 
   const isActive = (path) => pathname === path;
   // A module is "active" whenever the current path is inside it, e.g. /jobs/123 -> Emploi stays highlighted
-  const isModuleActive = (href) => pathname === href || pathname?.startsWith(href + "/");
+  const isModuleActive = (href) =>
+    pathname === href || pathname?.startsWith(href + "/");
   const role = user?.role;
 
   // ── Shared logout buttons ─────────────────────────────────────────────────
@@ -895,31 +918,31 @@ export default function Navbar() {
 
                     {/* Nav links — role-aware */}
                     <div className="py-1 bg-white">
-{role === 'business' ? (
-  <>
-    <DropdownItem
-      href="/dashboard"
-      icon={<Shield size={16} />}
-      label="Dashboard"
-      active={pathname === '/dashboard'}
-      onClick={() => setUserMenuOpen(false)}
-    />
-    <DropdownItem
-      href="/my-space/profile"
-      icon={<User size={16} />}
-      label="Mon profil"
-      active={pathname === '/my-space/profile'}
-      onClick={() => setUserMenuOpen(false)}
-    />
-    <DropdownItem
-      href="/my-space/favorites"
-      icon={<Heart size={16} />}
-      label="Mes favoris"
-      active={pathname === '/my-space/favorites'}
-      onClick={() => setUserMenuOpen(false)}
-    />
-  </>
-) : role === 'admin' ? (
+                      {role === "business" ? (
+                        <>
+                          <DropdownItem
+                            href="/dashboard"
+                            icon={<Shield size={16} />}
+                            label="Dashboard"
+                            active={pathname === "/dashboard"}
+                            onClick={() => setUserMenuOpen(false)}
+                          />
+                          <DropdownItem
+                            href="/my-space/profile"
+                            icon={<User size={16} />}
+                            label="Mon profil"
+                            active={pathname === "/my-space/profile"}
+                            onClick={() => setUserMenuOpen(false)}
+                          />
+                          <DropdownItem
+                            href="/my-space/favorites"
+                            icon={<Heart size={16} />}
+                            label="Mes favoris"
+                            active={pathname === "/my-space/favorites"}
+                            onClick={() => setUserMenuOpen(false)}
+                          />
+                        </>
+                      ) : role === "admin" ? (
                         <DropdownItem
                           href="/admin"
                           icon={<Shield size={16} />}
@@ -1060,7 +1083,6 @@ export default function Navbar() {
               <Grid3x3 size={14} className="text-gray-400" />
               Catégories
             </button>
-
 
             {role === "admin" && (
               <a
