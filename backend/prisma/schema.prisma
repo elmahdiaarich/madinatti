@@ -72,7 +72,14 @@ model User {
   messages          BusinessMessage[]
   carListings    CarListing[]
   carInquiries   CarInquiry[]
+<<<<<<< HEAD
   touristicListings  TouristicListing[]
+=======
+  workerProfiles        WorkerProfile[]
+  taskRequestsAsClient  TaskRequest[]   @relation("TaskRequestsAsClient")
+  bookingsAsClient      Booking[]       @relation("BookingsAsClient")
+  reviews               Review[]
+>>>>>>> e01619cb51b23d7ee9ff99ceddb3944f95f7da1d
 }
 
 model Role {
@@ -158,7 +165,13 @@ model Category {
   jobListings        JobListing[]
   realEstateListings RealEstateListing[]
   carListings    CarListing[]
+<<<<<<< HEAD
   touristicListings  TouristicListing[]
+=======
+  workerProfiles WorkerProfile[]
+  taskRequests   TaskRequest[]
+
+>>>>>>> e01619cb51b23d7ee9ff99ceddb3944f95f7da1d
 }
 
 enum EducationLevel {
@@ -341,7 +354,13 @@ enum ReportTarget {
   JOB
   USER
   CAR
+<<<<<<< HEAD
   TOURISM
+=======
+  TASK_REQUEST  
+  REVIEW 
+  WORKER_PROFILE
+>>>>>>> e01619cb51b23d7ee9ff99ceddb3944f95f7da1d
 }
 
 enum ReportReason {
@@ -555,6 +574,7 @@ model CarInquiry {
   @@index([listingId])
   @@index([userId])
 }
+<<<<<<< HEAD
 
 //// ── tourisme Models ────────────────────────────────────────────────────────────────
 model TouristicListing {
@@ -591,3 +611,224 @@ model TouristicListing {
   @@index([isActive])
   @@index([createdAt])
 }
+=======
+// ============================================================
+// MINI-JOBS MODULE
+// ENUMS
+
+
+enum WorkerProfileStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+  ARCHIVED
+}
+
+enum PricingUnit {
+  HOUR
+  DAY
+  TASK
+}
+
+enum BookingStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  COMPLETED
+  CANCELLED
+}
+
+// No PENDING here on purpose — TaskRequest publishes immediately
+// (reactive moderation via Report, not pre-approval)
+enum TaskRequestStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  ARCHIVED
+}
+
+enum TaskApplicationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+enum ReviewTargetType {
+  WORKER_PROFILE
+  // future: HOTEL, PHARMACY, SANTE, ...
+}
+
+model WorkerProfile {
+  id              String              @id @default(uuid())
+  userId          String
+  user            User                @relation(fields: [userId], references: [id])
+  categoryId      String
+  category        Category            @relation(fields: [categoryId], references: [id])
+
+  headline        String
+  description     String
+  city            String
+  region          String?
+  latitude        Decimal?
+  longitude       Decimal?
+  serviceRadius   Int?                // km
+
+  pricingUnit     PricingUnit
+  rate            Decimal
+  isNegotiable    Boolean             @default(false)
+
+  photo           String?             // Cloudinary URL
+  portfolioImages Json?               // [{url}]
+  yearsExperience Int?
+  availability    Json?               // {mon:[9,18], tue:[...], ...}
+
+  status          WorkerProfileStatus @default(PENDING)
+  isActive        Boolean             @default(true)
+  isFeatured      Boolean             @default(false)
+  viewsCount      Int                 @default(0)
+  ratingAvg       Decimal?            @default(0)
+  ratingCount     Int                 @default(0)
+
+  adminNotes      String?
+  reviewedAt      DateTime?
+  reviewedBy      String?
+  publishedAt     DateTime?
+  deletedByOwner  Boolean             @default(false)
+  deletedAt       DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  bookings        Booking[]
+  applications    TaskApplication[]
+
+  @@index([userId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([city])
+  @@index([rate])
+  @@index([createdAt])
+}
+
+// MODEL: TaskRequest  (Model B — client posts a task)
+
+model TaskRequest {
+  id             String            @id @default(uuid())
+  userId         String            // the client posting the task
+  user           User              @relation("TaskRequestsAsClient", fields: [userId], references: [id])
+  categoryId     String
+  category       Category          @relation(fields: [categoryId], references: [id])
+
+  title          String
+  description    String
+  city           String
+  region         String?
+  latitude       Decimal?
+  longitude      Decimal?
+  location       String?  
+  budget         Decimal?          // estimated/proposed rate, optional
+  neededDate     DateTime
+
+  status         TaskRequestStatus @default(OPEN)
+  viewsCount     Int               @default(0)
+
+  // reactive moderation only (no PENDING gate) — admin can still act after the fact
+  adminNotes     String?
+  reviewedAt     DateTime?
+  reviewedBy     String?
+
+  deletedByOwner Boolean           @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  applications   TaskApplication[]
+
+  @@index([userId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([city])
+  @@index([createdAt])
+  @@index([neededDate])
+}
+
+// MODEL: TaskApplication  (worker applies to a TaskRequest)
+
+model TaskApplication {
+  id              String                 @id @default(uuid())
+  taskRequestId   String
+  taskRequest     TaskRequest            @relation(fields: [taskRequestId], references: [id])
+  workerProfileId String
+  workerProfile   WorkerProfile          @relation(fields: [workerProfileId], references: [id])
+
+  message         String?
+  status          TaskApplicationStatus  @default(PENDING)
+  cancelReason    String?
+
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  review          Review?                
+
+  @@unique([taskRequestId, workerProfileId])
+  @@index([taskRequestId])
+  @@index([workerProfileId])
+  @@index([status])
+}
+
+
+// MODEL: Booking  (Model A — direct booking request)
+
+model Booking {
+  id              String        @id @default(uuid())
+  workerProfileId String
+  workerProfile   WorkerProfile @relation(fields: [workerProfileId], references: [id])
+  clientId        String
+  client          User          @relation("BookingsAsClient", fields: [clientId], references: [id])
+
+  taskDescription String
+  requestedDate   DateTime
+  estimatedHours  Int?
+  status          BookingStatus @default(PENDING)
+  workerNote      String?
+  clientPhone     String?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  review          Review?       
+
+  @@index([workerProfileId])
+  @@index([clientId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+
+// MODEL: Review  (universal — reused across future verticals too)
+
+model Review {
+  id                String            @id @default(uuid())
+  targetType        ReviewTargetType
+  targetId          String            
+  userId            String
+  user              User              @relation(fields: [userId], references: [id])
+  bookingId         String?           @unique
+  booking           Booking?          @relation(fields: [bookingId], references: [id])
+  taskApplicationId String?           @unique
+  taskApplication   TaskApplication?  @relation(fields: [taskApplicationId], references: [id])
+
+  rating            Int               // 1-5
+  comment           String?
+  isVerified        Boolean           @default(false) // true when bookingId or taskApplicationId is set
+
+  createdAt         DateTime          @default(now())
+
+  @@unique([userId, targetId, targetType])
+  @@index([targetType, targetId])
+  @@index([userId])
+}
+
+>>>>>>> e01619cb51b23d7ee9ff99ceddb3944f95f7da1d

@@ -124,7 +124,15 @@ const IconChevron = ({ left }) => (
     }
   </svg>
 )
-
+const IconClipboard = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+    <rect x="9" y="3" width="6" height="4" rx="1" />
+    <path d="M9 12h6M9 16h4" />
+  </svg>
+)
 // ── Nav items ─────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS = [
@@ -133,6 +141,8 @@ const NAV_ITEMS = [
   { key: 'immobilier',   label: 'Immobilier',       href: '/admin/real-estate', icon: IconBuilding   },
   { key: 'vehicule',     label: 'Véhicules',        href: '/admin/vehicles',    icon: IconCar        },
   { key: 'tourisme',     label: 'Tourisme',         href: '/admin/tourism',     icon: IconCompass    }, // <-- Added
+  { key: 'miniJobs',     label: 'Mini-jobs · Profils', href: '/admin/mini-jobs', icon: IconBriefcase },
+  { key: 'taskRequests', label: 'Mini-jobs · Demandes', href: '/admin/task-requests', icon: IconClipboard },
   { key: 'categories',   label: 'Catégories',       href: '/admin/categories',  icon: IconCategories },
   { key: 'signalements', label: 'Signalements',     href: '/admin/reports',     icon: IconFlag       },
   { key: 'entreprises',  label: 'Entreprises',      href: '/admin/businesses',  icon: IconCompany    },

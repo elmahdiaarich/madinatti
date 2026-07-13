@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+<<<<<<< HEAD
 const { seedRoles }      = require('./roles.seed');
 const { seedPlans }      = require('./plans.seed');
 const { seedCategories } = require('./categories.seed');
@@ -6,15 +7,26 @@ const { seedJobs }       = require('./jobs.seed');
 const { seedRealEstate } = require('./realEstate.seed');
 const { seedCars }       = require('./cars.seed');
 const { seedTourismListings } = require('./tourism.seed'); // 1. Import the tourism seeder
+=======
+const { seedUsers }           = require('./users.seed');
+const { seedRoles }           = require('./roles.seed');
+const { seedPlans }           = require('./plans.seed');
+const { seedCategories }      = require('./categories.seed');
+const { seedJobs }            = require('./jobs.seed');
+const { seedRealEstate }      = require('./realEstate.seed');
+const { seedCars }            = require('./cars.seed');
+const { seedWorkerProfiles }  = require('./workerProfiles.seed');   
+const { seedTaskRequests }    = require('./taskRequests.seed');     
+>>>>>>> e01619cb51b23d7ee9ff99ceddb3944f95f7da1d
 
 const prisma = new PrismaClient();
 
 async function main() {
   const roles      = await seedRoles(prisma);
+  await seedUsers(prisma, roles);  
   await seedPlans(prisma);
   const categories = await seedCategories(prisma);
 
-  // ── Job categories (module: emploi, keyed by slug) ─────────────────────────
   const jobCategories = {
     catInfo:         categories.emploi['informatique'],
     catMarketing:    categories.emploi['marketing'],
@@ -27,6 +39,7 @@ async function main() {
     catJuridique:    categories.emploi['juridique'],
     catEnseignement: categories.emploi['enseignement'],
   };
+<<<<<<< HEAD
 
   // Run existing module seeders
   // await seedJobs(prisma, roles, jobCategories);
@@ -35,6 +48,14 @@ async function main() {
 
   // 2. Execute Tourism listings, passing the roles and newly created categories
   await seedTourismListings(prisma, roles, categories); 
+=======
+  await seedJobs(prisma, roles, jobCategories);
+  await seedRealEstate(prisma, roles, categories);
+  await seedCars(prisma, roles, categories);
+
+  await seedWorkerProfiles(prisma, categories);   
+  await seedTaskRequests(prisma, categories);     
+>>>>>>> e01619cb51b23d7ee9ff99ceddb3944f95f7da1d
 }
 
 main()

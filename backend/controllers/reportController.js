@@ -29,7 +29,7 @@ const createReport = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Champs requis : targetType, targetId, reason' })
     }
 
-    const validTargets = ['REAL_ESTATE', 'JOB', 'USER', 'CAR']
+const validTargets = ['REAL_ESTATE', 'JOB', 'USER', 'CAR', 'WORKER_PROFILE', 'TASK_REQUEST', 'REVIEW']
     const validReasons = ['FAKE', 'FRAUD', 'DUPLICATE', 'INAPPROPRIATE', 'OTHER']
     if (!validTargets.includes(targetType)) {
       return res.status(400).json({ success: false, message: 'targetType invalide' })
@@ -260,7 +260,6 @@ const getReportById = async (req, res) => {
   try {
     const { id } = req.params
 
-    // Le rapport principal
     const report = await prisma.report.findUnique({
       where: { id },
       include: {
@@ -269,7 +268,6 @@ const getReportById = async (req, res) => {
     })
     if (!report) return res.status(404).json({ success: false, message: 'Signalement introuvable' })
 
-    // Tous les reporters sur la même cible
     const allReporters = await prisma.report.findMany({
       where: { targetId: report.targetId, targetType: report.targetType },
       orderBy: { createdAt: 'asc' },
@@ -278,7 +276,6 @@ const getReportById = async (req, res) => {
       },
     })
 
-    // Propriétaire de l'annonce + info annonce
     let listingInfo = null
     let owner       = null
 
@@ -305,34 +302,50 @@ const getReportById = async (req, res) => {
                         price: re.price, module: 'REAL_ESTATE' }
         owner = re.user
       }
+    } else if (report.targetType === 'WORKER_PROFILE') {
+      const wp = await prisma.workerProfile.findUnique({
+        where: { id: report.targetId },
+        select: { id: true, headline: true, status: true, createdAt: true, rate: true,
+                  user: { select: { id: true, name: true, email: true, isActive: true } } },
+      })
+      if (wp) {
+        listingInfo = { id: wp.id, title: wp.headline, status: wp.status, createdAt: wp.createdAt,
+                        price: wp.rate, module: 'WORKER_PROFILE' }
+        owner = wp.user
+      }
+    } else if (report.targetType === 'TASK_REQUEST') {
+      const tr = await prisma.taskRequest.findUnique({
+        where: { id: report.targetId },
+        select: { id: true, title: true, status: true, createdAt: true, budget: true,
+                  user: { select: { id: true, name: true, email: true, isActive: true } } },
+      })
+      if (tr) {
+        listingInfo = { id: tr.id, title: tr.title, status: tr.status, createdAt: tr.createdAt,
+                        price: tr.budget, module: 'TASK_REQUEST' }
+        owner = tr.user
+      }
     }
 
-    // Nombre d'autres annonces du propriétaire
     let ownerListingsCount = 0
     if (owner?.id) {
-      const [jobs, res2] = await Promise.all([
+      const [jobs, res2, workerProfiles, taskRequests] = await Promise.all([
         prisma.jobListing.count({ where: { userId: owner.id } }),
         prisma.realEstateListing.count({ where: { userId: owner.id } }),
+        prisma.workerProfile.count({ where: { userId: owner.id } }),
+        prisma.taskRequest.count({ where: { userId: owner.id } }),
       ])
-      ownerListingsCount = jobs + res2
+      ownerListingsCount = jobs + res2 + workerProfiles + taskRequests
     }
 
     res.json({
       success: true,
-      data: {
-        report,
-        allReporters,
-        listingInfo,
-        owner,
-        ownerListingsCount,
-      },
+      data: { report, allReporters, listingInfo, owner, ownerListingsCount },
     })
   } catch (error) {
     console.error('getReportById error:', error)
     res.status(500).json({ success: false, message: 'Erreur serveur' })
   }
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/admin/reports/:id/dismiss
 // Innocenter : remet l'annonce en PUBLISHED, clôt le signalement en REJECTED
@@ -345,14 +358,16 @@ const dismissReport = async (req, res) => {
     const report = await prisma.report.findUnique({ where: { id } })
     if (!report) return res.status(404).json({ success: false, message: 'Signalement introuvable' })
 
-    // Remettre l'annonce en ligne
     if (report.targetType === 'JOB') {
       await prisma.jobListing.updateMany({ where: { id: report.targetId }, data: { status: 'APPROVED' } })
     } else if (report.targetType === 'REAL_ESTATE') {
       await prisma.realEstateListing.updateMany({ where: { id: report.targetId }, data: { status: 'APPROVED' } })
+    } else if (report.targetType === 'WORKER_PROFILE') {
+      await prisma.workerProfile.updateMany({ where: { id: report.targetId }, data: { status: 'APPROVED' } })
+    } else if (report.targetType === 'TASK_REQUEST') {
+      await prisma.taskRequest.updateMany({ where: { id: report.targetId }, data: { status: 'OPEN' } })
     }
 
-    // Clôturer TOUS les rapports sur cette cible en REJECTED
     await prisma.report.updateMany({
       where: { targetId: report.targetId, targetType: report.targetType, status: { in: ['PENDING', 'REVIEWED'] } },
       data: { status: 'REJECTED', resolvedAt: new Date(), resolvedBy: adminId },
@@ -381,9 +396,12 @@ const removeListingFromReport = async (req, res) => {
       await prisma.jobListing.updateMany({ where: { id: report.targetId }, data: { status: 'REJECTED' } })
     } else if (report.targetType === 'REAL_ESTATE') {
       await prisma.realEstateListing.updateMany({ where: { id: report.targetId }, data: { status: 'REJECTED' } })
+    } else if (report.targetType === 'WORKER_PROFILE') {
+      await prisma.workerProfile.updateMany({ where: { id: report.targetId }, data: { status: 'REJECTED' } })
+    } else if (report.targetType === 'TASK_REQUEST') {
+      await prisma.taskRequest.updateMany({ where: { id: report.targetId }, data: { status: 'ARCHIVED' } })
     }
 
-    // Clôturer tous les rapports sur cette cible en RESOLVED
     await prisma.report.updateMany({
       where: { targetId: report.targetId, targetType: report.targetType },
       data: { status: 'RESOLVED', resolvedAt: new Date(), resolvedBy: adminId },
@@ -407,7 +425,6 @@ const suspendOwner = async (req, res) => {
     const report = await prisma.report.findUnique({ where: { id } })
     if (!report) return res.status(404).json({ success: false, message: 'Signalement introuvable' })
 
-    // Récupérer le userId de l'annonce
     let ownerId = null
     if (report.targetType === 'JOB') {
       const job = await prisma.jobListing.findUnique({ where: { id: report.targetId }, select: { userId: true } })
@@ -415,6 +432,12 @@ const suspendOwner = async (req, res) => {
     } else if (report.targetType === 'REAL_ESTATE') {
       const re = await prisma.realEstateListing.findUnique({ where: { id: report.targetId }, select: { userId: true } })
       ownerId = re?.userId
+    } else if (report.targetType === 'WORKER_PROFILE') {
+      const wp = await prisma.workerProfile.findUnique({ where: { id: report.targetId }, select: { userId: true } })
+      ownerId = wp?.userId
+    } else if (report.targetType === 'TASK_REQUEST') {
+      const tr = await prisma.taskRequest.findUnique({ where: { id: report.targetId }, select: { userId: true } })
+      ownerId = tr?.userId
     } else if (report.targetType === 'USER') {
       ownerId = report.targetId
     }
@@ -463,37 +486,47 @@ const contactOwner = async (req, res) => {
         select: { userId: true, title: true, user: { select: { name: true, email: true } } },
       })
       if (re) { owner = re.user; ownerId = re.userId; listingTitle = re.title }
+    } else if (report.targetType === 'WORKER_PROFILE') {
+      const wp = await prisma.workerProfile.findUnique({
+        where:  { id: report.targetId },
+        select: { userId: true, headline: true, user: { select: { name: true, email: true } } },
+      })
+      if (wp) { owner = wp.user; ownerId = wp.userId; listingTitle = wp.headline }
+    } else if (report.targetType === 'TASK_REQUEST') {
+      const tr = await prisma.taskRequest.findUnique({
+        where:  { id: report.targetId },
+        select: { userId: true, title: true, user: { select: { name: true, email: true } } },
+      })
+      if (tr) { owner = tr.user; ownerId = tr.userId; listingTitle = tr.title }
     }
 
     if (!owner?.email) {
       return res.status(404).json({ success: false, message: 'Email du propriétaire introuvable' })
     }
 
-    // Créer un message interne BusinessMessage (si le propriétaire a un compte)
-   if (ownerId) {
-  await prisma.businessMessage.create({
-    data: {
-      userId:       ownerId,
-      type:         'REPORT_CONTACT',
-      targetType:   report.targetType,
-      targetId:     report.targetId,
-      targetTitle:  listingTitle,
-      adminMessage: message.trim(),
-    },
-  })
+    if (ownerId) {
+      await prisma.businessMessage.create({
+        data: {
+          userId:       ownerId,
+          type:         'REPORT_CONTACT',
+          targetType:   report.targetType,
+          targetId:     report.targetId,
+          targetTitle:  listingTitle,
+          adminMessage: message.trim(),
+        },
+      })
 
-  // ✅ AJOUT — notification cloche en temps réel
-  const { createNotification } = require('./notificationController')
-  await createNotification(
-    ownerId,
-    'REPORT_CONTACT',
-    'Un message de l\'équipe Madinatti 📬',
-    `L'administration vous a contacté au sujet de votre annonce "${listingTitle}".`,
-    '/dashboard/messages'
-  )
-}
+      const { createNotification } = require('./notificationController')
+      const isCitizenOwned = ['WORKER_PROFILE', 'TASK_REQUEST'].includes(report.targetType)
+      await createNotification(
+        ownerId,
+        'REPORT_CONTACT',
+        'Un message de l\'équipe Madinatti 📬',
+        `L'administration vous a contacté au sujet de "${listingTitle}".`,
+        isCitizenOwned ? '/my-space/messages' : '/dashboard/messages'
+      )
+    }
 
-    // Envoyer l'email (si échoue en local, on ne bloque pas le processus)
     try {
       await sendReportContactEmail({
         to:           owner.email,
@@ -511,7 +544,60 @@ const contactOwner = async (req, res) => {
     res.status(500).json({ success: false, message: 'Erreur serveur' })
   }
 }
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE /api/admin/reports/:id/review
+// Supprime l'avis signalé (Review) et recalcule la note de la cible.
+// Le report ciblant ce Review passe en RESOLVED.
+// ─────────────────────────────────────────────────────────────────────────────
+const deleteReviewFromReport = async (req, res) => {
+  try {
+    const { id } = req.params
+    const adminId = req.user?.userId
 
+    const report = await prisma.report.findUnique({ where: { id } })
+    if (!report) return res.status(404).json({ success: false, message: 'Signalement introuvable' })
+    if (report.targetType !== 'REVIEW') {
+      return res.status(400).json({ success: false, message: "Ce signalement ne cible pas un avis" })
+    }
+
+    const review = await prisma.review.findUnique({ where: { id: report.targetId } })
+    if (!review) {
+      await prisma.report.updateMany({
+        where: { targetId: report.targetId, targetType: 'REVIEW' },
+        data: { status: 'RESOLVED', resolvedAt: new Date(), resolvedBy: adminId },
+      })
+      return res.json({ success: true, message: "Avis déjà supprimé, signalement résolu." })
+    }
+
+    await prisma.review.delete({ where: { id: review.id } })
+
+    if (review.targetType === 'WORKER_PROFILE') {
+      const remaining = await prisma.review.findMany({
+        where: { targetType: 'WORKER_PROFILE', targetId: review.targetId },
+        select: { rating: true },
+      })
+      const ratingCount = remaining.length
+      const ratingAvg = ratingCount
+        ? remaining.reduce((sum, r) => sum + r.rating, 0) / ratingCount
+        : 0
+
+      await prisma.workerProfile.update({
+        where: { id: review.targetId },
+        data: { ratingAvg, ratingCount },
+      })
+    }
+
+    await prisma.report.updateMany({
+      where: { targetId: report.targetId, targetType: 'REVIEW' },
+      data: { status: 'RESOLVED', resolvedAt: new Date(), resolvedBy: adminId },
+    })
+
+    res.json({ success: true, message: "Avis supprimé et signalement résolu." })
+  } catch (error) {
+    console.error('deleteReviewFromReport error:', error)
+    res.status(500).json({ success: false, message: 'Erreur serveur' })
+  }
+}
 module.exports = { createReport, getReports, getReportById, updateReport, getReportStats,
-                   dismissReport, removeListingFromReport, suspendOwner, contactOwner }
+                   dismissReport, removeListingFromReport, suspendOwner, contactOwner,deleteReviewFromReport }
 

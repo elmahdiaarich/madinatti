@@ -21,8 +21,7 @@ const REASON_LABELS = {
   INAPPROPRIATE: 'Contenu inapproprié',
   OTHER:         'Autre',
 }
-const MODULE_HREF = { JOB: '/jobs', REAL_ESTATE: '/real-estate' }
-
+const MODULE_HREF = { JOB: '/jobs', REAL_ESTATE: '/real-estate', WORKER_PROFILE: '/mini-jobs/profiles', TASK_REQUEST: '/mini-jobs/tasks' }
 const CONTACT_REASONS = [
   { value: 'PHOTOS',      label: '📷 Photos non conformes', text: "Les photos associées à votre annonce ne respectent pas nos critères de qualité (résolution insuffisante, contenu non pertinent ou hors-sujet). Merci de les remplacer par des photos claires et représentatives du bien." },
   { value: 'DESCRIPTION', label: '📝 Description insuffisante', text: "La description de votre annonce est incomplète ou ne reflète pas fidèlement le bien proposé. Merci de fournir des informations plus détaillées et précises." },
@@ -341,13 +340,14 @@ export default function ReportDetailPanel({ reportId, onClose, onRefresh }) {
     }
   }
 
-  const handleAction = async (action) => {
+const handleAction = async (action) => {
     if (!window.confirm(ACTION_CONFIRMS[action])) return
     setActionLoading(action)
     try {
-      if (action === 'dismiss') await reportService.dismissReport(reportId, token)
-      if (action === 'remove')  await reportService.removeListing(reportId, token)
-      if (action === 'suspend') await reportService.suspendOwner(reportId, token)
+      if (action === 'dismiss')      await reportService.dismissReport(reportId, token)
+      if (action === 'remove')      await reportService.removeListing(reportId, token)
+      if (action === 'deleteReview') await reportService.deleteReview(reportId, token)
+      if (action === 'suspend')     await reportService.suspendOwner(reportId, token)
       toast.success('Action effectuée')
       onRefresh?.()
     } catch (err) {
@@ -371,10 +371,11 @@ export default function ReportDetailPanel({ reportId, onClose, onRefresh }) {
     }
   }
 
-  const ACTION_CONFIRMS = {
-    dismiss: 'Confirmer : innocenter cette annonce et la remettre en ligne ?',
-    remove:  'Confirmer : retirer définitivement cette annonce ?',
-    suspend: 'Confirmer : suspendre le compte du propriétaire ?',
+ const ACTION_CONFIRMS = {
+    dismiss:      'Confirmer : innocenter cette annonce et la remettre en ligne ?',
+    remove:       'Confirmer : retirer définitivement cette annonce ?',
+    deleteReview: 'Confirmer : supprimer définitivement cet avis ?',
+    suspend:      'Confirmer : suspendre le compte du propriétaire ?',
   }
 
   const isResolved = ['RESOLVED', 'REJECTED'].includes(detail?.report?.status)
@@ -502,14 +503,25 @@ export default function ReportDetailPanel({ reportId, onClose, onRefresh }) {
                 ✅ Innocenter
               </ActionBtn>
 
-              <ActionBtn
-                variant="red"
-                loading={actionLoading === 'remove'}
-                disabled={isResolved}
-                onClick={() => handleAction('remove')}
-              >
-                🗑️ Retirer l'annonce
-              </ActionBtn>
+            {detail.report.targetType === 'REVIEW' ? (
+                <ActionBtn
+                  variant="red"
+                  loading={actionLoading === 'deleteReview'}
+                  disabled={isResolved}
+                  onClick={() => handleAction('deleteReview')}
+                >
+                  🗑️ Supprimer l'avis
+                </ActionBtn>
+              ) : (
+                <ActionBtn
+                  variant="red"
+                  loading={actionLoading === 'remove'}
+                  disabled={isResolved}
+                  onClick={() => handleAction('remove')}
+                >
+                  🗑️ Retirer l'annonce
+                </ActionBtn>
+              )}
 
               <ActionBtn
                 variant="orange"

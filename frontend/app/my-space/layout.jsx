@@ -7,7 +7,21 @@ import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/shared/ProtectedRoute";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
+const IconHome = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 12l-2 0l9-9l9 9l-2 0" />
+    <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+    <path d="M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6" />
+  </svg>
+);
 
+const IconCalendar = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="4" y="5" width="16" height="16" rx="2" />
+    <path d="M16 3v4M8 3v4M4 11h16" />
+    <path d="M9 15l2 2l4-4" />
+  </svg>
+);
 const IconUser = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -167,30 +181,14 @@ const IconSidebarToggle = () => (
 // ── Nav registries ────────────────────────────────────────────────────────────
 
 const COMMON_NAV = [
-  {
-    key: "profile",
-    label: "Mon profil",
-    href: "/my-space/profile",
-    icon: IconUser,
-  },
-  {
-    key: "favorites",
-    label: "Mes favoris",
-    href: "/my-space/favorites",
-    icon: IconHeart,
-  },
-  {
-    key: "notifications",
-    label: "Notifications",
-    href: "/my-space/notifications",
-    icon: IconBell,
-  },
-  {
-    key: "messages",
-    label: "Messages",
-    href: "/my-space/messages",
-    icon: IconMail,
-  },
+  { key: "overview", label: "Vue d'ensemble", href: "/my-space", icon: IconHome },
+  { key: "profile", label: "Mon profil", href: "/my-space/profile", icon: IconUser },
+  { key: "worker-profiles", label: "Mes profils prestataire", href: "/my-space/worker-profiles", icon: IconBriefcase },
+  { key: "bookings", label: "Mes réservations", href: "/my-space/bookings", icon: IconCalendar },
+  { key: "task-requests", label: "Mes demandes", href: "/my-space/task-requests", icon: IconClipboard },
+  { key: "favorites", label: "Mes favoris", href: "/my-space/favorites", icon: IconHeart },
+  { key: "notifications", label: "Notifications", href: "/my-space/notifications", icon: IconBell },
+  { key: "messages", label: "Messages", href: "/my-space/messages", icon: IconMail },
 ];
 
 const BUSINESS_NAV = [
@@ -349,16 +347,21 @@ export default function MySpaceLayout({ children }) {
           </div>
 
           {/* Nav */}
-          <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 flex flex-col gap-0.5">
-            {activeNav.map(({ key, ...item }) => (
-              <NavItem
-                key={key}
-                {...item}
-                active={pathname === item.href}
-                collapsed={!sidebarOpen}
-              />
-            ))}
-          </nav>
+<nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 flex flex-col gap-0.5">
+  {activeNav.map(({ key, href, ...item }) => {
+    const isExactOnly = href === "/my-space";
+    const active = isExactOnly ? pathname === href : pathname?.startsWith(href);
+    return (
+      <NavItem
+        key={key}
+        href={href}
+        {...item}
+        active={active}
+        collapsed={!sidebarOpen}
+      />
+    );
+  })}
+</nav>
 
           {/* Bottom — avatar + logout */}
           <div className="px-3 py-4 border-t border-gray-100">

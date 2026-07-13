@@ -129,7 +129,51 @@ const STATUS_CONFIG = {
     ],
   },
 };
-
+const TASK_REQUEST_STATUS_CONFIG = {
+  OPEN: {
+    label: "Ouverte",
+    badgeClass: "bg-green-100 text-green-800 border-green-300",
+    icon: ShieldCheck,
+    transitions: [
+      { to: "ARCHIVED", label: "Archiver", icon: Archive, style: "bg-gray-500 hover:bg-gray-600 text-white" },
+      { to: "CANCELLED", label: "Annuler", icon: ShieldX, style: "bg-red-500 hover:bg-red-600 text-white" },
+    ],
+  },
+  IN_PROGRESS: {
+    label: "En cours",
+    badgeClass: "bg-blue-100 text-blue-800 border-blue-300",
+    icon: Clock,
+    transitions: [
+      { to: "OPEN", label: "Rouvrir", icon: RefreshCw, style: "bg-amber-500 hover:bg-amber-600 text-white" },
+      { to: "ARCHIVED", label: "Archiver", icon: Archive, style: "bg-gray-500 hover:bg-gray-600 text-white" },
+    ],
+  },
+  COMPLETED: {
+    label: "Terminée",
+    badgeClass: "bg-gray-100 text-gray-600 border-gray-300",
+    icon: ShieldCheck,
+    transitions: [
+      { to: "ARCHIVED", label: "Archiver", icon: Archive, style: "bg-gray-500 hover:bg-gray-600 text-white" },
+    ],
+  },
+  CANCELLED: {
+    label: "Annulée",
+    badgeClass: "bg-red-100 text-red-800 border-red-300",
+    icon: ShieldX,
+    transitions: [
+      { to: "OPEN", label: "Rouvrir", icon: RefreshCw, style: "bg-amber-500 hover:bg-amber-600 text-white" },
+      { to: "ARCHIVED", label: "Archiver", icon: Archive, style: "bg-gray-500 hover:bg-gray-600 text-white" },
+    ],
+  },
+  ARCHIVED: {
+    label: "Archivée",
+    badgeClass: "bg-gray-200 text-gray-500 border-gray-300",
+    icon: Archive,
+    transitions: [
+      { to: "OPEN", label: "Restaurer", icon: RefreshCw, style: "bg-amber-500 hover:bg-amber-600 text-white" },
+    ],
+  },
+};
 // ─── Delete confirm modal ─────────────────────────────────────────────────────
 
 function DeleteConfirmModal({ isOpen, onClose, onConfirm, loading }) {
@@ -207,8 +251,9 @@ function DeleteConfirmModal({ isOpen, onClose, onConfirm, loading }) {
 
 // ─── StatusBadge ─────────────────────────────────────────────────────────────
 
-export function StatusBadge({ status }) {
-  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.PENDING;
+export function StatusBadge({ status, module }) {
+  const configMap = module === 'taskRequests' ? TASK_REQUEST_STATUS_CONFIG : STATUS_CONFIG;
+  const cfg = configMap[status] ?? Object.values(configMap)[0];
   const Icon = cfg.icon;
   return (
     <span
@@ -236,7 +281,8 @@ export function StatusPanel({
   const { token } = useAuth()
   const { toast } = useToast()
 
-  const transitions = (STATUS_CONFIG[currentStatus]?.transitions ?? [])
+const configMap = module === 'taskRequests' ? TASK_REQUEST_STATUS_CONFIG : STATUS_CONFIG;
+  const transitions = (configMap[currentStatus]?.transitions ?? [])
     .filter(t => !(deletedByOwner && t.to === 'PENDING'))
 
   if (transitions.length === 0 && currentStatus !== 'ARCHIVED') return null

@@ -121,6 +121,17 @@ export const reportService = {
     return json
   },
 
+  /** Supprimer l'avis signalé (uniquement pour targetType REVIEW) */
+  deleteReview: async (id, token) => {
+    const res = await fetch(`${API_URL}/admin/reports/${id}/review`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.message || 'Erreur')
+    return json
+  },
+
   /** Contacter le propriétaire par email */
   contactOwner: async (id, message, token) => {
     const res = await fetch(`${API_URL}/admin/reports/${id}/contact`, {

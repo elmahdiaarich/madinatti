@@ -11,9 +11,13 @@ const STATUS_CONFIG = {
 }
 
 const TARGET_LABELS = {
-  REAL_ESTATE: { label: 'Immobilier', color: 'bg-orange-100 text-orange-700' },
-  JOB:         { label: 'Emploi',     color: 'bg-[#E8F5D0] text-[#2D5016]'  },
-  USER:        { label: 'Utilisateur',color: 'bg-purple-100 text-purple-700' },
+  REAL_ESTATE:    { label: 'Immobilier',        color: 'bg-orange-100 text-orange-700' },
+  JOB:            { label: 'Emploi',            color: 'bg-[#E8F5D0] text-[#2D5016]'  },
+  CAR:            { label: 'Véhicule',          color: 'bg-blue-100 text-blue-700' },
+  WORKER_PROFILE: { label: 'Profil prestataire',color: 'bg-teal-100 text-teal-700' },
+  TASK_REQUEST:   { label: 'Demande de tâche',  color: 'bg-amber-100 text-amber-700' },
+  REVIEW:         { label: 'Avis',              color: 'bg-pink-100 text-pink-700' },
+  USER:           { label: 'Utilisateur',       color: 'bg-purple-100 text-purple-700' },
 }
 
 const REASON_LABELS = {

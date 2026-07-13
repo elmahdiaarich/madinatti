@@ -51,10 +51,14 @@ const STATUS_TABS = [
 ]
 
 const TYPE_OPTIONS = [
-  { value: '',            label: 'Tous les types' },
-  { value: 'REAL_ESTATE', label: 'Immobilier' },
-  { value: 'JOB',         label: 'Emploi' },
-  { value: 'USER',        label: 'Utilisateur' },
+  { value: '',               label: 'Tous les types' },
+  { value: 'REAL_ESTATE',    label: 'Immobilier' },
+  { value: 'JOB',            label: 'Emploi' },
+  { value: 'CAR',            label: 'Véhicule' },
+  { value: 'WORKER_PROFILE', label: 'Profil prestataire' },
+  { value: 'TASK_REQUEST',   label: 'Demande de tâche' },
+  { value: 'REVIEW',         label: 'Avis' },
+  { value: 'USER',           label: 'Utilisateur' },
 ]
 
 const ITEMS_PER_PAGE = 20

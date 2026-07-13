@@ -76,6 +76,7 @@ const register = async (req, res) => {
         password: hashedPassword,
         phone,
         city,
+        profileCompleted: true,
         roleId: userRole.id,
         companyName: role === "business" ? companyName : null,
         companyWebsite: role === "business" ? companyWebsite : null,
