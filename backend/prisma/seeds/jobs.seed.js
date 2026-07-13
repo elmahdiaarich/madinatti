@@ -17,9 +17,7 @@ async function seedJobs(prisma, { business }, {
   catBTP, catVente, catSante, catLogistique,
   catJuridique, catEnseignement
 }) {
-  // ── RESET JOBS ────────────────────────────────────────────
-  await prisma.jobListing.deleteMany({})
-  console.log('🗑️  Job listings supprimés')
+
   // ── USERS BUSINESS ────────────────────────────────────────
   const testPassword = await bcrypt.hash('password123', 10)
 

@@ -52,11 +52,23 @@ const MODULE_REGISTRY = {
     targetType:        'REAL_ESTATE',
     frontendPath:      (id) => `/real-estate/${id}`,
   },
-  automobile: {
+   automobile: {
     model:             'carListing',
     cloudinaryFolder:  'madinatti/real-estate',
     targetType:        'CAR',
     frontendPath:      (id) => `/cars/${id}`,
+  },
+  miniJobs: {
+    model:             'workerProfile',
+    cloudinaryFolder:  'madinatti/mini-jobs',
+    targetType:        'WORKER_PROFILE',
+    frontendPath:      (id) => `/mini-jobs/profiles/${id}`,
+  },
+  taskRequests: {
+    model:             'taskRequest',
+    cloudinaryFolder:  null,           // no images on TaskRequest
+    targetType:        'TASK_REQUEST',
+    frontendPath:      (id) => `/mini-jobs/tasks/${id}`,
   },
   // ── Add future modules here ────────────────────────────────────────────────
   // services: {
@@ -111,9 +123,29 @@ async function moveImages(images = [], targetFolder) {
   if (!targetFolder) return images;
   return Promise.all(images.map((img) => moveImage(img, targetFolder)));
 }
-
+ 
 async function destroyImages(images = []) {
   await Promise.all(images.map(destroyImage));
+}
+ 
+/**
+ * WorkerProfile-specific image mover — handles the photo (single string)
+ * + portfolioImages (array) split, since it doesn't use the {url,isCover}[]
+ * "images" shape the other modules use.
+ */
+async function moveWorkerProfileImages(record, targetFolder) {
+  const photo = record.photo
+    ? (await moveImage({ url: record.photo }, targetFolder)).url
+    : null;
+  const portfolioImages = await moveImages(record.portfolioImages || [], targetFolder);
+  return { photo, portfolioImages };
+}
+ 
+async function destroyWorkerProfileImages(record) {
+  const jobs = [];
+  if (record.photo) jobs.push(destroyImage({ url: record.photo }));
+  jobs.push(destroyImages(record.portfolioImages || []));
+  await Promise.all(jobs);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -250,6 +282,72 @@ const NORMALIZERS = {
     createdAt:        c.createdAt,
     updatedAt:        c.updatedAt,
   }),
+ 
+  miniJobs: (w) => ({
+    id:               w.id,
+    module:           'miniJobs',
+    title:            w.headline,          // mapped: WorkerProfile has no "title" field
+    headline:         w.headline,
+    description:      w.description,
+    company:          w.user?.name || '',
+    submittedBy:      w.user?.name || '',
+    submittedByEmail: w.user?.email || '',
+    submittedById:    w.user?.id || '',
+    submittedByLogo:  w.user?.avatar || null,
+    location:         w.city,
+    city:             w.city,
+    region:           w.region || null,
+    pricingUnit:      w.pricingUnit,
+    rate:             w.rate,
+    isNegotiable:     w.isNegotiable,
+    photo:            w.photo || null,
+    portfolioImages:  w.portfolioImages || [],
+    yearsExperience:  w.yearsExperience ?? null,
+    availability:     w.availability || null,
+    serviceRadius:    w.serviceRadius ?? null,
+    ratingAvg:        w.ratingAvg ?? 0,
+    ratingCount:      w.ratingCount ?? 0,
+    status:           w.status,
+    isActive:         w.isActive,
+    isFeatured:       w.isFeatured,
+    viewsCount:       w.viewsCount ?? 0,
+    adminNote:        w.adminNotes || null,
+    category:         w.category || null,
+    categoryId:       w.categoryId,
+    deletedByOwner:   w.deletedByOwner ?? false,
+    reviewedBy:       w.reviewedBy,
+    reviewedAt:       w.reviewedAt,
+    publishedAt:      w.publishedAt,
+    createdAt:        w.createdAt,
+    updatedAt:        w.updatedAt,
+  }),
+ 
+  taskRequests: (t) => ({
+    id:               t.id,
+    module:           'taskRequests',
+    title:            t.title,
+    description:      t.description,
+    company:          t.user?.name || '',
+    submittedBy:      t.user?.name || '',
+    submittedByEmail: t.user?.email || '',
+    submittedById:    t.user?.id || '',
+    submittedByLogo:  t.user?.avatar || null,
+    location:         t.city,
+    city:             t.city,
+    region:           t.region || null,
+    budget:           t.budget ?? null,
+    neededDate:       t.neededDate,
+    status:           t.status,
+    viewsCount:       t.viewsCount ?? 0,
+    adminNote:        t.adminNotes || null,
+    category:         t.category || null,
+    categoryId:       t.categoryId,
+    deletedByOwner:   t.deletedByOwner ?? false,
+    reviewedBy:       t.reviewedBy,
+    reviewedAt:       t.reviewedAt,
+    createdAt:        t.createdAt,
+    updatedAt:        t.updatedAt,
+  }),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -309,6 +407,32 @@ const SELECTS = {
     category: { select: { id: true, name: true, slug: true } },
     _count:   { select: { inquiries: true } },
   },
+ 
+  miniJobs: {
+    id: true, headline: true, description: true,
+    city: true, region: true,
+    pricingUnit: true, rate: true, isNegotiable: true,
+    photo: true, portfolioImages: true, yearsExperience: true,
+    availability: true, serviceRadius: true,
+    ratingAvg: true, ratingCount: true,
+    status: true, isActive: true, isFeatured: true,
+    viewsCount: true, adminNotes: true, deletedByOwner: true,
+    categoryId: true, reviewedAt: true, reviewedBy: true,
+    publishedAt: true, createdAt: true, updatedAt: true,
+    user:     { select: USER_SELECT },
+    category: { select: { id: true, name: true, slug: true } },
+  },
+ 
+  taskRequests: {
+    id: true, title: true, description: true,
+    city: true, region: true,
+    budget: true, neededDate: true,
+    status: true, viewsCount: true, adminNotes: true, deletedByOwner: true,
+    categoryId: true, reviewedAt: true, reviewedBy: true,
+    createdAt: true, updatedAt: true,
+    user:     { select: USER_SELECT },
+    category: { select: { id: true, name: true, slug: true } },
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -350,6 +474,30 @@ const WHERE_BUILDERS = {
         { model:    { contains: search, mode: 'insensitive' } },
         { city:     { contains: search, mode: 'insensitive' } },
         { location: { contains: search, mode: 'insensitive' } },
+      ],
+    }),
+  }),
+ 
+  miniJobs: ({ status, userId, search }) => ({
+    ...(status && { status }),
+    ...(userId && { userId }),
+    ...(search && {
+      OR: [
+        { headline:    { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { city:        { contains: search, mode: 'insensitive' } },
+      ],
+    }),
+  }),
+ 
+  taskRequests: ({ status, userId, search }) => ({
+    ...(status && { status }),
+    ...(userId && { userId }),
+    ...(search && {
+      OR: [
+        { title:       { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { city:        { contains: search, mode: 'insensitive' } },
       ],
     }),
   }),
@@ -485,16 +633,19 @@ const getOverview = async (req, res) => {
       pendingJobs,
       pendingRealEstate,
       pendingCars,
+      pendingWorkerProfiles,
       approvedTodayJobs,
       approvedTodayRealEstate,
       approvedTodayCars,
+      approvedTodayWorkerProfiles,
       openReports,
       totalUsers,
     ] = await Promise.all([
       prisma.jobListing.count({ where: { status: 'PENDING' } }),
       prisma.realEstateListing.count({ where: { status: 'PENDING' } }),
       prisma.carListing.count({ where: { status: 'PENDING' } }),
-
+      prisma.workerProfile.count({ where: { status: 'PENDING' } }),
+ 
       prisma.jobListing.count({
         where: { status: 'APPROVED', publishedAt: { gte: todayStart, lte: todayEnd } },
       }),
@@ -504,7 +655,10 @@ const getOverview = async (req, res) => {
       prisma.carListing.count({
         where: { status: 'APPROVED', publishedAt: { gte: todayStart, lte: todayEnd } },
       }),
-
+      prisma.workerProfile.count({
+        where: { status: 'APPROVED', publishedAt: { gte: todayStart, lte: todayEnd } },
+      }),
+ 
       // Replace Promise.resolve(0) with prisma.report.count(...) once reports go live
       Promise.resolve(0),
       prisma.user.count(),
@@ -513,8 +667,8 @@ const getOverview = async (req, res) => {
     res.json({
       success: true,
       data: {
-        pending:      pendingJobs + pendingRealEstate + pendingCars,
-        approvedToday: approvedTodayJobs + approvedTodayRealEstate + approvedTodayCars,
+        pending:      pendingJobs + pendingRealEstate + pendingCars + pendingWorkerProfiles,
+        approvedToday: approvedTodayJobs + approvedTodayRealEstate + approvedTodayCars + approvedTodayWorkerProfiles,
         openReports,
         totalUsers,
         // Granular breakdown — useful for per-module sidebar badges
@@ -522,6 +676,7 @@ const getOverview = async (req, res) => {
           emploi:     pendingJobs,
           immobilier: pendingRealEstate,
           automobile: pendingCars,
+          miniJobs:   pendingWorkerProfiles,
         },
       },
     });
@@ -557,10 +712,20 @@ const getListings = async (req, res) => {
       ? Object.keys(MODULE_REGISTRY)
       : Object.keys(MODULE_REGISTRY).filter((k) => k === mod);
 
-    // Fetch all active modules in parallel
+  // Fetch all active modules in parallel
     const results = await Promise.all(
       activeModules.map((moduleKey) => {
         const { model } = MODULE_REGISTRY[moduleKey];
+
+        // TaskRequest uses its own status enum (OPEN/IN_PROGRESS/COMPLETED/
+        // CANCELLED/ARCHIVED) — it has no PENDING/APPROVED/REJECTED/etc.
+        // If the admin's status filter doesn't apply to that enum, this
+        // module simply has nothing to show under that filter — skip the
+        // query instead of letting Prisma reject an invalid enum value.
+        if (moduleKey === 'taskRequests' && status && !TASK_REQUEST_VALID_STATUSES.includes(status)) {
+          return Promise.resolve([]);
+        }
+
         return prisma[model].findMany({
           where:   WHERE_BUILDERS[moduleKey](filters),
           orderBy: { createdAt: 'desc' },
@@ -568,7 +733,6 @@ const getListings = async (req, res) => {
         });
       }),
     );
-
     // Normalize, merge, sort, paginate
     const all = activeModules
       .flatMap((moduleKey, i) =>
@@ -615,11 +779,19 @@ const approveListing = async (req, res) => {
         return res.status(400).json({ success: false, message: "Cette annonce n'est pas en attente" });
       }
 
-      // Move images out of temp/ if this module uses Cloudinary images
-      const images = config.cloudinaryFolder
-        ? await moveImages(record.images || [], config.cloudinaryFolder)
-        : record.images || [];
-
+       // Move images out of temp/ if this module uses Cloudinary images.
+      // WorkerProfile (miniJobs) is special-cased: it splits photo (string)
+      // + portfolioImages (array) instead of a single "images" array.
+      let images = record.images || [];
+      let workerProfileImageFields = {};
+ 
+      if (moduleKey === 'miniJobs') {
+        const moved = await moveWorkerProfileImages(record, config.cloudinaryFolder);
+        workerProfileImageFields = { photo: moved.photo, portfolioImages: moved.portfolioImages };
+      } else if (config.cloudinaryFolder) {
+        images = await moveImages(record.images || [], config.cloudinaryFolder);
+      }
+ 
       const approved = await prisma[config.model].update({
         where: { id },
         data: {
@@ -628,21 +800,23 @@ const approveListing = async (req, res) => {
           reviewedAt:  now,
           reviewedBy:  adminId,
           adminNotes:  null,
-          ...(config.cloudinaryFolder ? { images } : {}),
+          ...(moduleKey === 'miniJobs'
+            ? workerProfileImageFields
+            : config.cloudinaryFolder ? { images } : {}),
         },
         include: { category: { select: { slug: true } } },
       });
-
+ 
       // Fire alert subscribers (if a notifier is registered for this module)
       const notifier = ALERT_NOTIFIERS[moduleKey];
       if (notifier) await notifier(approved, createNotification);
-
-      // Notify the listing owner
+ 
+      // Notify the listing owner (WorkerProfile has "headline", not "title")
       await createNotification(
         record.userId,
         'LISTING_APPROVED',
         'Votre annonce a été approuvée ✅',
-        `Votre annonce "${record.title}" est maintenant en ligne.`,
+        `Votre annonce "${record.title || record.headline}" est maintenant en ligne.`,
         config.frontendPath(id),
       );
 
@@ -669,12 +843,15 @@ const rejectListing = async (req, res) => {
     const now                              = new Date();
     const { createNotification }           = require('./notificationController');
 
-    for (const [, config] of Object.entries(MODULE_REGISTRY)) {
+    for (const [moduleKey, config] of Object.entries(MODULE_REGISTRY)) {
       const record = await prisma[config.model].findUnique({ where: { id } });
       if (!record) continue;
-
-      // Delete temp images on rejection (only for image-based modules)
-      if (config.cloudinaryFolder) {
+ 
+      // Delete temp images on rejection (only for image-based modules).
+      // WorkerProfile (miniJobs) is special-cased for the photo/portfolioImages split.
+      if (moduleKey === 'miniJobs') {
+        await destroyWorkerProfileImages(record);
+      } else if (config.cloudinaryFolder) {
         await destroyImages(record.images || []);
       }
 
@@ -690,18 +867,19 @@ const rejectListing = async (req, res) => {
           type:         'REJECTION',
           targetType:   config.targetType,
           targetId:     id,
-          targetTitle:  record.title,
+          targetTitle:  record.title || record.headline,
           adminMessage: messageToSend || adminNote || '',
         },
       });
-
-      // Bell notification
+ 
+      // Bell notification (citizen-owned WorkerProfile -> /my-space/messages,
+      // everything else -> /dashboard/messages)
       await createNotification(
         record.userId,
         'LISTING_REJECTED',
         'Votre annonce a été refusée ❌',
-        `Votre annonce "${record.title}" a été refusée. Consultez vos messages pour plus de détails.`,
-        '/dashboard/messages',
+        `Votre annonce "${record.title || record.headline}" a été refusée. Consultez vos messages pour plus de détails.`,
+        moduleKey === 'miniJobs' ? '/my-space/messages' : '/dashboard/messages',
       );
 
       return res.json({ success: true, message: 'Annonce refusée' });
@@ -782,12 +960,127 @@ async function handleGenericStatus(req, res, { id, status, adminNotes, adminId, 
 
   return res.json({ success: true, message: 'Annonce mise à jour', data: updated });
 }
-
+ 
+/**
+ * Dedicated status handler for WorkerProfile (mini-jobs). Not routed through
+ * handleGenericStatus because WorkerProfile splits images into photo (string)
+ * + portfolioImages (array) instead of a single "images" array, and uses
+ * "headline" instead of "title".
+ */
+async function handleMiniJobsStatus(req, res, { id, status, adminNotes, adminId, now }) {
+  const { createNotification } = require('./notificationController');
+  const config = MODULE_REGISTRY.miniJobs;
+ 
+  if (!VALID_STATUSES.includes(status)) {
+    return res.status(400).json({ success: false, message: 'Statut invalide' });
+  }
+ 
+  const record = await prisma.workerProfile.findUnique({ where: { id } });
+  if (!record) return res.status(404).json({ success: false, message: 'Profil introuvable' });
+ 
+  const wasPending = record.status === 'PENDING';
+  let photo = record.photo;
+  let portfolioImages = record.portfolioImages || [];
+ 
+  if (status === 'APPROVED' && wasPending) {
+    const moved = await moveWorkerProfileImages(record, config.cloudinaryFolder);
+    photo = moved.photo;
+    portfolioImages = moved.portfolioImages;
+  }
+ 
+  if (status === 'REJECTED' && wasPending) {
+    await destroyWorkerProfileImages(record);
+  }
+ 
+  const updated = await prisma.workerProfile.update({
+    where: { id },
+    data: {
+      status,
+      adminNotes: adminNotes || null,
+      reviewedAt: now,
+      reviewedBy: adminId,
+      photo,
+      portfolioImages,
+      ...(status === 'APPROVED' && !record.publishedAt ? { publishedAt: now } : {}),
+    },
+    include: { category: { select: { slug: true } } },
+  });
+ 
+  if (status === 'APPROVED' && wasPending) {
+    await createNotification(
+      updated.userId, 'WORKER_PROFILE_APPROVED',
+      'Votre profil prestataire a été approuvé ✅',
+      `Votre profil "${updated.headline}" est maintenant visible publiquement.`,
+      config.frontendPath(updated.id),
+    );
+  } else if (status === 'REJECTED' && wasPending) {
+    await createNotification(
+      updated.userId, 'WORKER_PROFILE_REJECTED',
+      'Votre profil prestataire a été refusé ❌',
+      `Votre profil "${updated.headline}" a été refusé. Consultez vos messages pour plus de détails.`,
+      '/my-space/messages',
+    );
+    await prisma.businessMessage.create({
+      data: {
+        userId:       updated.userId,
+        type:         'REJECTION',
+        targetType:   'WORKER_PROFILE',
+        targetId:     id,
+        targetTitle:  updated.headline,
+        adminMessage: adminNotes || '',
+      },
+    });
+  }
+ 
+  return res.json({ success: true, message: 'Profil mis à jour', data: updated });
+}
+ 
+// Module-specific handlers (thin wrappers — add custom logic per module here if needed)
+/**
+ * Dedicated status handler for TaskRequest. Uses a completely different
+ * valid-status set (OPEN/IN_PROGRESS/COMPLETED/CANCELLED/ARCHIVED) than
+ * the PENDING/APPROVED/REJECTED/SUSPENDED/EXPIRED cycle the generic
+ * handler assumes — TaskRequest never goes through PENDING at all
+ * (publishes immediately, moderated reactively via Report). In practice
+ * this handler is only reached from a Report resolution flow, typically
+ * to set status to ARCHIVED (hide a reported task) or CANCELLED.
+ */
+const TASK_REQUEST_VALID_STATUSES = ['OPEN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'ARCHIVED'];
+ 
+async function handleTaskRequestStatus(req, res, { id, status, adminNotes, adminId, now }) {
+  if (!TASK_REQUEST_VALID_STATUSES.includes(status)) {
+    return res.status(400).json({ success: false, message: 'Statut invalide pour une demande de tâche' });
+  }
+ 
+  const record = await prisma.taskRequest.findUnique({ where: { id } });
+  if (!record) return res.status(404).json({ success: false, message: 'Demande introuvable' });
+ 
+  const updated = await prisma.taskRequest.update({
+    where: { id },
+    data: { status, adminNotes: adminNotes || null, reviewedAt: now, reviewedBy: adminId },
+  });
+ 
+  const { createNotification } = require('./notificationController');
+  if (status === 'ARCHIVED' || status === 'CANCELLED') {
+    await createNotification(
+      updated.userId,
+      'TASK_REQUEST_MODERATED',
+      'Votre demande a été retirée',
+      `Votre demande "${updated.title}" a été retirée par un administrateur.${adminNotes ? ' Motif : ' + adminNotes : ''}`,
+      '/my-space/task-requests'
+    );
+  }
+ 
+  return res.json({ success: true, message: 'Demande mise à jour', data: updated });
+}
+ 
 // Module-specific handlers (thin wrappers — add custom logic per module here if needed)
 const STATUS_HANDLERS = {
-  emploi:     (req, res, ctx) => handleGenericStatus(req, res, ctx, 'emploi'),
-  immobilier: (req, res, ctx) => handleGenericStatus(req, res, ctx, 'immobilier'),
-  automobile: (req, res, ctx) => handleGenericStatus(req, res, ctx, 'automobile'),
+  emploi:       (req, res, ctx) => handleGenericStatus(req, res, ctx, 'emploi'),
+  immobilier:   (req, res, ctx) => handleGenericStatus(req, res, ctx, 'immobilier'),
+  automobile:   (req, res, ctx) => handleGenericStatus(req, res, ctx, 'automobile'),
+  miniJobs:     handleMiniJobsStatus,
+  taskRequests: handleTaskRequestStatus,
   // services:  (req, res, ctx) => handleGenericStatus(req, res, ctx, 'services'),
 };
 

@@ -30,6 +30,7 @@ const {
   removeListingFromReport,
   suspendOwner,
   contactOwner,
+  deleteReviewFromReport,  
 } = require('../controllers/reportController')
  
 // ── Middleware global sur toutes les routes admin ─────────────────────────────
@@ -76,6 +77,9 @@ router.post('/reports/:id/dismiss', dismissReport)
 
 // DELETE /api/admin/reports/:id/listing → retirer l'annonce
 router.delete('/reports/:id/listing', removeListingFromReport)
+
+// DELETE /api/admin/reports/:id/review → supprimer l'avis signalé (Phase 4)
+router.delete('/reports/:id/review', deleteReviewFromReport)
 
 // PATCH /api/admin/reports/:id/suspend  → suspendre le propriétaire
 router.patch('/reports/:id/suspend', suspendOwner)

@@ -48,6 +48,12 @@ app.use('/api/alerts', require('./routes/alerts'));
 const chatRoutes = require('./routes/chat');
 app.use('/api/chat', chatRoutes);
 
+app.use('/api/worker-profiles', require('./routes/workerProfiles'));
+ 
+app.use('/api/task-requests', require('./routes/taskRequests'));
+app.use('/api/task-applications', require('./routes/taskApplications'));
+app.use('/api/bookings', require('./routes/bookings'));
+app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/business/stats', require('./routes/stats'));
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {

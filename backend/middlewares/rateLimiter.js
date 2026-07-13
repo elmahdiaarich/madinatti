@@ -1,5 +1,4 @@
 const rateLimit = require('express-rate-limit');
-
 // ── Réponse standard en cas de dépassement ────────────────────────────────────
 const handler = (req, res) => {
   res.status(429).json({
@@ -7,9 +6,7 @@ const handler = (req, res) => {
     retryAfter: res.getHeader('Retry-After'),
   });
 };
-
 // ── AUTH — Login  ─────────────────────────────────────────────────────
-// 5 tentatives par IP toutes les 15 minutes
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
@@ -17,9 +14,7 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
   handler,
 });
-
 // ── AUTH — Register  ──────────────────────────────────────────────────
-// 10 inscriptions par IP par heure
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 10,
@@ -27,9 +22,7 @@ const registerLimiter = rateLimit({
   legacyHeaders: false,
   handler,
 });
-
 // ── AUTH — Forgot Password  ──────────────────────────────────────────
-// 3 demandes par IP par heure 
 const forgotPasswordLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 3,
@@ -37,9 +30,7 @@ const forgotPasswordLimiter = rateLimit({
   legacyHeaders: false,
   handler,
 });
-
 // ── LISTINGS — Création  ──────────────────────────────────────────────
-// 20 créations par IP par heure (jobs, real estate, cars)
 const createListingLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 20,
@@ -47,9 +38,7 @@ const createListingLimiter = rateLimit({
   legacyHeaders: false,
   handler,
 });
-
 // ── CANDIDATURES — Apply  ─────────────────────────────────────────────
-// 10 candidatures par IP par heure
 const applyLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 10,
@@ -57,9 +46,7 @@ const applyLimiter = rateLimit({
   legacyHeaders: false,
   handler,
 });
-
 // ── INQUIRIES — Contact propriétaire  ─────────────────────────────────
-// 15 messages par IP par heure
 const inquiryLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 15,
@@ -67,9 +54,7 @@ const inquiryLimiter = rateLimit({
   legacyHeaders: false,
   handler,
 });
-
 // ── REPORTS — Signalement (strict) ───────────────────────────────────────────
-// 5 reports par IP par heure (anonymes inclus)
 const reportLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 5,
@@ -77,15 +62,52 @@ const reportLimiter = rateLimit({
   legacyHeaders: false,
   handler,
 });
-
 // ── CHAT — Messages  ──────────────────────────────────────────────────
-// 20 messages par IP par heure
 const chatLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
   handler,
+});
+// ── MINI-JOBS — TaskRequest ────────────────────────────────────────────
+const createTaskRequestLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 15,
+  message: {
+    success: false,
+    message: 'Trop de demandes de tâches créées. Réessayez plus tard.',
+  },
+});
+// ── MINI-JOBS — Booking ────────────────────────────────────────────────
+const createBookingLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  message: {
+    success: false,
+    message: 'Trop de réservations créées. Réessayez plus tard.',
+  },
+});
+// ── MINI-JOBS — WorkerProfile ──────────────────────────────────────────
+// (était référencé depuis la Phase 2 dans routes/workerProfiles.js mais
+// jamais déclaré/exporté ici — la route importait donc `undefined` comme
+// middleware. Ajouté maintenant.)
+const createWorkerProfileLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: {
+    success: false,
+    message: 'Trop de créations de profil prestataire. Réessayez plus tard.',
+  },
+});
+// ── REVIEWS — Création d'avis ──────────────────────────────────────────
+const reviewLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: {
+    success: false,
+    message: "Trop d'avis créés. Réessayez plus tard.",
+  },
 });
 
 module.exports = {
@@ -97,4 +119,11 @@ module.exports = {
   inquiryLimiter,
   reportLimiter,
   chatLimiter,
+  // Ces deux étaient déjà déclarés (Phase 3) mais absents de cet objet
+  // exports — les routes taskRequests.js / bookings.js recevaient donc
+  // `undefined` comme middleware. Corrigé ici.
+  createTaskRequestLimiter,
+  createBookingLimiter,
+  createWorkerProfileLimiter,
+  reviewLimiter,
 };
