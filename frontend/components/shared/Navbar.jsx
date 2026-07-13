@@ -420,18 +420,6 @@ function CategoriesDrawer({
                           >
                             Voir tout — {svc.label} →
                           </button>
-<<<<<<< HEAD
-                          {svc.categories.map((cat) => (
-                            <button
-                              key={cat}
-                              onClick={() => handleGo(svc.href, cat)}
-                              className="w-full flex items-center gap-2 text-left px-8 py-2 text-sm text-gray-600 hover:bg-[#E8F5D0] hover:text-[#2D5016] transition-colors"
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#7BA428] shrink-0" />
-                              {cat}
-                            </button>
-                          ))}
-=======
                           {svc.categories.map((cat) => {
                             const label = typeof cat === 'string' ? cat : cat.label;
                             const href = typeof cat === 'string' ? svc.href : (cat.href || svc.href);
@@ -446,7 +434,6 @@ function CategoriesDrawer({
                               </button>
                             );
                           })}
->>>>>>> e01619cb51b23d7ee9ff99ceddb3944f95f7da1d
                         </motion.div>
                       )}
                     </AnimatePresence>

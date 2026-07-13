@@ -72,14 +72,11 @@ model User {
   messages          BusinessMessage[]
   carListings    CarListing[]
   carInquiries   CarInquiry[]
-<<<<<<< HEAD
   touristicListings  TouristicListing[]
-=======
   workerProfiles        WorkerProfile[]
   taskRequestsAsClient  TaskRequest[]   @relation("TaskRequestsAsClient")
   bookingsAsClient      Booking[]       @relation("BookingsAsClient")
   reviews               Review[]
->>>>>>> e01619cb51b23d7ee9ff99ceddb3944f95f7da1d
 }
 
 model Role {
@@ -165,13 +162,10 @@ model Category {
   jobListings        JobListing[]
   realEstateListings RealEstateListing[]
   carListings    CarListing[]
-<<<<<<< HEAD
   touristicListings  TouristicListing[]
-=======
   workerProfiles WorkerProfile[]
   taskRequests   TaskRequest[]
 
->>>>>>> e01619cb51b23d7ee9ff99ceddb3944f95f7da1d
 }
 
 enum EducationLevel {
@@ -354,13 +348,10 @@ enum ReportTarget {
   JOB
   USER
   CAR
-<<<<<<< HEAD
   TOURISM
-=======
   TASK_REQUEST  
   REVIEW 
   WORKER_PROFILE
->>>>>>> e01619cb51b23d7ee9ff99ceddb3944f95f7da1d
 }
 
 enum ReportReason {
@@ -574,7 +565,6 @@ model CarInquiry {
   @@index([listingId])
   @@index([userId])
 }
-<<<<<<< HEAD
 
 //// ── tourisme Models ────────────────────────────────────────────────────────────────
 model TouristicListing {
@@ -611,7 +601,6 @@ model TouristicListing {
   @@index([isActive])
   @@index([createdAt])
 }
-=======
 // ============================================================
 // MINI-JOBS MODULE
 // ENUMS
@@ -831,4 +820,3 @@ model Review {
   @@index([userId])
 }
 
->>>>>>> e01619cb51b23d7ee9ff99ceddb3944f95f7da1d

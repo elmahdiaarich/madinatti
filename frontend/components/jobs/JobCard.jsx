@@ -89,7 +89,7 @@ function FavoriteButton({ jobId, initialFavorited = false, onToggle }) {
     setFavorited(initialFavorited);
   }, [initialFavorited]);
 
-  if (!user) return null;
+  if (!user || user.role === 'admin') return null;
 
   const handleClick = async (e) => {
     e.preventDefault();

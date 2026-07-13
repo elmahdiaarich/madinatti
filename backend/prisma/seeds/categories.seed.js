@@ -23,7 +23,6 @@ const CATEGORIES = [
   { name: 'Motos',       slug: 'motos',       module: 'automobile' },
   { name: 'Utilitaires', slug: 'utilitaires', module: 'automobile' },
   { name: 'Camions',     slug: 'camions',     module: 'automobile' },
-<<<<<<< HEAD
 
   // ── Tourisme ─────────────────────────────────────────────────────────────
   { name: 'Hôtels',                   slug: 'hotels',              module: 'tourisme', displayType: 'PLACE' },
@@ -44,7 +43,6 @@ const CATEGORIES = [
   { name: 'Hôpitaux',                 slug: 'hopitaux',            module: 'tourisme', displayType: 'PLACE' },
   { name: 'Zoo',                      slug: 'zoo',                 module: 'tourisme', displayType: 'PLACE' },
   { name: 'Carte Touristique de la Ville', slug: 'carte-touristique', module: 'tourisme', displayType: 'DOCUMENT' },
-=======
   // ── Mini-jobs ────────────────────────────────────────────────────────────
   // Liste simplifiée : catégories larges et facilement identifiables par un client,
   // sans jargon métier. Les besoins proches (vitrerie, serrurerie, carrelage,
@@ -65,17 +63,13 @@ const CATEGORIES = [
   { name: 'Livraison & Courses',          slug: 'livraison',              module: 'mini-jobs' },
   { name: 'Dépannage Informatique',       slug: 'depannage-informatique', module: 'mini-jobs' },
   { name: 'Services Événementiels',       slug: 'evenementiel',           module: 'mini-jobs' },
->>>>>>> e01619cb51b23d7ee9ff99ceddb3944f95f7da1d
 ];
 
 async function seedCategories(prisma) {
   console.log('🌱 Seeding categories...');
-<<<<<<< HEAD
-  const result = { emploi: {}, immobilier: {}, automobile: {}, tourisme: {} };
 
-=======
-  const result = { emploi: {}, immobilier: {}, automobile: {}, 'mini-jobs': {} };
->>>>>>> e01619cb51b23d7ee9ff99ceddb3944f95f7da1d
+  const result = { emploi: {}, immobilier: {}, automobile: {}, tourisme: {} ,'mini-jobs': {}};
+
   for (const cat of CATEGORIES) {
     const record = await prisma.category.upsert({
       where:  { slug: cat.slug },

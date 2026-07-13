@@ -9,6 +9,7 @@ import WorkerProfileCard from '@/components/mini-jobs/WorkerProfileCard';
 import WorkerProfileFilter from '@/components/mini-jobs/WorkerProfileFilter';
 import TaskRequestCard from '@/components/mini-jobs/TaskRequestCard';
 import TaskRequestFilter from '@/components/mini-jobs/TaskRequestFilter';
+import InlineRegisterSection from '@/components/mini-jobs/InlineRegisterSection';
 
 const PROFILE_SORT_OPTIONS = [
   { value: '', label: 'Pertinence' },
@@ -117,13 +118,22 @@ export default function MiniJobsPage() {
       .finally(() => setLoadingTasks(false));
   }, [tab, taskFilters, token]);
 
+ const isVisitor = !user;
+  const userRole = user?.role;
+  const canActOnMiniJobs = !user || userRole === 'citizen'; // hide for business/admin
+
+  const scrollToRegister = () => {
+    const el = document.getElementById('inscription');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   const handlePublishTask = () => {
-    if (!user) { router.push('/auth/login'); return; }
+    if (!user) { scrollToRegister(); return; }
     router.push('/mini-jobs/tasks/create');
   };
 
   const handleCreateProfile = () => {
-    if (!user) { router.push('/auth/login'); return; }
+    if (!user) { scrollToRegister(); return; }
     router.push('/my-space/worker-profiles/create');
   };
 
@@ -179,25 +189,29 @@ export default function MiniJobsPage() {
               </p>
               <div className="flex items-center gap-2">
                 <SortSelect value={profileFilters.sort || ''} onChange={handleSortChange} />
-                <button onClick={handleCreateProfile}
-                  className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary-dark text-white font-bold text-sm shadow-sm hover:bg-primary hover:text-primary-dark transition-all">
-                  <UserPlus size={15} />
-                  Devenir prestataire
-                </button>
+                {canActOnMiniJobs && (
+                  <button onClick={handleCreateProfile}
+                    className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary-dark text-white font-bold text-sm shadow-sm hover:bg-primary hover:text-primary-dark transition-all">
+                    <UserPlus size={15} />
+                    Devenir prestataire
+                  </button>
+                )}
               </div>
             </div>
           )}
 
-          {tab === 'tasks' && (
+         {tab === 'tasks' && (
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm text-gray-500">
                 {taskPagination ? <><span className="font-semibold text-gray-800">{taskPagination.total}</span> demandes</> : '...'}
               </p>
-              <button onClick={handlePublishTask}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary-dark text-white font-bold text-sm shadow-sm hover:bg-primary hover:text-primary-dark transition-all">
-                <Plus size={15} />
-                Publier une demande
-              </button>
+              {canActOnMiniJobs && (
+                <button onClick={handlePublishTask}
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary-dark text-white font-bold text-sm shadow-sm hover:bg-primary hover:text-primary-dark transition-all">
+                  <Plus size={15} />
+                  Publier une demande
+                </button>
+              )}
             </div>
           )}
 
@@ -239,8 +253,21 @@ export default function MiniJobsPage() {
           {tab === 'tasks' && taskPagination?.totalPages > 1 && (
             <Pagination pagination={taskPagination} onPageChange={(p) => setTaskFilters((f) => ({ ...f, page: p }))} />
           )}
-        </main>
+  </main>
       </div>
+
+      {isVisitor && (
+        <div id="inscription" className="max-w-[1200px] mx-auto px-4 py-12">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#A7D129]/40 to-[#A7D129]/40" />
+            <span className="text-xs font-bold uppercase tracking-widest text-[#7BA428]">
+              Rejoignez Madinatti
+            </span>
+            <div className="flex-1 h-px bg-gradient-to-l from-transparent via-[#A7D129]/40 to-[#A7D129]/40" />
+          </div>
+          <InlineRegisterSection />
+        </div>
+      )}
     </div>
   );
 }

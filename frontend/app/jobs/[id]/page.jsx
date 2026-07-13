@@ -399,6 +399,7 @@ export default function JobDetailPage() {
 
   const isVisitor = !user;
   const userRole = user?.role;
+  const canApply = isVisitor || userRole === 'citizen'; // business/admin can't apply
 
   const handlePostuler = () => {
     if (isVisitor) {
@@ -536,12 +537,14 @@ export default function JobDetailPage() {
                   variant="hero"
                 />
               )}
-              <button
-                onClick={handlePostuler}
-                className="px-8 py-3 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-full text-sm shadow-lg hover:bg-white transition-all duration-200 hover:scale-[1.03] active:scale-100"
-              >
-                Postuler
-              </button>
+              {canApply && (
+                <button
+                  onClick={handlePostuler}
+                  className="px-8 py-3 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-full text-sm shadow-lg hover:bg-white transition-all duration-200 hover:scale-[1.03] active:scale-100"
+                >
+                  Postuler
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -622,7 +625,7 @@ export default function JobDetailPage() {
           />
 
           {/* CTA Postuler + cœur mobile */}
-          <div className="flex gap-3">
+         <div className="flex gap-3">
             {!isVisitor && (
               <HeartButton
                 isFavorited={isFavorited}
@@ -631,12 +634,14 @@ export default function JobDetailPage() {
                 variant="inline"
               />
             )}
-            <button
-              onClick={handlePostuler}
-              className="flex-1 py-4 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-2xl text-sm shadow hover:bg-[#2D5016] hover:text-white transition-all duration-200 hover:scale-[1.01] active:scale-100"
-            >
-              {isVisitor ? '✦ Créer un compte pour postuler' : '✦ Postuler à cette offre'}
-            </button>
+            {canApply && (
+              <button
+                onClick={handlePostuler}
+                className="flex-1 py-4 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-2xl text-sm shadow hover:bg-[#2D5016] hover:text-white transition-all duration-200 hover:scale-[1.01] active:scale-100"
+              >
+                {isVisitor ? '✦ Créer un compte pour postuler' : '✦ Postuler à cette offre'}
+              </button>
+            )}
           </div>
 
           {/* Alerte fraude */}
@@ -649,14 +654,16 @@ export default function JobDetailPage() {
           </div>
 
           {/* CTA mobile */}
-          <div className="md:hidden">
-            <button
-              onClick={handlePostuler}
-              className="w-full py-3.5 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-full text-sm shadow hover:bg-[#2D5016] hover:text-white transition-all duration-200"
-            >
-              Postuler à cette offre
-            </button>
-          </div>
+          {canApply && (
+            <div className="md:hidden">
+              <button
+                onClick={handlePostuler}
+                className="w-full py-3.5 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-full text-sm shadow hover:bg-[#2D5016] hover:text-white transition-all duration-200"
+              >
+                Postuler à cette offre
+              </button>
+            </div>
+          )}
         </div>
 
         {/* RIGHT */}
@@ -685,12 +692,14 @@ export default function JobDetailPage() {
             <a href="#" className="text-[#A7D129] text-xs font-semibold mt-3 inline-block hover:underline">
               Voir toutes nos annonces
             </a>
-            <button
-              onClick={handlePostuler}
-              className="mt-5 w-full py-3 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-full text-sm hover:bg-white transition-all duration-200 hover:scale-[1.02] active:scale-100"
-            >
-              {isVisitor ? 'Créer un compte pour postuler' : 'Postuler'}
-            </button>
+            {canApply && (
+              <button
+                onClick={handlePostuler}
+                className="mt-5 w-full py-3 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-full text-sm hover:bg-white transition-all duration-200 hover:scale-[1.02] active:scale-100"
+              >
+                {isVisitor ? 'Créer un compte pour postuler' : 'Postuler'}
+              </button>
+            )}
           </div>
 
           {/* Infos rapides */}

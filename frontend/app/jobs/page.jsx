@@ -414,15 +414,17 @@ export default function JobsPage() {
                 </span>
               </div>
             )}
-            <button
-              onClick={handlePublishClick}
-              className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-[#2D5016] text-white font-bold text-sm shadow-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-150 hover:scale-105 active:scale-100 cursor-pointer"
-            >
-              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current shrink-0">
-                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-              </svg>
-              Publier une annonce
-            </button>
+            {userRole !== 'admin' && (
+              <button
+                onClick={handlePublishClick}
+                className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-[#2D5016] text-white font-bold text-sm shadow-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-150 hover:scale-105 active:scale-100 cursor-pointer"
+              >
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current shrink-0">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                </svg>
+                Publier une annonce
+              </button>
+            )}
           </div>
         </div>
       </div>
