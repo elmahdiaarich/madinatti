@@ -148,21 +148,29 @@ export default function MyBookingsPage() {
 
       <div>
         <h1 className="text-xl font-bold text-gray-900">Mes réservations</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Réservations en tant que client et en tant que prestataire</p>
+        <p className="text-sm text-gray-400 mt-0.5">
+          Les services que vous avez réservés, et les demandes reçues sur vos profils prestataire.
+        </p>
       </div>
 
-      <div className="flex gap-2">
-        <Tab active={tab === 'client'} onClick={() => setTab('client')}>En tant que client</Tab>
-        <Tab active={tab === 'worker'} onClick={() => setTab('worker')}>En tant que prestataire</Tab>
-      </div>
+      {asWorker.length > 0 && (
+        <div className="flex gap-2">
+          <Tab active={tab === 'client'} onClick={() => setTab('client')}>
+            📤 Mes demandes envoyées
+          </Tab>
+          <Tab active={tab === 'worker'} onClick={() => setTab('worker')}>
+            📥 Demandes reçues
+          </Tab>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex flex-col gap-4">{[1, 2].map((i) => <div key={i} className="bg-gray-100 rounded-2xl h-32 animate-pulse" />)}</div>
       ) : sortedList.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
           <div className="text-4xl mb-3">📅</div>
-          <p className="font-semibold text-gray-700">
-            Aucune réservation {tab === 'client' ? 'en tant que client' : 'en tant que prestataire'}
+         <p className="font-semibold text-gray-700">
+            {tab === 'client' ? "Vous n'avez encore réservé aucun service" : "Vous n'avez reçu aucune demande pour l'instant"}
           </p>
         </div>
       ) : (

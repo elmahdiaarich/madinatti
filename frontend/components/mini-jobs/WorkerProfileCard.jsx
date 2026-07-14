@@ -1,7 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { Star, MapPin, Phone, BadgeCheck } from 'lucide-react';
-
+import { Star, MapPin, BadgeCheck } from 'lucide-react';
 const PRICING_UNIT_LABELS = { HOUR: '/heure', DAY: '/jour', TASK: '/forfait' };
 
 function formatRate(rate, unit, isNegotiable) {
@@ -95,15 +94,9 @@ export default function WorkerProfileCard({ profile }) {
           >
             {formatRate(profile.rate, profile.pricingUnit, isNegotiable)}
           </p>
-          <button
-            type="button"
-            aria-label="Appeler"
-            onClick={(e) => e.preventDefault()}
-            className="flex items-center gap-1.5 bg-primary-dark text-white text-xs font-bold px-3.5 py-2 rounded-full hover:bg-primary hover:text-primary-dark transition-colors"
-          >
-            <Phone size={13} />
-            Appeler
-          </button>
+          <span className="flex items-center gap-1.5 bg-primary-dark text-white text-xs font-bold px-3.5 py-2 rounded-full group-hover:bg-primary group-hover:text-primary-dark transition-colors">
+            Voir le profil
+          </span>
         </div>
       </div>
     </Link>
