@@ -34,15 +34,15 @@ export default function PlaceCard({
       }
     };
 
-    const downloadCount = item.downloadCount ?? item.attributes?.downloadCount;
+    const downloadCount = item.downloadsCount;
 
     return (
       <Link
         href={`${basePath}/${item.id}`}
         className="group flex flex-col overflow-hidden rounded-xl border border-black/[0.06] bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--color-primary)] hover:shadow-md"
       >
-        <div className="relative h-36 w-full bg-[var(--color-primary-mint)]">
-          <CategoryImage
+<div className="relative h-56 w-full bg-[var(--color-primary-mint)]">
+<CategoryImage
             src={cover}
             alt={item.name}
             icon={categoryConfig.icon}
@@ -69,14 +69,13 @@ export default function PlaceCard({
           )}
 
           <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-            <StarRating value={item.attributes?.rating ?? 4.5} size={13} />
-
-            {typeof downloadCount === "number" && (
-              <span className="flex items-center gap-1 text-xs text-black/50">
-                <Download size={12} className="shrink-0" />
-                {downloadCount.toLocaleString("fr-FR")}
-              </span>
-            )}
+{item.attributes?.rating != null && (
+  <StarRating value={item.attributes.rating} size={13} />
+)}
+            <span className="flex items-center gap-1 text-xs text-black/50">
+              <Download size={12} className="shrink-0" />
+              {downloadCount.toLocaleString("fr-FR")}
+            </span>
           </div>
 
           <button
@@ -97,8 +96,7 @@ export default function PlaceCard({
       href={`${basePath}/${item.id}`}
       className="group flex flex-col overflow-hidden rounded-xl border border-black/[0.06] bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--color-primary)] hover:shadow-md"
     >
-      <div className="relative h-44 w-full bg-[var(--color-primary-mint)]">
-        <CategoryImage
+<div className="relative h-44 w-full bg-[var(--color-primary-mint)]">      <CategoryImage
           src={cover}
           alt={item.name}
           icon={categoryConfig.icon}
@@ -134,8 +132,20 @@ export default function PlaceCard({
           </p>
         )}
 
-        <StarRating value={item.attributes?.rating ?? 4.5} size={13} />
-      </div>
+<div className="mt-auto flex items-center justify-between gap-2 pt-1">
+  {item.attributes?.rating != null ? (
+    <StarRating value={item.attributes.rating} size={13} />
+  ) : (
+    <span className="text-xs text-black/40">Nouveau</span>
+  )}
+
+  {item.attributes?.prix != null && item.attributes.prix !== "" && (
+    <span className="text-sm font-semibold text-black">
+      {Number(item.attributes.prix) === 0 ? "Gratuit" : `${item.attributes.prix} DH`}
+    </span>
+  )}
+</div>
+</div>
     </Link>
   );
 }

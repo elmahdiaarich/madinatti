@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { cloudinary } = require('../config/cloudinary');
 
 // Bucket boundaries chosen to roughly split your seeded price spread
 // (~25 DH to ~300 DH across spas/restaurants/museums/zoos). Adjust once
@@ -170,6 +171,52 @@ const updateTouristicListing = async (id, data) => {
 };
 
 const deleteTouristicListing = async (id) => {
+  // Fetch the listing first so we can access its images and fileUrl
+  const listing = await prisma.touristicListing.findUnique({
+    where: { id }
+  });
+
+  if (!listing) {
+    throw new Error('Touristic listing not found');
+  }
+
+  // Extract and delete images from Cloudinary
+  const images = Array.isArray(listing.images) ? listing.images : [];
+  const imageDeletions = images.map(async (img) => {
+    try {
+      const url = img?.url || img;
+      if (!url) return;
+      const urlParts = url.split('/upload/');
+      if (urlParts.length !== 2) return;
+      const withoutVer = urlParts[1].replace(/^v\d+\//, '');
+      const publicId = withoutVer.replace(/\.[^/.]+$/, '');
+      await cloudinary.uploader.destroy(publicId);
+    } catch (err) {
+      console.error('[deleteTouristicListing] Failed to delete image from Cloudinary:', img.url, err.message);
+    }
+  });
+
+  // Extract and delete PDF document (raw resource) from Cloudinary
+  let docDeletion = Promise.resolve();
+  if (listing.fileUrl) {
+    docDeletion = (async () => {
+      try {
+        const urlParts = listing.fileUrl.split('/upload/');
+        if (urlParts.length === 2) {
+          const withoutVer = urlParts[1].replace(/^v\d+\//, '');
+          const publicId = withoutVer; // Keep extension for raw resource
+          await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
+        }
+      } catch (err) {
+        console.error('[deleteTouristicListing] Failed to delete document from Cloudinary:', listing.fileUrl, err.message);
+      }
+    })();
+  }
+
+  // Run Cloudinary deletions in parallel (settled to avoid blocking database deletion on failures)
+  await Promise.allSettled([...imageDeletions, docDeletion]);
+
+  // Delete the database record
   return await prisma.touristicListing.delete({
     where: { id }
   });
