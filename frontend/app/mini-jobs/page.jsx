@@ -11,6 +11,15 @@ import TaskRequestCard from '@/components/mini-jobs/TaskRequestCard';
 import TaskRequestFilter from '@/components/mini-jobs/TaskRequestFilter';
 import InlineRegisterSection from '@/components/mini-jobs/InlineRegisterSection';
 
+// Mirrors EMPLOI_SIBLINGS in app/jobs/page.jsx — same sibling group, viewed
+// from the Mini-jobs side, so navigation feels consistent in both directions.
+const EMPLOI_SIBLINGS = [
+  { label: "Offres d'emploi", href: '/jobs' },
+  { label: 'Formation', href: '/coming-soon?feature=Formation' },
+  { label: 'Mini-jobs', href: '/mini-jobs' },
+  { label: 'Accompagnement', href: '/coming-soon?feature=Accompagnement' },
+  { label: "Demande d'emploi", href: '/coming-soon?feature=Demande d\'emploi' },
+];
 const PROFILE_SORT_OPTIONS = [
   { value: '', label: 'Pertinence' },
   { value: 'rate_asc', label: 'Prix croissant' },
@@ -145,6 +154,24 @@ export default function MiniJobsPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200 py-10">
         <div className="max-w-[1200px] mx-auto px-4">
+
+          {/* Sibling navigation — jump to related Emploi sub-pages */}
+         <div className="flex flex-wrap justify-center gap-2 mb-6">
+            {EMPLOI_SIBLINGS.map((s) => (
+              <a
+                key={s.label}
+                href={s.href}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
+                  s.href === '/mini-jobs'
+                    ? 'bg-primary-dark text-white'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:border-primary hover:text-primary-dark'
+                }`}
+              >
+                {s.label}
+              </a>
+            ))}
+          </div>
+
           <h1 className="text-3xl font-bold text-center text-primary-dark mb-2">Mini-jobs</h1>
           <p className="text-center text-gray-500 text-sm mb-7">
             Trouvez un prestataire de confiance ou publiez votre demande

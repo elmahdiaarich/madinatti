@@ -479,7 +479,7 @@ export default function Navbar() {
   // Categories drawer state
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [expandedModule, setExpandedModule] = useState(null);
-
+  const [hoveredModule, setHoveredModule] = useState(null);
   const userMenuRef = useRef(null);
   const notifRef = useRef(null);
 
@@ -670,23 +670,73 @@ export default function Navbar() {
         <span className="h-5 w-px bg-gray-200" />
 
         {/* MODULE LINKS — Emploi / Immobilier / Véhicule */}
-        {MODULE_LINKS.map((mod) => {
-          const ModIcon = mod.icon;
-          return (
-            <a
-              key={mod.label}
-              href={mod.href}
-              className={`text-sm px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 ${
-                isModuleActive(mod.href)
-                  ? "bg-[#E8F5D0] text-[#2D5016]"
-                  : "text-gray-600 hover:text-[#2D5016]"
-              }`}
-            >
-              <ModIcon size={14} />
-              {mod.label}
-            </a>
-          );
-        })}
+       {MODULE_LINKS.map((mod) => {
+  const ModIcon = mod.icon;
+  const svc = NAV_SERVICES.find((s) => s.href === mod.href);
+  const isHovered = hoveredModule === mod.label;
+
+  return (
+    <div
+      key={mod.label}
+      className="relative"
+      onMouseEnter={() => svc && setHoveredModule(mod.label)}
+      onMouseLeave={() => setHoveredModule(null)}
+    >
+      <a
+        href={mod.href}
+        className={`text-sm px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 ${
+          isModuleActive(mod.href)
+            ? "bg-[#E8F5D0] text-[#2D5016]"
+            : "text-gray-600 hover:text-[#2D5016]"
+        }`}
+      >
+        <ModIcon size={14} />
+        {mod.label}
+        {svc && (
+          <ChevronDown
+            size={12}
+            className={`transition-transform duration-150 ${isHovered ? "rotate-180" : ""}`}
+          />
+        )}
+      </a>
+
+      <AnimatePresence>
+        {svc && isHovered && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.12 }}
+            className="absolute left-0 top-full pt-2 w-56 z-50"
+          >
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden py-1.5">
+              <a
+                href={svc.href}
+                className="block px-4 py-2 text-xs font-bold text-[#2D5016] hover:bg-[#E8F5D0] transition-colors"
+              >
+                Voir tout — {svc.label} →
+              </a>
+              {svc.categories.map((cat) => {
+                const label = typeof cat === "string" ? cat : cat.label;
+                const href = typeof cat === "string" ? svc.href : cat.href || svc.href;
+                return (
+                  <a
+                    key={label}
+                    href={href}
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-[#E8F5D0] hover:text-[#2D5016] transition-colors"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#7BA428] shrink-0" />
+                    {label}
+                  </a>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+})}
 
         {/* Separator after module group */}
         <span className="h-5 w-px bg-gray-200" />

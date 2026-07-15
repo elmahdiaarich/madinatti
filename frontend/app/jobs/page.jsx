@@ -46,6 +46,17 @@ const citiesByRegion = cities.reduce((acc, city) => {
 
 const ALL_REGIONS = Object.keys(citiesByRegion).sort();
 
+// Emploi sibling pages — mirrors the "Emploi" entry in Navbar.jsx's
+// NAV_SERVICES. Only /jobs and /mini-jobs are real pages today; the rest
+// (Formation, Accompagnement, Demande d'emploi) have no page behind them yet,
+// so they render as disabled/greyed instead of dead links.
+const EMPLOI_SIBLINGS = [
+  { label: "Offres d'emploi", href: '/jobs' },
+  { label: 'Formation', href: '/coming-soon?feature=Formation' },
+  { label: 'Mini-jobs', href: '/mini-jobs' },
+  { label: 'Accompagnement', href: '/coming-soon?feature=Accompagnement' },
+  { label: "Demande d'emploi", href: '/coming-soon?feature=Demande d\'emploi' },
+];
 // ─── ALERT MODAL COMPONENT ────────────────────────────────────────────────────
 function AlertModal({ token, initialFilters, onClose, apiUrl }) {
   const [form, setForm] = useState({
@@ -348,6 +359,24 @@ export default function JobsPage() {
       {/* HERO HEADER */}
       <div className="bg-white border-b border-gray-200 py-10">
         <div className="max-w-[1200px] mx-auto px-4">
+
+          {/* Sibling navigation — jump to related Emploi sub-pages */}
+          <div className="flex flex-wrap justify-center gap-2 mb-6">
+            {EMPLOI_SIBLINGS.map((s) => (
+              <Link
+                key={s.label}
+                href={s.href}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
+                  s.href === '/jobs'
+                    ? 'bg-[#2D5016] text-white'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:border-[#A7D129] hover:text-[#2D5016]'
+                }`}
+              >
+                {s.label}
+              </Link>
+            ))}
+          </div>
+
           <h1 className="text-3xl font-bold text-center text-[#2D5016] mb-2">
             Trouvez votre prochain emploi
           </h1>
