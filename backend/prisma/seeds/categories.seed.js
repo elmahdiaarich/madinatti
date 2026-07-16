@@ -63,12 +63,16 @@ const CATEGORIES = [
   { name: 'Livraison & Courses',          slug: 'livraison',              module: 'mini-jobs' },
   { name: 'Dépannage Informatique',       slug: 'depannage-informatique', module: 'mini-jobs' },
   { name: 'Services Événementiels',       slug: 'evenementiel',           module: 'mini-jobs' },
+// ── Espaces Professionnels ─────────────────────────────────────────────────
+{ name: 'Zone Industrielle',    slug: 'zone-industrielle', module: 'espaces-pro', displayType: 'PLACE' },
+{ name: 'Free Zone',            slug: 'free-zone',         module: 'espaces-pro', displayType: 'PLACE' },
+{ name: 'Chambre de Commerce',  slug: 'chambre-commerce',  module: 'espaces-pro', displayType: 'PLACE' },
 ];
 
 async function seedCategories(prisma) {
   console.log('🌱 Seeding categories...');
 
-  const result = { emploi: {}, immobilier: {}, automobile: {}, tourisme: {} ,'mini-jobs': {}};
+  const result = { emploi: {}, immobilier: {}, automobile: {}, tourisme: {} ,'mini-jobs': {}, 'espaces-pro': {}};
 
   for (const cat of CATEGORIES) {
     const record = await prisma.category.upsert({

@@ -10,6 +10,7 @@ const { seedRealEstate }      = require('./realEstate.seed');
 const { seedCars }            = require('./cars.seed');
 const { seedWorkerProfiles }  = require('./workerProfiles.seed');   
 const { seedTaskRequests }    = require('./taskRequests.seed');     
+const { seedProfessionalSpaceListings } = require('./professionalSpaces.seed');
 
 
 const prisma = new PrismaClient();
@@ -39,13 +40,15 @@ async function main() {
   // await seedCars(prisma, roles, categories);
 
   // 2. Execute Tourism listings, passing the roles and newly created categories
-  await seedTourismListings(prisma, roles, categories); 
-  await seedJobs(prisma, roles, jobCategories);
-  await seedRealEstate(prisma, roles, categories);
-  await seedCars(prisma, roles, categories);
+  // await seedTourismListings(prisma, roles, categories); 
+  // await seedJobs(prisma, roles, jobCategories);
+  // await seedRealEstate(prisma, roles, categories);
+  // await seedCars(prisma, roles, categories);
 
-  await seedWorkerProfiles(prisma, categories);   
-  await seedTaskRequests(prisma, categories);     
+  // await seedWorkerProfiles(prisma, categories);   
+  // await seedTaskRequests(prisma, categories);     
+  await seedProfessionalSpaceListings(prisma, roles, categories);
+
 }
 
 main()

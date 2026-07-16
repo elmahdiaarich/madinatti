@@ -77,6 +77,8 @@ model User {
   taskRequestsAsClient  TaskRequest[]   @relation("TaskRequestsAsClient")
   bookingsAsClient      Booking[]       @relation("BookingsAsClient")
   reviews               Review[]
+  professionalSpaceListings ProfessionalSpaceListing[]
+
 }
 
 model Role {
@@ -163,6 +165,7 @@ model Category {
   realEstateListings RealEstateListing[]
   carListings    CarListing[]
   touristicListings  TouristicListing[]
+  professionalSpaceListings ProfessionalSpaceListing[]
   workerProfiles WorkerProfile[]
   taskRequests   TaskRequest[]
 
@@ -601,6 +604,39 @@ model TouristicListing {
   @@index([isActive])
   @@index([createdAt])
 }
+
+//// ── Espaces Professionnels Models ────────────────────────────────────────
+model ProfessionalSpaceListing {
+  id            String    @id @default(uuid())
+  categoryId    String
+  name          String
+  description   String?
+  neighborhood  String?
+  city          String?
+  region        String?
+  location      String?
+  latitude      Decimal?
+  longitude     Decimal?
+  contactPhone  String?
+  contactEmail  String?
+  images        Json?     // [{ url, isCover }]
+  attributes    Json?     // category-specific fields (surface, secteurs, services...)
+  isActive      Boolean   @default(true)
+  isFeatured    Boolean   @default(false)
+  viewsCount    Int       @default(0)
+  createdBy     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  category      Category  @relation(fields: [categoryId], references: [id])
+  creator       User?     @relation(fields: [createdBy], references: [id])
+
+  @@index([categoryId])
+  @@index([city])
+  @@index([isActive])
+  @@index([createdAt])
+}
+
 // ============================================================
 // MINI-JOBS MODULE
 // ENUMS

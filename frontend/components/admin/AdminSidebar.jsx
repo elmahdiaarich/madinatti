@@ -22,6 +22,14 @@ const IconDashboard = () => (
   </svg>
 )
 
+const IconFactory = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M4 21V9l4 3V9l4 3V9l4 3V5h4v16H4z" />
+  </svg>
+)
+
 const IconBriefcase = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
     fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -140,7 +148,8 @@ const NAV_ITEMS = [
   { key: 'emploi',       label: "Emploi", href: '/admin/jobs',        icon: IconBriefcase  },
   { key: 'immobilier',   label: 'Immobilier',       href: '/admin/real-estate', icon: IconBuilding   },
   { key: 'vehicule',     label: 'Véhicules',        href: '/admin/vehicles',    icon: IconCar        },
-  { key: 'tourisme',     label: 'Tourisme',         href: '/admin/tourism',     icon: IconCompass    }, // <-- Added
+  { key: 'tourisme',     label: 'Tourisme',         href: '/admin/tourism',     icon: IconCompass    },
+  { key: 'espacesPro', label: 'Espaces Pro', href: '/admin/industriel-zones', icon: IconFactory },
   { key: 'miniJobs',     label: 'Mini-jobs · Profils', href: '/admin/mini-jobs', icon: IconBriefcase },
   { key: 'taskRequests', label: 'Mini-jobs · Demandes', href: '/admin/task-requests', icon: IconClipboard },
   { key: 'categories',   label: 'Catégories',       href: '/admin/categories',  icon: IconCategories },
