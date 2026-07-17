@@ -159,6 +159,7 @@ const NAV_ITEMS = [
   { key: 'immobilier',   label: 'Immobilier',       href: '/admin/real-estate', icon: IconBuilding   },
   { key: 'vehicule',     label: 'Véhicules',        href: '/admin/vehicles',    icon: IconCar        },
   { key: 'tourisme',     label: 'Tourisme',         href: '/admin/tourism',     icon: IconCompass    },
+  { key: 'espacesPro', label: 'Espaces Pro', href: '/admin/industriel-zones', icon: IconFactory },
   { key: 'sante',        label: 'Santé',            href: '/admin/health',      icon: IconHealth     },
   { key: 'miniJobs',     label: 'Mini-jobs · Profils', href: '/admin/mini-jobs', icon: IconBriefcase },
   { key: 'taskRequests', label: 'Mini-jobs · Demandes', href: '/admin/task-requests', icon: IconClipboard },
