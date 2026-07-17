@@ -81,10 +81,49 @@ const deleteProfessionalSpaceListing = async (req, res) => {
   }
 };
 
+const listAdminListings = async (req, res) => {
+  try {
+    const { categorySlug, city, search, page, limit, isActive } = req.query;
+    const { listings, pagination } = await professionalSpaceService.getProfessionalSpaceListings(
+      { categorySlug, city, search, page, limit, isActive: isActive ?? 'all' }
+    );
+    res.status(200).json({ success: true, pagination, data: listings });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des espaces (admin)' });
+  }
+};
+
+const importListings = async (req, res) => {
+  if (!req.file) return res.status(400).json({ success: false, message: 'Fichier CSV/XLSX requis.' });
+  try {
+    const result = await professionalSpaceService.importProfessionalSpaceListings(req.file.buffer, req.user);
+    res.status(201).json({ success: true, data: result });
+  } catch (error) {
+    console.error('professionalSpace importListings error:', error.message);
+    res.status(500).json({ success: false, message: 'Import impossible.' });
+  }
+};
+
+const downloadImportTemplate = async (req, res) => {
+  try {
+    const buffer = await professionalSpaceService.buildImportTemplate();
+    res.setHeader('Content-Disposition', 'attachment; filename="modele-import-industrie.csv"');
+    res.setHeader('Content-Type', 'text/csv');
+    res.send(buffer);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erreur lors de la génération du modèle' });
+  }
+};
+
 module.exports = {
   getAllListings,
   getListingById,
   createProfessionalSpaceListing,
   updateProfessionalSpaceListing,
   deleteProfessionalSpaceListing,
+  listAdminListings,       
+  importListings,          
+  downloadImportTemplate,  
 };

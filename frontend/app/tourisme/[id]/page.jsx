@@ -20,8 +20,6 @@ import {
   Share2,
   Heart,
   Images,
-  Facebook,
-  Instagram,
   Globe,
 } from "lucide-react";
 import StarRating from "@/components/explore/StarRating";
@@ -42,6 +40,20 @@ const FIELD_ICONS = {
   rating: Star,
   location: MapPin,
 };
+
+const FacebookIcon = (props) => (
+  <svg viewBox="0 0 24 24" width={16} height={16} fill="currentColor" {...props}>
+    <path d="M22 12a10 10 0 1 0-11.5 9.9v-7H8v-2.9h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.4h-1.3c-1.2 0-1.6.8-1.6 1.6v1.9H16l-.4 2.9h-2.1v7A10 10 0 0 0 22 12z" />
+  </svg>
+);
+
+const InstagramIcon = (props) => (
+  <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+    <rect x="2" y="2" width="20" height="20" rx="5" />
+    <circle cx="12" cy="12" r="4" />
+    <line x1="17.5" y1="6.5" x2="17.5" y2="6.5" />
+  </svg>
+);
 
 const DRAWER_THRESHOLD = 6;
 
@@ -225,10 +237,11 @@ export default function TourismDetailPage() {
   const hasCoords = listing.latitude != null && listing.longitude != null;
 
   // Social link helpers
-  const facebookUrl = listing.attributes?.socialLinks?.facebook || listing.attributes?.facebook;
-  const instagramUrl = listing.attributes?.socialLinks?.instagram || listing.attributes?.instagram;
-  const websiteUrl = listing.attributes?.socialLinks?.website || listing.attributes?.website;
-  const hasSocialLinks = facebookUrl || instagramUrl || websiteUrl;
+// Social link helpers
+const facebookUrl = listing.facebook;
+const instagramUrl = listing.instagram;
+const websiteUrl = listing.website;
+const hasSocialLinks = facebookUrl || instagramUrl || websiteUrl;
 
   const isDocument = listing.categoryDisplayType === "DOCUMENT";
   const pdfUrl = getListingField(listing, "pdfUrl") || listing.fileUrl;
@@ -290,7 +303,7 @@ export default function TourismDetailPage() {
                       rel="noopener noreferrer"
                       className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:border-[var(--color-primary)] hover:text-[var(--color-primary-dark)] transition-colors"
                     >
-                      <Facebook size={16} />
+                      <FacebookIcon />
                     </a>
                   )}
                   {instagramUrl && (
@@ -300,7 +313,7 @@ export default function TourismDetailPage() {
                       rel="noopener noreferrer"
                       className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:border-[var(--color-primary)] hover:text-[var(--color-primary-dark)] transition-colors"
                     >
-                      <Instagram size={16} />
+                      <InstagramIcon />
                     </a>
                   )}
                   {websiteUrl && (
@@ -440,9 +453,9 @@ export default function TourismDetailPage() {
                   </span>
                 )}
                 {listing.neighborhood && <span>{listing.neighborhood}</span>}
-                {listing.attributes?.rating != null && (
-                  <StarRating value={Number(listing.attributes.rating)} size={15} />
-                )}
+                {listing.rating != null && (
+  <StarRating value={Number(listing.rating)} size={15} />
+)}
               </div>
 
               {listing.description && (
@@ -494,7 +507,7 @@ export default function TourismDetailPage() {
                       rel="noopener noreferrer"
                       className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-black/10 text-black/60 hover:border-[var(--color-primary)] hover:text-[var(--color-primary-dark)]"
                     >
-                      <Facebook size={16} />
+                      <FacebookIcon />
                     </a>
                   )}
                   {instagramUrl && (
@@ -504,7 +517,7 @@ export default function TourismDetailPage() {
                       rel="noopener noreferrer"
                       className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-black/10 text-black/60 hover:border-[var(--color-primary)] hover:text-[var(--color-primary-dark)]"
                     >
-                      <Instagram size={16} />
+                      <InstagramIcon />
                     </a>
                   )}
                   {websiteUrl && (
