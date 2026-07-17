@@ -9,7 +9,7 @@ import { getAdminCategories } from "@/lib/adminApi";
 import AdminLocationPicker from "@/components/admin/AdminLocationPicker";
 import SearchableDropdown from "@/components/explore/SearchableDropdown";
 import TourismDetailMap from "@/components/explore/TourismDetailMap";
-import { MapPin } from "lucide-react";
+import { MapPin,Download, FileSpreadsheet } from "lucide-react";
 import { cities as MOROCCO_CITIES_RAW } from "morocco-cities";
 import ConfirmModal from "@/components/admin/ConfirmModal";
 
@@ -93,6 +93,17 @@ const IconStar = ({ filled }) => (
 const IconX = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 6 6 18M6 6l12 12" />
+  </svg>
+);
+
+const IconDownload = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
+const IconFileSpreadsheet = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="8" y1="13" x2="16" y2="13" /><line x1="8" y1="17" x2="16" y2="17" />
   </svg>
 );
 
@@ -226,6 +237,8 @@ export default function AdminIndustrielZonesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef(null);
+  const importInputRef = useRef(null);
+const [importing, setImporting] = useState(false);
   const sessionUploadsRef = useRef([]); // uploads made THIS form session, not yet saved
   const [mapUrlError, setMapUrlError] = useState("");
 
@@ -436,6 +449,40 @@ export default function AdminIndustrielZonesPage() {
     });
   };
 
+  const importFile = async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  setImporting(true);
+  try {
+    const response = await industrielZonesService.importFile(file);
+    const stats = response.data;
+    toast.success(`Import terminé: ${stats.created} créé(s), ${stats.updated} modifié(s), ${stats.failed} erreur(s).`);
+    if (stats.errors?.length) {
+      console.table(stats.errors);
+    }
+    await loadData();
+  } catch (error) {
+    console.error(error);
+    toast.error("Import impossible.");
+  } finally {
+    setImporting(false);
+    if (importInputRef.current) importInputRef.current.value = "";
+  }
+};
+
+const downloadTemplate = async () => {
+  const response = await fetch(industrielZonesService.templateUrl(), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "modele-import-industrie.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     const fieldErrors = validate(formData);
@@ -493,12 +540,33 @@ export default function AdminIndustrielZonesPage() {
           </div>
         </div>
 
-        <button
-          onClick={handleOpenCreate}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#2D5016] hover:bg-[#1e3a0f] transition-all shadow-sm"
-        >
-          <IconPlus /> Ajouter un espace
-        </button>
+   <div className="flex flex-wrap gap-2">
+    <button
+      onClick={downloadTemplate}
+      className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 border border-gray-200 hover:border-[#2D5016] transition-all"
+    >
+      <IconDownload /> Modèle CSV
+    </button>
+
+    <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 border border-gray-200 hover:border-[#2D5016] transition-all cursor-pointer">
+      <IconFileSpreadsheet /> {importing ? "Import..." : "Importer"}
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".csv,.xls,.xlsx"
+        className="hidden"
+        onChange={importFile}
+        disabled={importing}
+      />
+    </label>
+
+    <button
+      onClick={handleOpenCreate}
+      className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#2D5016] hover:bg-[#1e3a0f] transition-all shadow-sm"
+    >
+      <IconPlus /> Ajouter un espace
+    </button>
+  </div>
       </div>
 
       {/* Filters */}

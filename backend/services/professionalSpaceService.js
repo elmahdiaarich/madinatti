@@ -1,7 +1,32 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { cloudinary } = require('../config/cloudinary');
+const XLSX = require('xlsx');
 const { cities: MOROCCO_CITIES } = require('morocco-cities');
+
+function readRowsFromBuffer(buffer) {
+  const workbook = XLSX.read(buffer, { type: 'buffer' });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(sheet, { defval: '' });
+}
+
+function rowToPayload(row) {
+  return {
+    name: row.name?.toString().trim(),
+    categorySlug: row.categorySlug?.toString().trim(),
+    city: row.city?.toString().trim() || null,
+    neighborhood: row.neighborhood?.toString().trim() || null,
+    location: row.location?.toString().trim() || null,
+    contactPhone: row.contactPhone?.toString().trim() || null,
+    contactEmail: row.contactEmail?.toString().trim() || null,
+    description: row.description?.toString().trim() || null,
+    latitude: row.latitude ? Number(row.latitude) : null,
+    longitude: row.longitude ? Number(row.longitude) : null,
+    attributes: row.secteurs
+      ? { secteurs: row.secteurs.toString().split(',').map((s) => s.trim()).filter(Boolean) }
+      : null,
+  };
+}
 
 function regionFor(cityName) {
   if (!cityName) return null;
@@ -154,10 +179,68 @@ const deleteProfessionalSpaceListing = async (id) => {
   });
 };
 
+const importProfessionalSpaceListings = async (fileBuffer, admin) => {
+  const rows = readRowsFromBuffer(fileBuffer);
+  const results = { created: 0, updated: 0, failed: 0, errors: [] };
+
+  for (let i = 0; i < rows.length; i += 1) {
+    const row = rows[i];
+    const payload = rowToPayload(row);
+
+    if (!payload.name || !payload.categorySlug || !payload.contactPhone) {
+      results.failed += 1;
+      results.errors.push({ row: i + 2, message: 'Nom, categorySlug et contactPhone sont obligatoires.' });
+      continue;
+    }
+
+    try {
+      const category = await prisma.category.findUnique({ where: { slug: payload.categorySlug } });
+      if (!category || category.module !== 'espaces-pro') {
+        results.failed += 1;
+        results.errors.push({ row: i + 2, message: `Catégorie inconnue ou hors module: ${payload.categorySlug}` });
+        continue;
+      }
+
+      const { categorySlug, ...rest } = payload;
+      const data = {
+        ...rest,
+        region: regionFor(payload.city),
+        categoryId: category.id,
+        isActive: true,
+        createdBy: admin.userId,
+      };
+
+      const existing = await prisma.professionalSpaceListing.findFirst({
+        where: { name: data.name, city: data.city, neighborhood: data.neighborhood },
+      });
+
+      if (existing) {
+        await prisma.professionalSpaceListing.update({ where: { id: existing.id }, data });
+        results.updated += 1;
+      } else {
+        await prisma.professionalSpaceListing.create({ data });
+        results.created += 1;
+      }
+    } catch (error) {
+      results.failed += 1;
+      results.errors.push({ row: i + 2, message: error.message });
+    }
+  }
+
+  return results;
+};
+
+const buildImportTemplate = async () => {
+  const header = 'name,categorySlug,city,neighborhood,location,contactPhone,contactEmail,description,latitude,longitude,secteurs\n';
+  return Buffer.from(header, 'utf-8');
+};
+
 module.exports = {
   getProfessionalSpaceListings,
   getProfessionalSpaceListingById,
   createProfessionalSpaceListing,
   updateProfessionalSpaceListing,
   deleteProfessionalSpaceListing,
+  importProfessionalSpaceListings,
+  buildImportTemplate,     
 };
