@@ -14,12 +14,15 @@
   --font-sans: 'Inter', sans-serif;
 }
 
-body {
+html, body {
   font-family: var(--font-sans);
   color: #000000;
   background-color: #FFFFFF;
+  overscroll-behavior-y: contain;
 }
-
+html {
+  scroll-behavior: smooth;
+}
 /* register and login inputs */
 @layer components {
   .input-green {

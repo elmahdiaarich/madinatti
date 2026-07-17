@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/shared/ProtectedRoute";
 import { carsService } from "@/services/carsService";
 import PricingModal from "@/components/shared/PricingModal";
+import VehicleMakeModelFields from "@/components/cars/VehicleMakeModelFields";
 import axios from "axios";
 import moroccoCities from "morocco-cities";
 import { useToast } from "@/context/ToastContext";
@@ -570,8 +571,9 @@ function CreateCarForm() {
     if (Object.keys(e).length) {
       setErrors(e);
       const firstKey = ERROR_ORDER.find((k) => e[k]);
-      if (firstKey && sectionRefs[firstKey]?.current) {
-        sectionRefs[firstKey].current.scrollIntoView({ behavior: "smooth", block: "center" });
+      const scrollKey = firstKey === "model" ? "make" : firstKey;
+      if (scrollKey && sectionRefs[scrollKey]?.current) {
+        sectionRefs[scrollKey].current.scrollIntoView({ behavior: "smooth", block: "center" });
       }
       return;
     }
@@ -685,17 +687,14 @@ function CreateCarForm() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
           <SectionTitle>Fiche technique du véhicule</SectionTitle>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div ref={sectionRefs.make}>
-              <Field label="Marque *" error={errors.make}>
-                <Input value={form.make} onChange={(e) => set("make", e.target.value)} placeholder="Ex: Peugeot" error={errors.make} />
-              </Field>
-            </div>
-            <div ref={sectionRefs.model}>
-              <Field label="Modèle *" error={errors.model}>
-                <Input value={form.model} onChange={(e) => set("model", e.target.value)} placeholder="Ex: 208" error={errors.model} />
-              </Field>
-            </div>
+          <div ref={sectionRefs.make}>
+            <VehicleMakeModelFields
+              make={form.make}
+              model={form.model}
+              onMakeChange={(value) => set("make", value)}
+              onModelChange={(value) => set("model", value)}
+              errors={errors}
+            />
           </div>
 
           <div className="grid grid-cols-3 gap-4">

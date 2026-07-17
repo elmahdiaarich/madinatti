@@ -110,6 +110,8 @@ export default function CarFilter({ onFilter }) {
     listingType:  true,
     condition:    true,
     category:     false,
+    make:         false,
+    model:        false,
     fuelType:     false,
     transmission: false,
     bodyType:     false,
@@ -124,6 +126,8 @@ export default function CarFilter({ onFilter }) {
     listingType:  [],
     condition:    [],
     category:     [],
+    make:         [],
+    model:        [],
     fuelType:     [],
     transmission: [],
     bodyType:     [],
@@ -135,6 +139,7 @@ export default function CarFilter({ onFilter }) {
   const [yearRange,    setYearRange]    = useState({ min: '', max: '' });
   const [maxMileage,   setMaxMileage]   = useState('');
   const [categories,   setCategories]   = useState([]);
+  const [catalog,      setCatalog]      = useState([]);
   const [loadingCats,  setLoadingCats]  = useState(true);
 
   const selectedRegion = selected.region[0] || null;
@@ -145,6 +150,10 @@ export default function CarFilter({ onFilter }) {
       .then((res) => setCategories(res.data || []))
       .catch(() => {})
       .finally(() => setLoadingCats(false));
+
+    carsService.getCatalog()
+      .then((res) => setCatalog(res.data || []))
+      .catch(() => setCatalog([]));
   }, []);
 
   const regionOptions = useMemo(() => ALL_REGIONS.map((r) => ({ value: r, label: r })), []);
@@ -154,11 +163,20 @@ export default function CarFilter({ onFilter }) {
     return [...pool].sort((a, b) => a.localeCompare(b, 'fr')).map((c) => ({ value: c, label: c }));
   }, [selectedRegion]);
 
+  const selectedMake = selected.make[0] || '';
+  const selectedModel = selected.model[0] || '';
+  const modelOptions = useMemo(() => {
+    const found = catalog.find((item) => item.make === selectedMake);
+    return found?.models || [];
+  }, [catalog, selectedMake]);
+
   const emitFilters = (newSelected, newPrice, newYear, newMileage) => {
     const f = {};
     if (newSelected.listingType[0])  f.listingType  = newSelected.listingType[0];
     if (newSelected.condition[0])    f.condition     = newSelected.condition[0];
     if (newSelected.category[0])     f.categoryId    = newSelected.category[0];
+    if (newSelected.make[0])         f.make          = newSelected.make[0];
+    if (newSelected.model[0])        f.model         = newSelected.model[0];
     if (newSelected.fuelType[0])     f.fuelType      = newSelected.fuelType[0];
     if (newSelected.transmission[0]) f.transmission  = newSelected.transmission[0];
     if (newSelected.bodyType[0])     f.bodyType      = newSelected.bodyType[0];
@@ -176,8 +194,14 @@ export default function CarFilter({ onFilter }) {
 
   const handleCheck = (key, value) => {
     let newSelected;
-    if (key === 'region') {
+    if (!value) {
+      newSelected = key === 'make'
+        ? { ...selected, make: [], model: [] }
+        : { ...selected, [key]: [] };
+    } else if (key === 'region') {
       newSelected = { ...selected, region: selected.region[0] === value ? [] : [value], city: [] };
+    } else if (key === 'make') {
+      newSelected = { ...selected, make: selected.make[0] === value ? [] : [value], model: [] };
     } else {
       newSelected = { ...selected, [key]: selected[key][0] === value ? [] : [value] };
     }
@@ -203,7 +227,7 @@ export default function CarFilter({ onFilter }) {
   };
 
   const handleReset = () => {
-    const empty = { listingType: [], condition: [], category: [], fuelType: [], transmission: [], bodyType: [], region: [], city: [] };
+    const empty = { listingType: [], condition: [], category: [], make: [], model: [], fuelType: [], transmission: [], bodyType: [], region: [], city: [] };
     setSelected(empty);
     setPriceRange({ min: '', max: '' });
     setYearRange({ min: '', max: '' });
@@ -267,6 +291,33 @@ export default function CarFilter({ onFilter }) {
             ))}
           </div>
         )}
+      </FilterSection>
+
+      <FilterSection icon="🏷" label="Marque" badge={selectedMake ? 1 : 0} isOpen={open.make} onToggle={() => toggleSection('make')}>
+        <div className="px-3 pb-3">
+          <select value={selectedMake} onChange={(e) => handleCheck('make', e.target.value)} className={inp}>
+            <option value="">Toutes les marques</option>
+            {catalog.map((item) => (
+              <option key={item.make} value={item.make}>{item.make}</option>
+            ))}
+          </select>
+        </div>
+      </FilterSection>
+
+      <FilterSection icon="🔎" label="Modèle" badge={selectedModel ? 1 : 0} isOpen={open.model} onToggle={() => toggleSection('model')}>
+        <div className="px-3 pb-3">
+          <select
+            value={selectedModel}
+            onChange={(e) => handleCheck('model', e.target.value)}
+            disabled={!selectedMake}
+            className={`${inp} disabled:bg-gray-50 disabled:text-gray-400`}
+          >
+            <option value="">{selectedMake ? 'Tous les modèles' : 'Choisissez une marque'}</option>
+            {modelOptions.map((model) => (
+              <option key={model} value={model}>{model}</option>
+            ))}
+          </select>
+        </div>
       </FilterSection>
 
       {/* Carburant */}

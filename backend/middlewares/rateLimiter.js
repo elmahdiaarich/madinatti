@@ -100,6 +100,14 @@ const createWorkerProfileLimiter = rateLimit({
     message: 'Trop de créations de profil prestataire. Réessayez plus tard.',
   },
 });
+
+const healthSearchLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler,
+});
 // ── REVIEWS — Création d'avis ──────────────────────────────────────────
 const reviewLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -125,5 +133,6 @@ module.exports = {
   createTaskRequestLimiter,
   createBookingLimiter,
   createWorkerProfileLimiter,
+  healthSearchLimiter,
   reviewLimiter,
 };

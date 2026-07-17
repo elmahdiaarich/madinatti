@@ -262,7 +262,7 @@ const NORMALIZERS = {
     isNegotiable:     c.isNegotiable,
     listingType:      c.listingType,
     // shared
-    price:            c.price,
+    price:            c.price != null ? Number(c.price) : null,
     contactPhone:     c.contactPhone,
     images:           c.images,
     features:         c.features,
@@ -464,9 +464,11 @@ const WHERE_BUILDERS = {
     }),
   }),
 
-  automobile: ({ status, userId, search }) => ({
+  automobile: ({ status, userId, search, make, model }) => ({
     ...(status && { status }),
     ...(userId && { userId }),
+    ...(make && { make: { contains: make, mode: 'insensitive' } }),
+    ...(model && { model: { contains: model, mode: 'insensitive' } }),
     ...(search && {
       OR: [
         { title:    { contains: search, mode: 'insensitive' } },
@@ -698,6 +700,10 @@ const getListings = async (req, res) => {
       status  = '',
       search  = '',
       userId  = '',
+      make    = '',
+      model   = '',
+      sortBy  = 'createdAt',
+      sortDir = 'desc',
       page    = 1,
       limit   = 10,
     } = req.query;
@@ -705,7 +711,11 @@ const getListings = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
 
-    const filters = { status, userId, search };
+    const filters = { status, userId, search, make, model };
+    const sortDirection = sortDir === 'asc' ? 'asc' : 'desc';
+    const sortField = ['createdAt', 'make', 'model', 'price', 'year'].includes(sortBy)
+      ? sortBy
+      : 'createdAt';
 
     // Determine which modules to query
     const activeModules = mod === 'tous'
@@ -738,7 +748,21 @@ const getListings = async (req, res) => {
       .flatMap((moduleKey, i) =>
         results[i].map((row) => NORMALIZERS[moduleKey](row)),
       )
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      .sort((a, b) => {
+        if (sortField === 'createdAt') {
+          return sortDirection === 'asc'
+            ? new Date(a.createdAt) - new Date(b.createdAt)
+            : new Date(b.createdAt) - new Date(a.createdAt);
+        }
+        const av = a[sortField];
+        const bv = b[sortField];
+        if (typeof av === 'number' || typeof bv === 'number') {
+          return sortDirection === 'asc' ? Number(av || 0) - Number(bv || 0) : Number(bv || 0) - Number(av || 0);
+        }
+        return sortDirection === 'asc'
+          ? String(av || '').localeCompare(String(bv || ''), 'fr', { sensitivity: 'base' })
+          : String(bv || '').localeCompare(String(av || ''), 'fr', { sensitivity: 'base' });
+      });
 
     const total    = all.length;
     const paginated = all.slice(skip, skip + take);

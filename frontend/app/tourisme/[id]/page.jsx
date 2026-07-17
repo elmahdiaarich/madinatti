@@ -4,6 +4,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import ReportModal from "@/components/shared/ReportModal";
 import {
   ArrowLeft,
   MapPin,
@@ -12,6 +13,7 @@ import {
   Star,
   Loader2,
   FileText,
+  Flag,
   X,
   ChevronLeft,
   ChevronRight,
@@ -80,6 +82,7 @@ export default function TourismDetailPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  const [showReport, setShowReport] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [favLoading, setFavLoading] = useState(false);
 
@@ -464,6 +467,21 @@ export default function TourismDetailPage() {
                 >
                   <Share2 size={14} /> Partager
                 </button>
+                                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="inline-flex items-center gap-1.5 rounded-lg border-2 border-black/10 px-3.5 py-2 text-sm font-medium text-black/70 transition hover:border-black/20"
+                >
+                  <Share2 size={14} /> Partager
+                </button>
+                {/* Add Signaler Button: */}
+                <button
+                  type="button"
+                  onClick={() => setShowReport(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border-2 border-red-200/60 bg-red-50/30 px-3.5 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 hover:border-red-200"
+                >
+                  <Flag size={14} /> Signaler
+                </button>
               </div>
 
               {/* Social links row */}
@@ -701,6 +719,15 @@ export default function TourismDetailPage() {
             </span>
           )}
         </div>
+      )}
+            {showReport && (
+        <ReportModal
+          isOpen={showReport}
+          targetType="TOURISM"
+          targetId={id}
+          targetTitle={listing.name}
+          onClose={() => setShowReport(false)}
+        />
       )}
     </div>
   );

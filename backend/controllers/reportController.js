@@ -29,8 +29,8 @@ const createReport = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Champs requis : targetType, targetId, reason' })
     }
 
-const validTargets = ['REAL_ESTATE', 'JOB', 'USER', 'CAR', 'WORKER_PROFILE', 'TASK_REQUEST', 'REVIEW']
-    const validReasons = ['FAKE', 'FRAUD', 'DUPLICATE', 'INAPPROPRIATE', 'OTHER']
+const validTargets = ['REAL_ESTATE', 'JOB', 'USER', 'CAR', 'WORKER_PROFILE', 'TASK_REQUEST', 'REVIEW', 'TOURISM', 'PROFESSIONAL_SPACE']    
+const validReasons = ['FAKE', 'FRAUD', 'DUPLICATE', 'INAPPROPRIATE', 'OTHER']
     if (!validTargets.includes(targetType)) {
       return res.status(400).json({ success: false, message: 'targetType invalide' })
     }
@@ -324,6 +324,26 @@ const getReportById = async (req, res) => {
                         price: tr.budget, module: 'TASK_REQUEST' }
         owner = tr.user
       }
+    } else if (report.targetType === 'TOURISM') {
+      const tour = await prisma.touristicListing.findUnique({
+        where: { id: report.targetId },
+        select: { id: true, name: true, isActive: true, createdAt: true,
+                  creator: { select: { id: true, name: true, email: true, isActive: true } } },
+      })
+      if (tour) {
+        listingInfo = { id: tour.id, title: tour.name, status: tour.isActive ? 'APPROVED' : 'REJECTED', createdAt: tour.createdAt, module: 'TOURISM' }
+        owner = tour.creator
+      }
+    } else if (report.targetType === 'PROFESSIONAL_SPACE') {
+      const space = await prisma.professionalSpaceListing.findUnique({
+        where: { id: report.targetId },
+        select: { id: true, name: true, isActive: true, createdAt: true,
+                  creator: { select: { id: true, name: true, email: true, isActive: true } } },
+      })
+      if (space) {
+        listingInfo = { id: space.id, title: space.name, status: space.isActive ? 'APPROVED' : 'REJECTED', createdAt: space.createdAt, module: 'PROFESSIONAL_SPACE' }
+        owner = space.creator
+      }
     }
 
     let ownerListingsCount = 0
@@ -366,6 +386,10 @@ const dismissReport = async (req, res) => {
       await prisma.workerProfile.updateMany({ where: { id: report.targetId }, data: { status: 'APPROVED' } })
     } else if (report.targetType === 'TASK_REQUEST') {
       await prisma.taskRequest.updateMany({ where: { id: report.targetId }, data: { status: 'OPEN' } })
+    } else if (report.targetType === 'TOURISM') {
+      await prisma.touristicListing.updateMany({ where: { id: report.targetId }, data: { isActive: true } })
+    } else if (report.targetType === 'PROFESSIONAL_SPACE') {
+      await prisma.professionalSpaceListing.updateMany({ where: { id: report.targetId }, data: { isActive: true } })
     }
 
     await prisma.report.updateMany({
@@ -400,6 +424,10 @@ const removeListingFromReport = async (req, res) => {
       await prisma.workerProfile.updateMany({ where: { id: report.targetId }, data: { status: 'REJECTED' } })
     } else if (report.targetType === 'TASK_REQUEST') {
       await prisma.taskRequest.updateMany({ where: { id: report.targetId }, data: { status: 'ARCHIVED' } })
+        } else if (report.targetType === 'TOURISM') {
+      await prisma.touristicListing.updateMany({ where: { id: report.targetId }, data: { isActive: false } })
+    } else if (report.targetType === 'PROFESSIONAL_SPACE') {
+      await prisma.professionalSpaceListing.updateMany({ where: { id: report.targetId }, data: { isActive: false } })
     }
 
     await prisma.report.updateMany({
@@ -498,6 +526,25 @@ const contactOwner = async (req, res) => {
         select: { userId: true, title: true, user: { select: { name: true, email: true } } },
       })
       if (tr) { owner = tr.user; ownerId = tr.userId; listingTitle = tr.title }
+    } else if (report.targetType === 'TASK_REQUEST') {
+      const tr = await prisma.taskRequest.findUnique({
+        where:  { id: report.targetId },
+        select: { userId: true, title: true, user: { select: { name: true, email: true } } },
+      })
+      if (tr) { owner = tr.user; ownerId = tr.userId; listingTitle = tr.title }
+      
+    } else if (report.targetType === 'TOURISM') {
+      const tour = await prisma.touristicListing.findUnique({
+        where:  { id: report.targetId },
+        select: { createdBy: true, name: true, creator: { select: { name: true, email: true } } },
+      })
+      if (tour) { owner = tour.creator; ownerId = tour.createdBy; listingTitle = tour.name }
+    } else if (report.targetType === 'PROFESSIONAL_SPACE') {
+      const space = await prisma.professionalSpaceListing.findUnique({
+        where:  { id: report.targetId },
+        select: { createdBy: true, name: true, creator: { select: { name: true, email: true } } },
+      })
+      if (space) { owner = space.creator; ownerId = space.createdBy; listingTitle = space.name }
     }
 
     if (!owner?.email) {

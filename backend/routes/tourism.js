@@ -4,6 +4,10 @@ const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
 const touristicController = require('../controllers/touristicController');
 
+const favoriteController = require('../controllers/favoriteController');
+
+router.post('/favorites/:id/toggle', authMiddleware, favoriteController.toggleFavorite('TOURISM'));
+router.get('/favorites/me', authMiddleware, favoriteController.getUserFavorites('TOURISM'));
 // -------------------------------------------------------------
 // PUBLIC ROUTES (Anyone can browse tourism listings)
 // -------------------------------------------------------------

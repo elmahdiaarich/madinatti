@@ -10,6 +10,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { cloudinary } = require('../config/cloudinary');
 const { cities: moroccoCities } = require('morocco-cities');
+const { getVehicleCatalog } = require('../data/vehicleCatalog');
 
 // ── Build region → cities lookup once at startup ──────────────────────────────
 const citiesByRegion = moroccoCities.reduce((acc, c) => {
@@ -96,6 +97,10 @@ async function getCategories() {
   });
 }
 
+function getCatalog() {
+  return getVehicleCatalog();
+}
+
 // ── PUBLIC ────────────────────────────────────────────────────────────────────
 
 /**
@@ -176,7 +181,7 @@ async function getListings(query) {
   }
 
   // Allowed sort columns (whitelist to prevent injection)
-  const SORT_WHITELIST = { createdAt: true, price: true, year: true, mileage: true };
+  const SORT_WHITELIST = { createdAt: true, price: true, year: true, mileage: true, make: true, model: true };
   const orderByField = SORT_WHITELIST[sortBy] ? sortBy : 'createdAt';
   const orderByDir = sortDir === 'asc' ? 'asc' : 'desc';
 
@@ -326,7 +331,7 @@ async function createInquiry(data, userId) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 async function getMyListings(userId, query) {
-  const { page = 1, limit = 12, status, city, listingType, search } = query;
+  const { page = 1, limit = 12, status, city, listingType, make, model, search } = query;
   const skip = (parseInt(page) - 1) * parseInt(limit);
   const take = parseInt(limit);
 
@@ -336,6 +341,8 @@ async function getMyListings(userId, query) {
     ...(status      && { status }),
     ...(city        && { city: { contains: city, mode: 'insensitive' } }),
     ...(listingType && { listingType }),
+    ...(make        && { make: { contains: make, mode: 'insensitive' } }),
+    ...(model       && { model: { contains: model, mode: 'insensitive' } }),
     ...(search && {
       OR: [
         { title: { contains: search, mode: 'insensitive' } },
@@ -707,6 +714,7 @@ module.exports = {
   validateLeafCategory,
   // public
   getCategories,
+  getCatalog,
   createListing,
   getListings,
   getListingById,

@@ -20,10 +20,8 @@ const uploadImage = async (req, res) => {
       return res.status(400).json({ message: 'Aucun fichier reçu.' });
     }
 
-    // 5MB cap — matches the multer limit below; kept here too in case this
-    // controller ever gets reused without that middleware.
-    if (req.file.size > 5 * 1024 * 1024) {
-      return res.status(400).json({ message: 'Fichier trop volumineux (max 5 Mo).' });
+    if (req.file.size > 100 * 1024 * 1024) {
+      return res.status(400).json({ message: 'Fichier trop volumineux (max 100 Mo).' });
     }
 
     const result = await streamUpload(req.file.buffer, {
@@ -66,4 +64,17 @@ const uploadDocument = async (req, res) => {
   }
 };
 
-module.exports = { uploadImage, uploadDocument };
+const deleteUpload = async (req, res) => {
+  try {
+    const { publicId, resourceType = 'image' } = req.body;
+    if (!publicId) return res.status(400).json({ message: 'publicId requis.' });
+
+    await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Cloudinary delete error:', error);
+    res.status(500).json({ message: "Échec de la suppression." });
+  }
+};
+
+module.exports = { uploadImage, uploadDocument, deleteUpload };

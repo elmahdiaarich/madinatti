@@ -56,8 +56,15 @@ const createTouristicListing = async (req, res) => {
       return res.status(400).json({ message: 'Données invalides', errors });
     }
 
-    const listing = await touristicService.createTouristicListing(req.body, req.user.id);
-    res.status(201).json({ success: true, data: listing });
+    const listing = await touristicService.createTouristicListing(req.body, req.user.userId);
+res.status(201).json({
+  success: true,
+  data: {
+    ...listing,
+    category: listing.category?.slug,
+    categoryDisplayType: listing.category?.displayType,
+  },
+});
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Erreur lors de la création du lieu' });
@@ -78,7 +85,7 @@ const updateTouristicListing = async (req, res) => {
     }
 
     const listing = await touristicService.updateTouristicListing(req.params.id, req.body);
-    res.status(200).json({ success: true, data: listing });
+res.status(200).json({ success: true, data: listing });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Erreur lors de la mise à jour du lieu' });

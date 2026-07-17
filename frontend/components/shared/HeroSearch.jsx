@@ -56,6 +56,16 @@ const MODULES = [
       ],
     },
   },
+  {
+    label: 'Tourisme',
+    value: 'tourisme',
+    href: '/tourisme',
+  },
+  {
+    label: 'Industrie',
+    value: 'espaces-pro',
+    href: '/industrie',
+  },
 ];
 
 function SelectDropdown({ label, icon: Icon, value, options, onSelect, disabled }) {
@@ -392,12 +402,16 @@ export default function HeroSearch() {
     setExtraValue(null);
   };
 
-  const handleSearch = (e) => {
+    const handleSearch = (e) => {
     e.preventDefault();
     const params = new URLSearchParams();
     if (selectedRegion)                        params.set('region', selectedRegion);
     if (selectedCity)                          params.set('city', selectedCity);
-    if (selectedCategory)                      params.set('categoryId', selectedCategory.id);
+    if (selectedCategory) {
+      params.set('categoryId', selectedCategory.id);
+      params.set('categorySlug', selectedCategory.slug);
+      params.set('category', selectedCategory.name);
+    }
     if (extraValue && activeModule.extraField)  params.set(activeModule.extraField.key, extraValue);
     if (searchQuery.trim())                    params.set('search', searchQuery.trim());
     router.push(`${activeModule.href}?${params.toString()}`);

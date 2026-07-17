@@ -15,21 +15,36 @@ import {
   LogOut,
   X,
   Grid3x3,
-  Briefcase,
-  Home,
-  Car,
+  HeartPulse,
 } from "lucide-react";
 import GoogleAuth from "../../components/auth/GoogleAuth";
 import Logo from "./logos/Logo";
 
-// ── TOP-LEVEL MODULE LINKS (shown directly in the navbar) ────────────────────
-const MODULE_LINKS = [
-  { label: "Emploi", href: "/jobs", icon: Briefcase },
-  { label: "Immobilier", href: "/real-estate", icon: Home },
-  { label: "Véhicule", href: "/cars", icon: Car },
-];
+// ── FEATURE FLAG (code-only, no UI control) ───────────────────────────────────
+// Passe à true pour réactiver le dropdown de sous-catégories au survol du sous-nav.
+const ENABLE_SUBCATEGORY_HOVER = true;
 
-// ── ALL CATEGORIES (shown inside the "Catégories" left drawer) ───────────────
+// ── TOP-LEVEL CORE MODULE LINKS (now inline with the logo/profile row) ───────
+// Actualités placée juste après Véhicules, comme demandé.
+const SUB_NAV_LINKS = [
+  { label: "Emploi", href: "/jobs", emoji: "💼" },
+  { label: "Immobilier", href: "/real-estate", emoji: "🏠" },
+  { label: "Véhicules", href: "/cars", emoji: "🚗" },
+  { label: "Actualités", href: "/press", emoji: "📰" },
+  { label: "Tourisme", href: "/tourisme", emoji: "🧭" },
+  { label: "Industrie", href: "/industrie", emoji: "🏭" },
+  { label: "Santé", href: "/sante", emoji: "🩺" },
+];
+ /* const SUB_NAV_LINKS = [
+  { label: "Emploi", href: "/jobs" },
+  { label: "Immobilier", href: "/real-estate" },
+  { label: "Véhicules", href: "/cars" },
+  { label: "Actualités", href: "/press" },
+  { label: "Tourisme", href: "/tourisme" },
+  { label: "Industrie", href: "/industrie" },
+  { label: "Santé", href: "/sante", icon: HeartPulse },
+];  */
+// ── ALL CATEGORIES (shown inside the "Catégories" left drawer + hover dropdowns) ──
 const NAV_SERVICES = [
   {
     label: "Emploi",
@@ -69,39 +84,41 @@ const NAV_SERVICES = [
     href: "/cars",
     categories: ["Voitures occasion", "Voitures neuves", "Motos", "Auto info"],
   },
-{
-  label: "Tourisme",
-  href: "/tourisme",
-  categories: [
-    "Hôtels",
-    "Privé (Appartement + Maison)",
-    "Wellness / SPA",
-    "Hammam",
-    "Magazine des touristes",
-    "Mosquée",
-    "Musée",
-    "Cinéma",
-    "Restaurant",
-    "Café",
-    "Jardin",
-    "Forêt",
-    "Terrains de proximité",
-    "Piscine publique",
-    "Plage",
-    "Hôpitaux",
-    "Zoo",
-    "Carte touristique de la ville",
-  ],
-},
+  {
+    label: "Tourisme",
+    href: "/tourisme",
+    categories: [
+      "Hôtels",
+      "Privé (Appartement + Maison)",
+      "Wellness / SPA",
+      "Hammam",
+      "Magazine des touristes",
+      "Mosquée",
+      "Musée",
+      "Cinéma",
+      "Restaurant",
+      "Café",
+      "Jardin",
+      "Forêt",
+      "Terrains de proximité",
+      "Piscine publique",
+      "Plage",
+      "Hôpitaux",
+      "Zoo",
+      "Carte touristique de la ville",
+    ],
+  },
   {
     label: "Santé",
     href: "/sante",
     categories: [
-      "Cliniques",
-      "Médecine",
+      "Hôpitaux et cliniques",
+      "Laboratoires d'analyses",
       "Pharmacies",
-      "Pharmacie de garde",
-      "Para",
+      "Médecins et cabinets",
+      "Dentistes",
+      "Radiologie",
+      "Parapharmacies",
     ],
   },
   {
@@ -332,10 +349,14 @@ function CategoriesDrawer({
   router,
 }) {
   const handleGo = (href, category) => {
-    const url = category
-      ? `${href}?category=${encodeURIComponent(category)}`
-      : href;
-    router.push(url);
+    if (category && typeof category === "object") {
+      router.push(category.href);
+    } else {
+      const url = category
+        ? `${href}?category=${encodeURIComponent(category)}`
+        : href;
+      router.push(url);
+    }
     onClose();
   };
 
@@ -421,12 +442,13 @@ function CategoriesDrawer({
                             Voir tout — {svc.label} →
                           </button>
                           {svc.categories.map((cat) => {
-                            const label = typeof cat === 'string' ? cat : cat.label;
-                            const href = typeof cat === 'string' ? svc.href : (cat.href || svc.href);
+                            const isObj = typeof cat === "object" && cat !== null;
+                            const key = isObj ? cat.label : cat;
+                            const label = isObj ? cat.label : cat;
                             return (
                               <button
-                                key={label}
-                                onClick={() => handleGo(href)}
+                                key={key}
+                                onClick={() => handleGo(svc.href, cat)}
                                 className="w-full flex items-center gap-2 text-left px-8 py-2 text-sm text-gray-600 hover:bg-[#E8F5D0] hover:text-[#2D5016] transition-colors"
                               >
                                 <span className="w-1.5 h-1.5 rounded-full bg-[#7BA428] shrink-0" />
@@ -482,6 +504,7 @@ export default function Navbar() {
   const [hoveredModule, setHoveredModule] = useState(null);
   const userMenuRef = useRef(null);
   const notifRef = useRef(null);
+  const hoverTimeoutRef = useRef(null);
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 10);
@@ -601,14 +624,22 @@ export default function Navbar() {
     setNotifOpen(false);
   };
 
+  const handleModuleMouseEnter = (label) => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    setHoveredModule(label);
+  };
+
+  const handleModuleMouseLeave = () => {
+    hoverTimeoutRef.current = setTimeout(() => setHoveredModule(null), 150);
+  };
+
   const isActive = (path) => pathname === path;
-  // A module is "active" whenever the current path is inside it, e.g. /jobs/123 -> Emploi stays highlighted
   const isModuleActive = (href) =>
     pathname === href || pathname?.startsWith(href + "/");
   const role = user?.role;
 
   // ── Shared logout buttons ─────────────────────────────────────────────────
-  const LogoutButtons = ({ small = false }) => (
+  const LogoutButtons = () => (
     <div className="border-t border-gray-100 py-1 bg-white flex flex-col">
       {accounts.length > 1 ? (
         <>
@@ -643,374 +674,320 @@ export default function Navbar() {
   );
 
   return (
-    <nav
-      className={`bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between sticky top-0 z-50 transition-shadow ${
+    <div
+      className={`w-full flex flex-col bg-white border-b border-gray-200 sticky top-0 z-50 transition-shadow ${
         scrolled ? "shadow-md" : ""
       }`}
     >
-      {/* LOGO */}
-      <a href="/" className="flex items-center gap-2 scale-75 origin-left">
-        <Logo />
-      </a>
-
-      {/* DESKTOP MENU */}
-      <div className="hidden md:flex items-center gap-6">
-        <a
-          href="/"
-          className={`text-sm px-3 py-1.5 rounded-lg font-medium transition ${
-            isActive("/")
-              ? "bg-[#E8F5D0] text-[#2D5016]"
-              : "text-gray-600 hover:text-[#2D5016]"
-          }`}
-        >
-          Accueil
-        </a>
-
-        {/* Separator before module group */}
-        <span className="h-5 w-px bg-gray-200" />
-
-        {/* MODULE LINKS — Emploi / Immobilier / Véhicule */}
-       {MODULE_LINKS.map((mod) => {
-  const ModIcon = mod.icon;
-  const svc = NAV_SERVICES.find((s) => s.href === mod.href);
-  const isHovered = hoveredModule === mod.label;
-
-  return (
-    <div
-      key={mod.label}
-      className="relative"
-      onMouseEnter={() => svc && setHoveredModule(mod.label)}
-      onMouseLeave={() => setHoveredModule(null)}
-    >
-      <a
-        href={mod.href}
-        className={`text-sm px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 ${
-          isModuleActive(mod.href)
-            ? "bg-[#E8F5D0] text-[#2D5016]"
-            : "text-gray-600 hover:text-[#2D5016]"
-        }`}
-      >
-        <ModIcon size={14} />
-        {mod.label}
-        {svc && (
-          <ChevronDown
-            size={12}
-            className={`transition-transform duration-150 ${isHovered ? "rotate-180" : ""}`}
-          />
-        )}
-      </a>
-
-      <AnimatePresence>
-        {svc && isHovered && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.12 }}
-            className="absolute left-0 top-full pt-2 w-56 z-50"
-          >
-            <div className="bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden py-1.5">
-              <a
-                href={svc.href}
-                className="block px-4 py-2 text-xs font-bold text-[#2D5016] hover:bg-[#E8F5D0] transition-colors"
-              >
-                Voir tout — {svc.label} →
-              </a>
-              {svc.categories.map((cat) => {
-                const label = typeof cat === "string" ? cat : cat.label;
-                const href = typeof cat === "string" ? svc.href : cat.href || svc.href;
-                return (
-                  <a
-                    key={label}
-                    href={href}
-                    className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-[#E8F5D0] hover:text-[#2D5016] transition-colors"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#7BA428] shrink-0" />
-                    {label}
-                  </a>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-})}
-
-        {/* Separator after module group */}
-        <span className="h-5 w-px bg-gray-200" />
-
-        <a
-          href="/explorer"
-          className={`text-sm transition ${
-            isActive("/explorer")
-              ? "text-[#2D5016] font-medium"
-              : "text-gray-600 hover:text-[#2D5016]"
-          }`}
-        >
-          Explorer
-        </a>
-
-        <a
-          href="/blog"
-          className={`text-sm transition ${
-            isActive("/blog")
-              ? "text-[#2D5016] font-medium"
-              : "text-gray-600 hover:text-[#2D5016]"
-          }`}
-        >
-          Blog
-        </a>
-
-        {/* CATEGORIES — opens left drawer (placed last) */}
+      {/* 1. Thin Top Category Trigger Bar */}
+      <div className="flex items-center justify-between px-6 py-1.5 border-b border-gray-100 bg-gray-50/80 backdrop-blur-xs">
         <button
           type="button"
           onClick={() => setCategoriesOpen(true)}
-          className="text-sm px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-medium transition text-gray-600 hover:text-[#2D5016]"
+          className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#2D5016] transition"
         >
-          <Grid3x3 size={14} />
-          Catégories
+          <span className="text-base leading-none">☰</span> Sélectionner une catégorie
         </button>
 
-        {role === "admin" && (
-          <a
-            href="/admin"
-            className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold tracking-wide transition-all duration-200 overflow-hidden group bg-[#2D5016] text-white hover:bg-[#3a6b1e] shadow-md shadow-[#2D5016]/20 hover:shadow-lg hover:shadow-[#2D5016]/30"
-          >
-            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
-            <Shield size={13} className="stroke-[2.5]" />
-            <span>Espace Admin</span>
-            {pathname?.startsWith("/admin") && (
-              <span className="w-1.5 h-1.5 rounded-full bg-[#A7D129] animate-pulse ml-0.5" />
-            )}
-          </a>
-        )}
+        <div className="flex gap-4 text-[11px] font-medium text-gray-400">
+         <a href="/#faq" className="hover:text-black transition">Aide & FAQ</a>
+          <a href="/#contact" className="hover:text-black transition">Nous contacter</a>
+        </div>
       </div>
 
-      {/* RIGHT SIDE */}
-      <div className="flex items-center gap-3">
-        {/* Mobile hamburger */}
-        <button
-          className="md:hidden text-gray-700 font-medium text-lg"
-          onClick={() => setMobileOpen(!mobileOpen)}
-        >
-          ☰
-        </button>
+      {/* 2. Main Bar — Logo + Sous-nav (Emploi, Immobilier, Véhicules...) + Profil, tous alignés sur la même ligne */}
+      <div
+        className="flex items-center justify-between gap-4 px-6 py-3"
+        onMouseLeave={handleModuleMouseLeave}
+      >
+        {/* LOGO */}
+        <a href="/" className="flex items-center gap-2 shrink-0">
+          <Logo />
+        </a>
 
-        {/* Loading placeholder — prevents hydration flash */}
-        {loading ? (
-          <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse" />
-        ) : user ? (
-          <>
-            {/* ── NOTIFICATION BELL ──────────────────────────────────────── */}
-            <div className="relative" ref={notifRef}>
-              <button
-                onClick={() => setNotifOpen((p) => !p)}
-                className="relative w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 hover:border-[#A7D129] bg-white transition"
+        {/* Sous-nav modules — au même niveau que logo & profil */}
+        <div className="hidden md:flex flex-1 items-center justify-center flex-wrap gap-x-1 gap-y-1">
+          {SUB_NAV_LINKS.map((link) => {
+          const svc = ENABLE_SUBCATEGORY_HOVER
+              ? NAV_SERVICES.find((s) => s.href === link.href)
+              : null;
+            const isHovered = hoveredModule === link.label;
+            const active =
+              isModuleActive(link.href) ||
+              (link.href === "/" ? isActive("/") : false);
+
+            return (
+              <div
+                key={link.label}
+                className="relative px-1"
+                onMouseEnter={() => svc && handleModuleMouseEnter(link.label)}
               >
-                <Bell size={16} className="text-gray-600" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                )}
-              </button>
+                <a
+                  href={link.href}
+                  className={`flex items-center gap-1.5 text-xs font-bold tracking-wide uppercase transition whitespace-nowrap px-3 py-1.5 rounded-full ${
+                    active
+                      ? "bg-[#E8F5D0] text-[#2D5016]"
+                      : "text-gray-400 hover:text-[#2D5016] hover:bg-gray-50"
+                  }`}
+                >
+                  <span className="text-sm leading-none">{link.emoji}</span>
+                  {link.label}
+                  {svc && (
+                    <ChevronDown
+                      size={11}
+                      className={`transition-transform duration-150 ${
+                        isHovered ? "rotate-180" : ""
+                      }`}
+                    />
+                  )}
+                </a>
 
-              <AnimatePresence>
-                {notifOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -6, scale: 0.97 }}
-                    transition={{ duration: 0.12 }}
-                    className="absolute right-0 top-11 w-80 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 overflow-hidden"
+                <AnimatePresence>
+                  {svc && isHovered && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.12 }}
+                      className="absolute left-0 top-full pt-2 w-56 z-50"
+                    >
+                      <div className="bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden py-1.5 normal-case">
+                        <a
+                          href={svc.href}
+                          className="block px-4 py-2 text-xs font-bold text-[#2D5016] hover:bg-[#E8F5D0] transition-colors"
+                        >
+                          Voir tout — {svc.label} →
+                        </a>
+                        {svc.categories.map((cat) => {
+                          const isObj = typeof cat === "object" && cat !== null;
+                          const label = isObj ? cat.label : cat;
+                          const href = isObj ? cat.href : svc.href;
+                          return (
+                            <a
+                              key={label}
+                              href={href}
+                              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-[#E8F5D0] hover:text-[#2D5016] transition-colors"
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#7BA428] shrink-0" />
+                              {label}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Action controls / User dropdown */}
+        <div className="flex items-center gap-4 shrink-0">
+          <div className="hidden sm:flex items-center gap-3">
+            {role === "admin" && (
+              <a
+                href="/admin"
+                className="relative flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 overflow-hidden bg-[#2D5016] text-white hover:bg-[#3a6b1e] shadow-sm"
+              >
+                <Shield size={13} className="stroke-[2.5]" />
+                <span>Espace Admin</span>
+              </a>
+            )}
+            {!user && (
+              <>
+                <a
+                  href="/auth/register"
+                  className="px-4 py-2 rounded-xl text-xs font-bold border border-gray-200 text-gray-700 hover:bg-gray-50 transition"
+                >
+                  S'inscrire
+                </a>
+                <a
+                  href="/auth/login"
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-[#2D5016] text-white hover:bg-[#1e3a0f] transition shadow-sm"
+                >
+                  Se connecter
+                </a>
+              </>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              className="md:hidden text-gray-700 font-medium text-lg px-2"
+              onClick={() => setMobileOpen(!mobileOpen)}
+            >
+              ☰
+            </button>
+
+            {loading ? (
+              <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse" />
+            ) : user ? (
+              <>
+                {/* ── NOTIFICATION BELL ──────────────────────────────────────── */}
+                <div className="relative" ref={notifRef}>
+                  <button
+                    onClick={() => setNotifOpen((p) => !p)}
+                    className="relative w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 hover:border-[#A7D129] bg-white transition"
                   >
-                    <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                      <p className="font-bold text-gray-900 text-sm">
-                        Notifications
-                      </p>
-                      {unreadCount > 0 && (
-                        <span className="text-xs text-[#2D5016] font-semibold bg-[#E8F5D0] px-2 py-0.5 rounded-full">
-                          {unreadCount} non lues
-                        </span>
-                      )}
-                    </div>
+                    <Bell size={16} className="text-gray-600" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </button>
 
-                    <div className="divide-y divide-gray-50 max-h-80 overflow-y-auto">
-                      {notifications.length === 0 ? (
-                        <div className="p-6 text-center text-sm text-gray-400">
-                          Aucune notification
+                  <AnimatePresence>
+                    {notifOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                        transition={{ duration: 0.12 }}
+                        className="absolute right-0 top-11 w-80 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 overflow-hidden"
+                      >
+                        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                          <p className="font-bold text-gray-900 text-sm">
+                            Notifications
+                          </p>
+                          {unreadCount > 0 && (
+                            <span className="text-xs text-[#2D5016] font-semibold bg-[#E8F5D0] px-2 py-0.5 rounded-full">
+                              {unreadCount} non lues
+                            </span>
+                          )}
                         </div>
-                      ) : (
-                        notifications.map((notif) => (
-                          <div
-                            key={notif.id}
-                            onClick={() => handleNotifClick(notif)}
-                            className={`px-4 py-3 cursor-pointer hover:bg-gray-50 transition ${
-                              !notif.isRead ? "bg-[#E8F5D0]/30" : ""
-                            }`}
-                          >
-                            <div className="flex items-start gap-3">
+
+                        <div className="divide-y divide-gray-50 max-h-80 overflow-y-auto">
+                          {notifications.length === 0 ? (
+                            <div className="p-6 text-center text-sm text-gray-400">
+                              Aucune notification
+                            </div>
+                          ) : (
+                            notifications.map((notif) => (
                               <div
-                                className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
-                                  !notif.isRead
-                                    ? "bg-[#A7D129]"
-                                    : "bg-transparent"
+                                key={notif.id}
+                                onClick={() => handleNotifClick(notif)}
+                                className={`px-4 py-3 cursor-pointer hover:bg-gray-50 transition ${
+                                  !notif.isRead ? "bg-[#E8F5D0]/30" : ""
                                 }`}
-                              />
-                              <div className="flex-1 min-w-0">
-                                <p
-                                  className={`text-sm ${
-                                    !notif.isRead
-                                      ? "font-semibold text-gray-900"
-                                      : "text-gray-700"
-                                  }`}
-                                >
-                                  {notif.title}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
-                                  {notif.body}
-                                </p>
-                                <p className="text-[10px] text-gray-400 mt-1">
-                                  {new Date(notif.createdAt).toLocaleDateString(
-                                    "fr-FR",
-                                  )}
-                                </p>
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div
+                                    className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
+                                      !notif.isRead
+                                        ? "bg-[#A7D129]"
+                                        : "bg-transparent"
+                                    }`}
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <p
+                                      className={`text-sm ${
+                                        !notif.isRead
+                                          ? "font-semibold text-gray-900"
+                                          : "text-gray-700"
+                                      }`}
+                                    >
+                                      {notif.title}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                                      {notif.body}
+                                    </p>
+                                    <p className="text-[10px] text-gray-400 mt-1">
+                                      {new Date(notif.createdAt).toLocaleDateString(
+                                        "fr-FR",
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
                               </div>
+                            ))
+                          )}
+                        </div>
+
+                        <div className="border-t border-gray-100 px-4 py-2">
+                          <a
+                            href={
+                              role === "business"
+                                ? "/dashboard/notifications"
+                                : "/my-space/notifications"
+                            }
+                            onClick={() => setNotifOpen(false)}
+                            className="text-xs font-semibold text-[#2D5016] hover:underline"
+                          >
+                            Voir toutes les notifications →
+                          </a>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* ── AVATAR DROPDOWN ── */}
+                <div className="relative" ref={userMenuRef}>
+                  <button
+                    onClick={() => setUserMenuOpen((p) => !p)}
+                    className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full border border-gray-200 hover:border-[#A7D129] transition-colors bg-white"
+                  >
+                    <Avatar user={user} size="sm" />
+                    <span className="hidden md:block text-sm font-medium text-gray-700 max-w-[110px] truncate">
+                      {user.name}
+                    </span>
+                    <span className="hidden md:block text-gray-400">
+                      <ChevronDown
+                        size={12}
+                        className={`transition-transform duration-200 ${
+                          userMenuOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </span>
+                  </button>
+
+                  <AnimatePresence>
+                    {userMenuOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                        transition={{ duration: 0.12 }}
+                        className="absolute right-0 top-11 w-64 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 overflow-hidden"
+                      >
+                        <div className="px-4 py-3 bg-gray-50/50 border-b border-gray-100">
+                          <div className="flex items-center gap-3">
+                            <Avatar user={user} size="md" />
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-gray-900 truncate">
+                                {user.name}
+                              </p>
+                              <p className="text-xs text-gray-400 truncate">
+                                {user.email}
+                              </p>
+                              <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E8F5D0] text-[#2D5016] uppercase tracking-wide">
+                                {getRoleLabel(user.role)}
+                              </span>
                             </div>
                           </div>
-                        ))
-                      )}
-                    </div>
-
-                    <div className="border-t border-gray-100 px-4 py-2">
-                      <a
-                        href={
-                          role === "business"
-                            ? "/dashboard/notifications"
-                            : "/my-space/notifications"
-                        }
-                        onClick={() => setNotifOpen(false)}
-                        className="text-xs font-semibold text-[#2D5016] hover:underline"
-                      >
-                        Voir toutes les notifications →
-                      </a>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* ── AVATAR DROPDOWN ─────────────────────────────────────────── */}
-            <div className="relative" ref={userMenuRef}>
-              <button
-                onClick={() => setUserMenuOpen((p) => !p)}
-                className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full border border-gray-200 hover:border-[#A7D129] transition-colors bg-white"
-              >
-                <Avatar user={user} size="sm" />
-                <span className="hidden md:block text-sm font-medium text-gray-700 max-w-[110px] truncate">
-                  {user.name}
-                </span>
-                <span className="hidden md:block text-gray-400">
-                  <ChevronDown
-                    size={12}
-                    className={`transition-transform duration-200 ${
-                      userMenuOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </span>
-              </button>
-
-              <AnimatePresence>
-                {userMenuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -6, scale: 0.97 }}
-                    transition={{ duration: 0.12 }}
-                    className="absolute right-0 top-11 w-64 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 overflow-hidden"
-                  >
-                    {/* User header */}
-                    <div className="px-4 py-3 bg-gray-50/50 border-b border-gray-100">
-                      <div className="flex items-center gap-3">
-                        <Avatar user={user} size="md" />
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-gray-900 truncate">
-                            {user.name}
-                          </p>
-                          <p className="text-xs text-gray-400 truncate">
-                            {user.email}
-                          </p>
-                          <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E8F5D0] text-[#2D5016] uppercase tracking-wide">
-                            {getRoleLabel(user.role)}
-                          </span>
                         </div>
-                      </div>
-                    </div>
 
-                    {/* Account switcher */}
-                    <AccountSwitcher
-                      accounts={accounts}
-                      user={user}
-                      switchingId={switchingId}
-                      onSwitch={handleSwitch}
-                    />
-
-                    {/* Add account */}
-                    <AddAccountForm
-                      showAddAccount={showAddAccount}
-                      setShowAddAccount={setShowAddAccount}
-                      addForm={addForm}
-                      setAddForm={setAddForm}
-                      addError={addError}
-                      setAddError={setAddError}
-                      addLoading={addLoading}
-                      handleAddAccountSubmit={handleAddAccountSubmit}
-                      setUserMenuOpen={setUserMenuOpen}
-                    />
-
-                    {/* Nav links — role-aware */}
-                    <div className="py-1 bg-white">
-                      {role === "business" ? (
-                        <>
-                          <DropdownItem
-                            href="/dashboard"
-                            icon={<Shield size={16} />}
-                            label="Dashboard"
-                            active={pathname === "/dashboard"}
-                            onClick={() => setUserMenuOpen(false)}
-                          />
-                          <DropdownItem
-                            href="/my-space/profile"
-                            icon={<User size={16} />}
-                            label="Mon profil"
-                            active={pathname === "/my-space/profile"}
-                            onClick={() => setUserMenuOpen(false)}
-                          />
-                          <DropdownItem
-                            href="/my-space/favorites"
-                            icon={<Heart size={16} />}
-                            label="Mes favoris"
-                            active={pathname === "/my-space/favorites"}
-                            onClick={() => setUserMenuOpen(false)}
-                          />
-                        </>
-                      ) : role === "admin" ? (
-                        <DropdownItem
-                          href="/admin"
-                          icon={<Shield size={16} />}
-                          label="Espace Admin"
-                          active={pathname?.startsWith("/admin")}
-                          onClick={() => setUserMenuOpen(false)}
+                        <AccountSwitcher
+                          accounts={accounts}
+                          user={user}
+                          switchingId={switchingId}
+                          onSwitch={handleSwitch}
                         />
-                      ) : (
-                        <>
+
+                        <div className="py-1">
                           <DropdownItem
-                            href="/my-space/profile"
+                            href={
+                              role === "business"
+                                ? "/dashboard"
+                                : role === "admin"
+                                  ? "/admin"
+                                  : "/my-space/profile"
+                            }
                             icon={<User size={16} />}
                             label="Mon espace"
-                            active={pathname?.startsWith("/my-space/profile")}
+                            active={pathname === "/dashboard" || pathname?.startsWith("/my-space")}
                             onClick={() => setUserMenuOpen(false)}
                           />
                           <DropdownItem
@@ -1027,112 +1004,58 @@ export default function Navbar() {
                             active={pathname === "/my-space/favorites"}
                             onClick={() => setUserMenuOpen(false)}
                           />
-                          <DropdownItem
-                            href="/my-space/notifications"
-                            icon={<Bell size={16} />}
-                            label="Notifications"
-                            active={pathname === "/my-space/notifications"}
-                            onClick={() => setUserMenuOpen(false)}
-                          />
-                        </>
-                      )}
-                    </div>
+                        </div>
 
-                    <LogoutButtons />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </>
-        ) : (
-          /* ── GUEST BUTTONS ───────────────────────────────────────────── */
-          <div className="hidden md:flex items-center gap-3">
-            <a
-              href="/auth/login"
-              className="text-sm text-gray-600 hover:text-[#2D5016]"
-            >
-              Connexion
-            </a>
-            <a
-              href="/auth/register"
-              className="bg-[#2D5016] text-white px-4 py-1.5 rounded-lg text-sm hover:bg-[#3a6b1e] transition-colors"
-            >
-              S'inscrire
-            </a>
+                        <LogoutButtons />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </>
+            ) : null}
           </div>
-        )}
+        </div>
       </div>
 
-      {/* CATEGORIES DRAWER (slides from the left) */}
+      {/* Categories drawer */}
       <CategoriesDrawer
         open={categoriesOpen}
-        onClose={() => {
-          setCategoriesOpen(false);
-          setExpandedModule(null);
-        }}
+        onClose={() => setCategoriesOpen(false)}
         expandedModule={expandedModule}
         setExpandedModule={setExpandedModule}
         router={router}
       />
 
-      {/* MOBILE MENU */}
+      {/* Mobile Drawer menu */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="absolute top-full left-0 w-full bg-white border-t border-gray-200 md:hidden px-6 py-4 flex flex-col gap-1 z-40 overflow-hidden"
+            className="md:hidden border-t border-gray-200 bg-white px-6 py-4 flex flex-col gap-1 overflow-hidden"
           >
-            <a
-              href="/"
-              className="text-sm text-gray-700 px-2 py-2 rounded-lg hover:bg-gray-50"
-            >
-              Accueil
-            </a>
+            {SUB_NAV_LINKS.map((mod) => (
+              <a
+                key={mod.label}
+                href={mod.href}
+                className={`text-sm py-2 px-2 rounded-lg font-medium transition ${
+                  isModuleActive(mod.href)
+                    ? "text-[#2D5016] font-semibold bg-[#E8F5D0]"
+                    : "text-gray-700"
+                }`}
+              >
+                {mod.label}
+              </a>
+            ))}
 
-            {/* Module links */}
-            {MODULE_LINKS.map((mod) => {
-              const ModIcon = mod.icon;
-              return (
-                <a
-                  key={mod.label}
-                  href={mod.href}
-                  className={`flex items-center gap-2 text-sm px-2 py-2 rounded-lg hover:bg-gray-50 ${
-                    isModuleActive(mod.href)
-                      ? "text-[#2D5016] font-semibold bg-[#E8F5D0]"
-                      : "text-gray-700"
-                  }`}
-                >
-                  <ModIcon size={14} className="text-gray-400" />
-                  {mod.label}
-                </a>
-              );
-            })}
-
-            <a
-              href="/explorer"
-              className="text-sm text-gray-700 px-2 py-2 rounded-lg hover:bg-gray-50"
-            >
-              Explorer
-            </a>
-
-            <a
-              href="/blog"
-              className="text-sm text-gray-700 px-2 py-2 rounded-lg hover:bg-gray-50 mt-1"
-            >
-              Blog
-            </a>
-
-            {/* Categories drawer trigger (placed last) */}
             <button
               type="button"
               onClick={() => {
                 setMobileOpen(false);
                 setCategoriesOpen(true);
               }}
-              className="flex items-center gap-2 text-sm text-gray-700 px-2 py-2 rounded-lg hover:bg-gray-50 text-left"
+              className="flex items-center gap-2 text-sm text-gray-700 px-2 py-2 rounded-lg hover:bg-gray-50 text-left w-full"
             >
               <Grid3x3 size={14} className="text-gray-400" />
               Catégories
@@ -1148,11 +1071,9 @@ export default function Navbar() {
               </a>
             )}
 
-            {/* Mobile user section */}
             {!loading &&
               (user ? (
                 <div className="border-t border-gray-100 pt-3 mt-2 flex flex-col gap-1">
-                  {/* User header */}
                   <div className="flex items-center gap-3 px-2 pb-3">
                     <Avatar user={user} size="md" />
                     <div className="min-w-0">
@@ -1165,7 +1086,6 @@ export default function Navbar() {
                     </div>
                   </div>
 
-                  {/* Account switcher */}
                   <AccountSwitcher
                     accounts={accounts}
                     user={user}
@@ -1173,7 +1093,6 @@ export default function Navbar() {
                     onSwitch={handleSwitch}
                   />
 
-                  {/* Nav links */}
                   <a
                     href={
                       role === "business"
@@ -1227,6 +1146,6 @@ export default function Navbar() {
           </motion.div>
         )}
       </AnimatePresence>
-    </nav>
+    </div>
   );
 }
