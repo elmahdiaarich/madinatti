@@ -69,8 +69,8 @@ export default function PlaceCard({
           )}
 
           <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-{item.attributes?.rating != null && (
-  <StarRating value={item.attributes.rating} size={13} />
+{item.rating != null && (
+  <StarRating value={item.rating} size={13} />
 )}
             <span className="flex items-center gap-1 text-xs text-black/50">
               <Download size={12} className="shrink-0" />
@@ -133,17 +133,17 @@ export default function PlaceCard({
         )}
 
 <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-  {item.attributes?.rating != null ? (
-    <StarRating value={item.attributes.rating} size={13} />
+  {item.rating != null ? (
+    <StarRating value={item.rating} size={13} />
   ) : (
     <span className="text-xs text-black/40">Nouveau</span>
   )}
 
-  {item.attributes?.prix != null && item.attributes.prix !== "" && (
-    <span className="text-sm font-semibold text-black">
-      {Number(item.attributes.prix) === 0 ? "Gratuit" : `${item.attributes.prix} DH`}
-    </span>
-  )}
+  {item.prix != null && (
+  <span className="text-sm font-semibold text-black">
+    {Number(item.prix) === 0 ? "Gratuit" : `${item.prix} DH`}
+  </span>
+)}
 </div>
 </div>
     </Link>

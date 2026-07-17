@@ -74,23 +74,15 @@ function validateTouristicPayload(data, category, { isUpdate = false } = {}) {
     errors.images = "Format des images invalide.";
   }
 
-  if (
-    data.attributes?.rating !== undefined &&
-    data.attributes.rating !== null &&
-    data.attributes.rating !== ""
-  ) {
-    const rating = parseFloat(data.attributes.rating);
+  if (data.rating !== undefined && data.rating !== null && data.rating !== "") {
+    const rating = parseFloat(data.rating);
     if (Number.isNaN(rating) || rating < 0 || rating > 5) {
       errors.rating = "La note doit être comprise entre 0 et 5.";
     }
   }
 
-  if (
-    data.attributes?.prix !== undefined &&
-    data.attributes.prix !== null &&
-    data.attributes.prix !== ""
-  ) {
-    const prix = parseFloat(data.attributes.prix);
+  if (data.prix !== undefined && data.prix !== null && data.prix !== "") {
+    const prix = parseFloat(data.prix);
     if (Number.isNaN(prix) || prix < 0) {
       errors.prix = "Le prix doit être un nombre positif.";
     }
@@ -99,12 +91,13 @@ function validateTouristicPayload(data, category, { isUpdate = false } = {}) {
   const HOURS_RE =
     /^([01]\d|2[0-3]):([0-5]\d)\s*-\s*([01]\d|2[0-3]):([0-5]\d)(\s*,\s*([01]\d|2[0-3]):([0-5]\d)\s*-\s*([01]\d|2[0-3]):([0-5]\d))*$/;
   if (
-    data.attributes?.hours &&
-    data.attributes.hours !== "24h/24" &&
-    !HOURS_RE.test(String(data.attributes.hours).trim())
+    data.hours &&
+    data.hours !== "24h/24" &&
+    !HOURS_RE.test(String(data.hours).trim())
   ) {
     errors.hours = "Format des horaires invalide.";
   }
+
   return { valid: Object.keys(errors).length === 0, errors };
 }
 

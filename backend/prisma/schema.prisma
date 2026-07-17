@@ -565,8 +565,6 @@ model CarInquiry {
   @@index([listingId])
   @@index([userId])
 }
-
-//// ── tourisme Models ────────────────────────────────────────────────────────────────
 model TouristicListing {
   id            String    @id @default(uuid())
   categoryId    String
@@ -581,15 +579,24 @@ model TouristicListing {
   longitude     Decimal?
   contactPhone  String?
   contactEmail  String?
-  fileUrl        String?     // the PDF
-  publishedAt    DateTime?   // magazine issue date, or map's last update
-  downloadsCount Int         @default(0)
-  images        Json?     // [{ url, isCover }]  — same shape as RealEstateListing/CarListing
-  attributes    Json?     // category-specific fields: rating, priceRange, hours, cuisine, roomCount...
+  fileUrl       String?
+  publishedAt   DateTime?
+  downloadsCount Int      @default(0)
+  images        Json?
+
+  // Previously buried in `attributes` Json — now real, typed, filterable/sortable columns.
+  rating        Decimal?  // 0.0 - 5.0
+  prix          Int?      // DH, 0 = gratuit, null = not applicable for this category
+  hours         String?   // "HH:MM - HH:MM" or "24h/24" or comma-separated ranges
+  facebook      String?
+  instagram     String?
+  website       String?
+  mapUrl        String?   // Google Maps share link the admin pasted, kept for reference/re-editing
+
   isActive      Boolean   @default(true)
   isFeatured    Boolean   @default(false)
   viewsCount    Int       @default(0)
-  createdBy     String?   // admin who added it — audit only, no ownership logic
+  createdBy     String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -600,6 +607,8 @@ model TouristicListing {
   @@index([city])
   @@index([isActive])
   @@index([createdAt])
+  @@index([rating])
+  @@index([prix])
 }
 
 // ============================================================

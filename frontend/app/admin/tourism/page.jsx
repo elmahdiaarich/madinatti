@@ -45,14 +45,14 @@ function validate(formData, category) {
   if (!formData.name?.trim()) errors.name = "Le nom est requis.";
   if (!formData.categoryId) errors.categoryId = "Choisissez une catégorie.";
   if (!formData.city) errors.city = "Choisissez une ville.";
-  if (formData.attributes.rating !== "" && formData.attributes.rating != null) {
-    const rating = parseFloat(formData.attributes.rating);
+  if (formData.rating !== "" && formData.rating != null) {
+  const rating = parseFloat(formData.rating);
     if (Number.isNaN(rating) || rating < 0 || rating > 5) {
       errors.rating = "La note doit être comprise entre 0 et 5.";
     }
   }
-  if (formData.attributes.prix !== "" && formData.attributes.prix != null) {
-    const prix = parseFloat(formData.attributes.prix);
+  if (formData.prix !== "" && formData.prix != null) {
+  const prix = parseFloat(formData.prix);
     if (Number.isNaN(prix) || prix < 0) {
       errors.prix = "Le prix doit être un nombre positif (0 = gratuit).";
     }
@@ -60,10 +60,10 @@ function validate(formData, category) {
   const HOURS_RE =
     /^([01]\d|2[0-3]):([0-5]\d)\s*-\s*([01]\d|2[0-3]):([0-5]\d)(\s*,\s*([01]\d|2[0-3]):([0-5]\d)\s*-\s*([01]\d|2[0-3]):([0-5]\d))*$/;
   if (
-    formData.attributes.hours &&
-    formData.attributes.hours !== "24h/24" &&
-    !HOURS_RE.test(formData.attributes.hours.trim())
-  ) {
+  formData.hours &&
+  formData.hours !== "24h/24" &&
+  !HOURS_RE.test(formData.hours.trim())
+) {
     errors.hours =
       "Format attendu : 09:00 - 18:00 (ou plusieurs plages séparées par une virgule).";
   }
@@ -281,16 +281,15 @@ const emptyForm = () => ({
   fileUrl: "",
   latitude: "",
   longitude: "",
+  mapUrl: "",
+  hours: "",
+  prix: "",
+  rating: "",
+  facebook: "",
+  instagram: "",
+  website: "",
   isActive: true,
   isFeatured: false,
-  attributes: {
-    hours: "",
-    prix: "",
-    rating: "",
-    facebook: "",
-    instagram: "",
-    website: "",
-  },
   images: [],
 });
 
@@ -459,25 +458,15 @@ export default function AdminTourismPage() {
       fileUrl: item.fileUrl || "",
       latitude: item.latitude ? String(item.latitude) : "",
       longitude: item.longitude ? String(item.longitude) : "",
+      mapUrl: item.mapUrl || "",
+      hours: item.hours || "",
+      prix: item.prix != null ? String(item.prix) : "",
+      rating: item.rating != null ? String(item.rating) : "",
+      facebook: item.facebook || "",
+      instagram: item.instagram || "",
+      website: item.website || "",
       isActive: item.isActive,
       isFeatured: item.isFeatured,
-      attributes: {
-        hours: item.attributes?.hours || "",
-        prix: item.attributes?.prix || "",
-        rating: item.attributes?.rating || "",
-        facebook:
-          item.attributes?.facebook ||
-          item.attributes?.socialLinks?.facebook ||
-          "",
-        instagram:
-          item.attributes?.instagram ||
-          item.attributes?.socialLinks?.instagram ||
-          "",
-        website:
-          item.attributes?.website ||
-          item.attributes?.socialLinks?.website ||
-          "",
-      },
       images: item.images || [],
     });
     setFormOpen(true);
@@ -576,18 +565,19 @@ const handleDocFilePick = async (e) => {
       return;
     }
 
-    const { mapUrl, ...rest } = formData; // mapUrl is form-only, not a DB column — never send it top-level
-
     const payload = {
-      ...rest,
+      ...formData,
       latitude: formData.latitude !== "" ? parseFloat(formData.latitude) : null,
       longitude:
         formData.longitude !== "" ? parseFloat(formData.longitude) : null,
       fileUrl: showFileField ? formData.fileUrl.trim() : null,
-      attributes: {
-        ...formData.attributes,
-        mapUrl: mapUrl?.trim() || undefined,
-      },
+      mapUrl: formData.mapUrl?.trim() || null,
+      rating: formData.rating !== "" ? parseFloat(formData.rating) : null,
+      prix: formData.prix !== "" ? parseFloat(formData.prix) : null,
+      hours: formData.hours?.trim() || null,
+      facebook: formData.facebook?.trim() || null,
+      instagram: formData.instagram?.trim() || null,
+      website: formData.website?.trim() || null,
     };
 
     setSubmitting(true);
@@ -938,14 +928,14 @@ setFormOpen(false);
                     Évaluation
                   </p>
                   <div className="mt-0.5 flex items-center gap-0.5 text-amber-400">
-                    {viewItem.attributes?.rating ? (
+                    {viewItem?.rating ? (
                       [1, 2, 3, 4, 5].map((n) => (
                         <IconStar
                           key={n}
                           filled={
                             n <=
                             Math.round(
-                              parseFloat(viewItem.attributes.rating) || 0,
+                              parseFloat(viewItem.rating) || 0,
                             )
                           }
                         />
@@ -971,23 +961,23 @@ setFormOpen(false);
                     {viewItem.contactEmail || "—"}
                   </p>
                 </div>
-                {viewItem.attributes?.hours && (
+                {viewItem?.hours && (
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
                       Horaires
                     </p>
                     <p className="mt-0.5 text-gray-800">
-                      {viewItem.attributes.hours}
+                      {viewItem.hours}
                     </p>
                   </div>
                 )}
-                {viewItem.attributes?.prix && (
+                {viewItem?.prix && (
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
                       Prix
                     </p>
                     <p className="mt-0.5 text-gray-800">
-                      {viewItem.attributes.prix}
+                      {viewItem.prix}
                     </p>
                   </div>
                 )}
@@ -1020,17 +1010,17 @@ setFormOpen(false);
                 </div>
               )}
 
-              {(viewItem.attributes?.facebook ||
-                viewItem.attributes?.instagram ||
-                viewItem.attributes?.website) && (
+              {(viewItem.facebook ||
+                viewItem.instagram ||
+                viewItem.website) && (
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">
                     Réseaux
                   </p>
                   <div className="flex flex-wrap gap-3 text-sm">
-                    {viewItem.attributes.facebook && (
+                    {viewItem.facebook && (
                       <a
-                        href={viewItem.attributes.facebook}
+                        href={viewItem.facebook}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[#2D5016] hover:underline"
@@ -1038,9 +1028,9 @@ setFormOpen(false);
                         Facebook
                       </a>
                     )}
-                    {viewItem.attributes.instagram && (
+                    {viewItem.instagram && (
                       <a
-                        href={viewItem.attributes.instagram}
+                        href={viewItem.instagram}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[#2D5016] hover:underline"
@@ -1048,9 +1038,9 @@ setFormOpen(false);
                         Instagram
                       </a>
                     )}
-                    {viewItem.attributes.website && (
+                    {viewItem.website && (
                       <a
-                        href={viewItem.attributes.website}
+                        href={viewItem.website}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[#2D5016] hover:underline"
@@ -1425,166 +1415,95 @@ setFormOpen(false);
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Field label="Horaires" error={errors.hours}>
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formData.attributes.hours === "24h/24"}
-                          onChange={(e) => {
-                            const is24h = e.target.checked;
-                            setFormData({
-                              ...formData,
-                              attributes: {
-                                ...formData.attributes,
-                                hours: is24h ? "24h/24" : "",
-                              },
-                            });
-                          }}
-                          className="w-4 h-4 rounded border-gray-300 text-[#2D5016] focus:ring-[#A7D129]/20"
-                        />
-                        Ouvert 24h/24
-                      </label>
+  <div className="space-y-2">
+    <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={formData.hours === "24h/24"}
+        onChange={(e) => {
+          const is24h = e.target.checked;
+          setFormData({ ...formData, hours: is24h ? "24h/24" : "" });
+        }}
+        className="w-4 h-4 rounded border-gray-300 text-[#2D5016] focus:ring-[#A7D129]/20"
+      />
+      Ouvert 24h/24
+    </label>
 
-                      <Select
-                        value={
-                          HOURS_PRESETS.includes(formData.attributes.hours)
-                            ? formData.attributes.hours
-                            : "custom"
-                        }
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setFormData({
-                            ...formData,
-                            attributes: {
-                              ...formData.attributes,
-                              hours: val === "custom" ? "" : val,
-                            },
-                          });
-                        }}
-                        disabled={formData.attributes.hours === "24h/24"}
-                        error={errors.hours}
-                      >
-                        {HOURS_PRESETS.map((h) => (
-                          <option key={h} value={h}>
-                            {h}
-                          </option>
-                        ))}
-                        <option value="custom">Personnalisé...</option>
-                      </Select>
+    <Select
+      value={HOURS_PRESETS.includes(formData.hours) ? formData.hours : "custom"}
+      onChange={(e) => {
+        const val = e.target.value;
+        setFormData({ ...formData, hours: val === "custom" ? "" : val });
+      }}
+      disabled={formData.hours === "24h/24"}
+      error={errors.hours}
+    >
+      {HOURS_PRESETS.map((h) => (
+        <option key={h} value={h}>{h}</option>
+      ))}
+      <option value="custom">Personnalisé...</option>
+    </Select>
 
-                      {!HOURS_PRESETS.includes(formData.attributes.hours) &&
-                        formData.attributes.hours !== "24h/24" && (
-                          <Input
-                            type="text"
-                            placeholder="Ex: 09:00 - 12:00, 14:00 - 19:00"
-                            value={formData.attributes.hours}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                attributes: {
-                                  ...formData.attributes,
-                                  hours: e.target.value,
-                                },
-                              })
-                            }
-                            error={errors.hours}
-                          />
-                        )}
-                    </div>
-                  </Field>
-                  <Field
-                    label="Prix moyen (DH)"
-                    error={errors.prix}
-                    hint="0 = Gratuit"
-                  >
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      min="0"
-                      step="1"
-                      placeholder="Ex: 50"
-                      value={formData.attributes.prix}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          attributes: {
-                            ...formData.attributes,
-                            prix: e.target.value,
-                          },
-                        })
-                      }
-                      error={errors.prix}
-                    />
-                  </Field>
+    {!HOURS_PRESETS.includes(formData.hours) && formData.hours !== "24h/24" && (
+      <Input
+        type="text"
+        placeholder="Ex: 09:00 - 12:00, 14:00 - 19:00"
+        value={formData.hours}
+        onChange={(e) => setFormData({ ...formData, hours: e.target.value })}
+        error={errors.hours}
+      />
+    )}
+  </div>
+</Field>
+                  <Field label="Prix moyen (DH)" error={errors.prix} hint="0 = Gratuit">
+  <Input
+    type="number"
+    inputMode="numeric"
+    min="0"
+    step="1"
+    placeholder="Ex: 50"
+    value={formData.prix}
+    onChange={(e) => setFormData({ ...formData, prix: e.target.value })}
+    error={errors.prix}
+  />
+</Field>
                   <Field label="Évaluation moyenne" error={errors.rating}>
-                    <Input
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      max="5"
-                      step="0.1"
-                      placeholder="Ex: 4.5"
-                      value={formData.attributes.rating}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          attributes: {
-                            ...formData.attributes,
-                            rating: e.target.value,
-                          },
-                        })
-                      }
-                      error={errors.rating}
-                    />
-                  </Field>
+  <Input
+    type="number"
+    inputMode="decimal"
+    min="0"
+    max="5"
+    step="0.1"
+    placeholder="Ex: 4.5"
+    value={formData.rating}
+    onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+    error={errors.rating}
+  />
+</Field>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Field label="Facebook URL">
-                    <Input
-                      type="text"
-                      value={formData.attributes.facebook}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          attributes: {
-                            ...formData.attributes,
-                            facebook: e.target.value,
-                          },
-                        })
-                      }
-                    />
-                  </Field>
-                  <Field label="Instagram URL">
-                    <Input
-                      type="text"
-                      value={formData.attributes.instagram}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          attributes: {
-                            ...formData.attributes,
-                            instagram: e.target.value,
-                          },
-                        })
-                      }
-                    />
-                  </Field>
-                  <Field label="Site Web URL">
-                    <Input
-                      type="text"
-                      value={formData.attributes.website}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          attributes: {
-                            ...formData.attributes,
-                            website: e.target.value,
-                          },
-                        })
-                      }
-                    />
-                  </Field>
+  <Input
+    type="text"
+    value={formData.facebook}
+    onChange={(e) => setFormData({ ...formData, facebook: e.target.value })}
+  />
+</Field>
+<Field label="Instagram URL">
+  <Input
+    type="text"
+    value={formData.instagram}
+    onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+  />
+</Field>
+<Field label="Site Web URL">
+  <Input
+    type="text"
+    value={formData.website}
+    onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+  />
+</Field>
                 </div>
               </div>
 

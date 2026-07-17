@@ -1,131 +1,119 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { cloudinary } = require('../config/cloudinary');
+const { cities: MOROCCO_CITIES } = require('morocco-cities');
 
-// Bucket boundaries chosen to roughly split your seeded price spread
-// (~25 DH to ~300 DH across spas/restaurants/museums/zoos). Adjust once
-// you have real business pricing instead of seed data.
+function regionFor(cityName) {
+  if (!cityName) return null;
+  const match = MOROCCO_CITIES.find(
+    (c) => c.name.toLowerCase() === cityName.toLowerCase().trim()
+  );
+  return match?.region_name || null;
+}
+
 const PRICE_BUCKETS = {
-  low:  { lte: 75 },
-  mid:  { gt: 75, lte: 150 },
-  high: { gt: 150 },
+  low:  { max: 75 },
+  mid:  { min: 75, max: 150 },
+  high: { min: 150 },
 };
 
 const getTouristicListings = async (filters) => {
-  const { categorySlug, city, neighborhood, search, attributes, page = 1, limit = 20, isActive } = filters;
+  const { categorySlug, city, neighborhood, search, attributes = {}, page = 1, limit = 20, isActive } = filters;
 
-  // 1. Build the base query conditions
-  const where = {
-    category: {
-      module: 'tourisme' // Guarantee we only query items in your tourism module
-    }
-  };
+  const where = { category: { module: 'tourisme' } };
 
-  // Admin filter or public default
   if (isActive !== undefined) {
-    if (isActive !== 'all') {
-      where.isActive = isActive === 'true' || isActive === true;
-    }
+    if (isActive !== 'all') where.isActive = isActive === 'true' || isActive === true;
   } else {
-    where.isActive = true; // Only display active listings to the public
+    where.isActive = true;
   }
 
-  // 2. Filter by Category Slug if provided
-  if (categorySlug) {
-    where.category.slug = categorySlug;
-  }
+  if (categorySlug) where.category.slug = categorySlug;
+  if (neighborhood) where.neighborhood = { contains: neighborhood.trim(), mode: 'insensitive' };
 
-  // 3. Filter by Location (City / Neighborhood) — Case & accent insensitive
-  if (city) {
-    where.city = { contains: city.trim(), mode: 'insensitive' };
-  }
-  if (neighborhood) {
-    where.neighborhood = { contains: neighborhood.trim(), mode: 'insensitive' };
-  }
-
-  // 4. Handle Global Text Search (Name or Description)
   if (search) {
     where.OR = [
       { name: { contains: search, mode: 'insensitive' } },
-      { description: { contains: search, mode: 'insensitive' } }
+      { description: { contains: search, mode: 'insensitive' } },
     ];
   }
 
-  // 5. Handle Dynamic JSON Attributes (e.g., prix, evaluation)
-  if (attributes && Object.keys(attributes).length > 0) {
-    const jsonFilters = [];
+  // NOTE: `city` is intentionally NOT added to `where` anymore — it's a
+  // ranking signal (searched city first, same-region cities next, others
+  // after), not a hard filter. Same treatment for rating/priceRange below.
+  const ratingThreshold = attributes.rating ? parseFloat(attributes.rating) : null;
+  const priceRangeKey = attributes.priceRange || null;
 
-    // Map rating ('4' or '3') to evaluation stars ('4★', '3★')
-    if (attributes.rating) {
-      const minRating = parseInt(attributes.rating, 10) || 0;
-      const stars = [];
-      for (let r = minRating; r <= 5; r++) {
-        stars.push(`${r}★`);
-      }
-      jsonFilters.push({
-        OR: stars.map(star => ({
-          attributes: {
-            path: ['evaluation'],
-            equals: star
-          }
-        }))
-      });
-      delete attributes.rating;
-    }
-
-    // Map priceRange ('low'/'mid'/'high') to a numeric gte/lte range
-    // against attributes.prix. NOTE: this only matches listings whose
-    // `prix` is stored as a JSON *number* — a formatted string like
-    // "165 DH" will never satisfy gt/lte. See tourism.seed.js.
-    if (attributes.priceRange) {
-      const bucket = PRICE_BUCKETS[attributes.priceRange];
-      if (bucket) {
-        const rangeConds = [];
-        if (bucket.gt != null) rangeConds.push({ attributes: { path: ['prix'], gt: bucket.gt } });
-        if (bucket.gte != null) rangeConds.push({ attributes: { path: ['prix'], gte: bucket.gte } });
-        if (bucket.lte != null) rangeConds.push({ attributes: { path: ['prix'], lte: bucket.lte } });
-        if (rangeConds.length > 0) jsonFilters.push({ AND: rangeConds });
-      }
-      delete attributes.priceRange;
-    }
-
-    // Remaining standard attributes
-    Object.keys(attributes).forEach((key) => {
-      if (attributes[key] !== undefined && attributes[key] !== null && attributes[key] !== '') {
-        jsonFilters.push({
-          attributes: {
-            path: [key],
-            equals: attributes[key],
-          },
-        });
-      }
-    });
-
-    if (jsonFilters.length > 0) {
-      where.AND = jsonFilters;
-    }
+  // Any remaining dynamic attributes still hard-filter as before (equals).
+  const remainingKeys = Object.keys(attributes).filter(
+    (k) => k !== 'rating' && k !== 'priceRange' && attributes[k] !== undefined && attributes[k] !== null && attributes[k] !== ''
+  );
+  if (remainingKeys.length > 0) {
+    where.AND = remainingKeys.map((key) => ({ [key]: attributes[key] }));
   }
 
-  // 6. Pagination math
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
   const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
-  const skip = (pageNum - 1) * limitNum;
 
-  // 7. Execute query + count in parallel
-  const [listings, total] = await Promise.all([
+  // Fetch the FULL matching set (pre-ranking-boost) so sorting by
+  // city/region/rating/price priority is correct across the whole result,
+  // not just within one page — then paginate in JS after sorting.
+  // Trade-off: loads more rows into memory per request than a pure DB
+  // skip/take. Fine at your current data volume; revisit with a raw SQL
+  // ORDER BY (like the earlier rating-only version) if a module ever grows
+  // into the tens of thousands of rows.
+  const [allMatching, total] = await Promise.all([
     prisma.touristicListing.findMany({
       where,
-      include: {
-        category: true, // Pulls along category fields like names and icons
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      skip,
-      take: limitNum,
+      include: { category: true },
+      orderBy: { createdAt: 'desc' },
     }),
     prisma.touristicListing.count({ where }),
   ]);
+
+  const searchedRegion = city ? regionFor(city) : null;
+
+  const cityRank = (listing) => {
+    if (!city) return 2; // no city filter active — everyone's equal
+    if (listing.city?.toLowerCase().trim() === city.toLowerCase().trim()) return 0; // exact city match
+    if (searchedRegion && listing.region === searchedRegion) return 1; // same region
+    return 2; // elsewhere
+  };
+
+  const ratingRank = (listing) => {
+    if (ratingThreshold == null) return 0;
+    const r = listing.rating != null ? Number(listing.rating) : 0;
+    return r >= ratingThreshold ? 0 : 1; // meets threshold first
+  };
+
+  const priceMatches = (listing) => {
+    if (!priceRangeKey) return true;
+    const bucket = PRICE_BUCKETS[priceRangeKey];
+    if (!bucket || listing.prix == null) return false;
+    if (bucket.min != null && listing.prix < bucket.min) return false;
+    if (bucket.max != null && listing.prix > bucket.max) return false;
+    return true;
+  };
+  const priceRank = (listing) => (priceMatches(listing) ? 0 : 1);
+
+  const sorted = [...allMatching].sort((a, b) => {
+    const cr = cityRank(a) - cityRank(b);
+    if (cr !== 0) return cr;
+
+    const rr = ratingRank(a) - ratingRank(b);
+    if (rr !== 0) return rr;
+
+    const pr = priceRank(a) - priceRank(b);
+    if (pr !== 0) return pr;
+
+    // Tiebreak: higher rating first, then most recent.
+    const ratingDiff = (Number(b.rating) || 0) - (Number(a.rating) || 0);
+    if (ratingDiff !== 0) return ratingDiff;
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+
+  const skip = (pageNum - 1) * limitNum;
+  const listings = sorted.slice(skip, skip + limitNum);
 
   return {
     listings,
@@ -141,20 +129,22 @@ const getTouristicListings = async (filters) => {
 const getTouristicListingById = async (id) => {
   return await prisma.touristicListing.findUnique({
     where: { id },
-    include: { category: true }
+    include: { category: true },
   });
 };
 
+
 const createTouristicListing = async (data, adminId) => {
+  const { mapUrl, ...rest } = data;
   return await prisma.touristicListing.create({
     data: {
-      ...data,
+      ...rest,
+      mapUrl: mapUrl || null,
       createdBy: adminId,
       isActive: data.isActive !== undefined ? data.isActive : true,
       images: data.images ? JSON.parse(JSON.stringify(data.images)) : [],
-      attributes: data.attributes ? JSON.parse(JSON.stringify(data.attributes)) : {},
     },
-    include: { category: true }
+    include: { category: true },
   });
 };
 
@@ -164,20 +154,20 @@ const updateTouristicListing = async (id, data) => {
     data: {
       ...data,
       images: data.images ? JSON.parse(JSON.stringify(data.images)) : undefined,
-      attributes: data.attributes ? JSON.parse(JSON.stringify(data.attributes)) : undefined,
     },
-    include: { category: true }
+    include: { category: true },
   });
 };
+
 
 const deleteTouristicListing = async (id) => {
   // Fetch the listing first so we can access its images and fileUrl
   const listing = await prisma.touristicListing.findUnique({
-    where: { id }
+    where: { id },
   });
 
   if (!listing) {
-    throw new Error('Touristic listing not found');
+    throw new Error("Touristic listing not found");
   }
 
   // Extract and delete images from Cloudinary
@@ -186,13 +176,17 @@ const deleteTouristicListing = async (id) => {
     try {
       const url = img?.url || img;
       if (!url) return;
-      const urlParts = url.split('/upload/');
+      const urlParts = url.split("/upload/");
       if (urlParts.length !== 2) return;
-      const withoutVer = urlParts[1].replace(/^v\d+\//, '');
-      const publicId = withoutVer.replace(/\.[^/.]+$/, '');
+      const withoutVer = urlParts[1].replace(/^v\d+\//, "");
+      const publicId = withoutVer.replace(/\.[^/.]+$/, "");
       await cloudinary.uploader.destroy(publicId);
     } catch (err) {
-      console.error('[deleteTouristicListing] Failed to delete image from Cloudinary:', img.url, err.message);
+      console.error(
+        "[deleteTouristicListing] Failed to delete image from Cloudinary:",
+        img.url,
+        err.message,
+      );
     }
   });
 
@@ -201,14 +195,18 @@ const deleteTouristicListing = async (id) => {
   if (listing.fileUrl) {
     docDeletion = (async () => {
       try {
-        const urlParts = listing.fileUrl.split('/upload/');
+        const urlParts = listing.fileUrl.split("/upload/");
         if (urlParts.length === 2) {
-          const withoutVer = urlParts[1].replace(/^v\d+\//, '');
+          const withoutVer = urlParts[1].replace(/^v\d+\//, "");
           const publicId = withoutVer; // Keep extension for raw resource
-          await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
+          await cloudinary.uploader.destroy(publicId, { resource_type: "raw" });
         }
       } catch (err) {
-        console.error('[deleteTouristicListing] Failed to delete document from Cloudinary:', listing.fileUrl, err.message);
+        console.error(
+          "[deleteTouristicListing] Failed to delete document from Cloudinary:",
+          listing.fileUrl,
+          err.message,
+        );
       }
     })();
   }
@@ -218,18 +216,21 @@ const deleteTouristicListing = async (id) => {
 
   // Delete the database record
   return await prisma.touristicListing.delete({
-    where: { id }
+    where: { id },
   });
 };
 
 const incrementDownloadCount = async (id) =>
-  prisma.touristicListing.update({ where: { id }, data: { downloadsCount: { increment: 1 } } });
+  prisma.touristicListing.update({
+    where: { id },
+    data: { downloadsCount: { increment: 1 } },
+  });
 
 const getDistinctNeighborhoods = async () => {
   const listings = await prisma.touristicListing.findMany({
     where: { isActive: true },
     select: { city: true, neighborhood: true },
-    distinct: ['city', 'neighborhood'],
+    distinct: ["city", "neighborhood"],
   });
 
   const map = {};
@@ -241,7 +242,7 @@ const getDistinctNeighborhoods = async () => {
   });
 
   return Object.fromEntries(
-    Object.entries(map).map(([city, set]) => [city, [...set].sort()])
+    Object.entries(map).map(([city, set]) => [city, [...set].sort()]),
   );
 };
 
@@ -252,5 +253,5 @@ module.exports = {
   updateTouristicListing,
   deleteTouristicListing,
   incrementDownloadCount,
-  getDistinctNeighborhoods
+  getDistinctNeighborhoods,
 };
