@@ -43,6 +43,14 @@ const CATEGORIES = [
   { name: 'Hôpitaux',                 slug: 'hopitaux',            module: 'tourisme', displayType: 'PLACE' },
   { name: 'Zoo',                      slug: 'zoo',                 module: 'tourisme', displayType: 'PLACE' },
   { name: 'Carte Touristique de la Ville', slug: 'carte-touristique', module: 'tourisme', displayType: 'DOCUMENT' },
+  // Sante
+  { name: 'Pharmacies',               slug: 'pharmacy',             module: 'sante', displayType: 'PLACE' },
+  { name: 'Hopitaux et cliniques',    slug: 'hospital-clinic',      module: 'sante', displayType: 'PLACE' },
+  { name: "Laboratoires d'analyses",  slug: 'medical-laboratory',   module: 'sante', displayType: 'PLACE' },
+  { name: 'Medecins et cabinets',     slug: 'doctor-office',        module: 'sante', displayType: 'PLACE' },
+  { name: 'Dentistes',                slug: 'dentist',              module: 'sante', displayType: 'PLACE' },
+  { name: 'Centres de radiologie',    slug: 'radiology-center',     module: 'sante', displayType: 'PLACE' },
+  { name: 'Parapharmacies',           slug: 'parapharmacy',         module: 'sante', displayType: 'PLACE' },
   // ── Mini-jobs ────────────────────────────────────────────────────────────
   // Liste simplifiée : catégories larges et facilement identifiables par un client,
   // sans jargon métier. Les besoins proches (vitrerie, serrurerie, carrelage,
@@ -72,7 +80,7 @@ const CATEGORIES = [
 async function seedCategories(prisma) {
   console.log('🌱 Seeding categories...');
 
-  const result = { emploi: {}, immobilier: {}, automobile: {}, tourisme: {} ,'mini-jobs': {}, 'espaces-pro': {}};
+  const result = { emploi: {}, immobilier: {}, automobile: {}, tourisme: {} ,'mini-jobs': {}, 'espaces-pro': {}, sante: {}};
 
   for (const cat of CATEGORIES) {
     const record = await prisma.category.upsert({

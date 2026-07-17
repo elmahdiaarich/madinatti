@@ -11,6 +11,7 @@ const realEstateRoutes = require('./routes/realEstate');
 const carsRouter = require('./routes/cars');
 const tourismRoutes = require('./routes/tourism');
 const professionalSpaceRoutes = require('./routes/professionalSpaces');
+const healthRoutes = require('./routes/health');
 
 const googleAuthRoutes = require("./routes/googleAuth")
 
@@ -22,6 +23,7 @@ app.use('/api/real-estate', realEstateRoutes);
 app.use('/api/cars', carsRouter);
 app.use('/api/tourism', tourismRoutes);
 app.use('/api/industriel-zones', professionalSpaceRoutes);
+app.use('/api/health', healthRoutes);
 
 
 //to uploas imgs on cloudnary

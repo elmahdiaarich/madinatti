@@ -330,19 +330,23 @@ function ListingCard({ listing, onDelete, onViewInquiries, onViewDetails }) {
 
 // ─── Inline filter component ──────────────────────────────────────────────────
 function ListingFilters({ onChange, showStatus = true, listings = [] }) {
-  const [filters, setFilters] = useState({ status: '', listingType: '', city: '', search: '' });
+  const [filters, setFilters] = useState({ status: '', listingType: '', city: '', make: '', model: '', search: '' });
 
   const cities = [...new Set(listings.map(l => l.city).filter(Boolean))].sort();
   const listingTypes = [...new Set(listings.map(l => l.listingType).filter(Boolean))];
+  const makes = [...new Set(listings.map(l => l.make).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
+  const models = [...new Set(listings.filter(l => !filters.make || l.make === filters.make).map(l => l.model).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
 
   const set = (key, value) => {
-    const next = { ...filters, [key]: value };
+    const next = key === 'make'
+      ? { ...filters, make: value, model: '' }
+      : { ...filters, [key]: value };
     setFilters(next);
     onChange(next);
   };
 
   const reset = () => {
-    const empty = { status: '', listingType: '', city: '', search: '' };
+    const empty = { status: '', listingType: '', city: '', make: '', model: '', search: '' };
     setFilters(empty);
     onChange(empty);
   };
@@ -397,6 +401,32 @@ function ListingFilters({ onChange, showStatus = true, listings = [] }) {
             <option value="">Toutes les villes</option>
             {cities.map(c => (
               <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        )}
+
+        {makes.length > 1 && (
+          <select
+            value={filters.make}
+            onChange={e => set('make', e.target.value)}
+            className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D5016] bg-white text-gray-700"
+          >
+            <option value="">Toutes les marques</option>
+            {makes.map(m => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+        )}
+
+        {filters.make && models.length > 1 && (
+          <select
+            value={filters.model}
+            onChange={e => set('model', e.target.value)}
+            className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D5016] bg-white text-gray-700"
+          >
+            <option value="">Tous les modèles</option>
+            {models.map(m => (
+              <option key={m} value={m}>{m}</option>
             ))}
           </select>
         )}
@@ -469,6 +499,8 @@ function DashboardContent() {
           ...(filters.status      && { status: filters.status }),
           ...(filters.city        && { city: filters.city }),
           ...(filters.listingType && { listingType: filters.listingType }),
+          ...(filters.make        && { make: filters.make }),
+          ...(filters.model       && { model: filters.model }),
           ...(filters.search      && { search: filters.search }),
         },
         token,

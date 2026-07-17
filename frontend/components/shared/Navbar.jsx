@@ -18,6 +18,7 @@ import {
   Briefcase,
   Home,
   Car,
+  HeartPulse,
 } from "lucide-react";
 import GoogleAuth from "../../components/auth/GoogleAuth";
 import Logo from "./logos/Logo";
@@ -30,6 +31,7 @@ const SUB_NAV_LINKS = [
   { label: "Véhicules", href: "/cars" },
   { label: "Tourisme", href: "/tourisme" },
   { label: "Industrie", href: "/industrie" },
+  { label: "Santé", href: "/sante", icon: HeartPulse },
   { label: "Actualités", href: "/presse" },
   { label: "Annuaire", href: "/annuaire" },
   { label: "Plan de Ville", href: "/plan" },
@@ -104,11 +106,13 @@ const NAV_SERVICES = [
     label: "Santé",
     href: "/sante",
     categories: [
-      "Cliniques",
-      "Médecine",
+      "Hôpitaux et cliniques",
+      "Laboratoires d'analyses",
       "Pharmacies",
-      "Pharmacie de garde",
-      "Para",
+      "Médecins et cabinets",
+      "Dentistes",
+      "Radiologie",
+      "Parapharmacies",
     ],
   },
   {

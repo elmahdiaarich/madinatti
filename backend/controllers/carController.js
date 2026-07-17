@@ -147,6 +147,15 @@ async function getCategories(req, res) {
   }
 }
 
+async function getCatalog(req, res) {
+  try {
+    return res.json({ success: true, data: service.getCatalog() });
+  } catch (err) {
+    console.error('[cars/getCatalog]', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
 async function getListings(req, res) {
   try {
     const result = await service.getListings(req.query);
@@ -483,6 +492,7 @@ async function unsuspendListing(req, res) {
 module.exports = {
   // public
   getCategories,
+  getCatalog,
   getListings,
   getListingById,
   // authenticated

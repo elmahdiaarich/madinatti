@@ -57,6 +57,8 @@ const SORT_OPTIONS = [
   { value: "price_desc",     label: "Prix décroissant" },
   { value: "year_desc",      label: "Année décroissante" },
   { value: "mileage_asc",    label: "Km croissant" },
+  { value: "make_asc",       label: "Marque A-Z" },
+  { value: "model_asc",      label: "Modèle A-Z" },
 ];
 
 const FUEL_LABELS  = { PETROL: "Essence", DIESEL: "Diesel", ELECTRIC: "Électrique", HYBRID: "Hybride", LPG: "GPL" };
@@ -307,6 +309,7 @@ function AlertModal({ token, onClose }) {
     condition: "",
   });
   const [categories, setCategories] = useState([]);
+  const [catalog, setCatalog] = useState([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -323,7 +326,13 @@ function AlertModal({ token, onClose }) {
         setCategories(d.data || []);
       })
       .catch(() => {});
+    carsService
+      .getCatalog()
+      .then((d) => setCatalog(d.data || []))
+      .catch(() => setCatalog([]));
   }, []);
+
+  const modelOptions = catalog.find((item) => item.make === form.make)?.models || [];
 
   const handleRegionChange = (region) => {
     setForm((f) => ({ ...f, region, city: "" }));
@@ -443,29 +452,36 @@ function AlertModal({ token, onClose }) {
                   <label className="text-xs font-semibold text-gray-500 mb-1 block">
                     Marque
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Toyota"
+                  <select
                     value={form.make}
                     onChange={(e) =>
-                      setForm((f) => ({ ...f, make: e.target.value }))
+                      setForm((f) => ({ ...f, make: e.target.value, model: "" }))
                     }
                     className={inputStyle}
-                  />
+                  >
+                    <option value="">Toutes</option>
+                    {catalog.map((item) => (
+                      <option key={item.make} value={item.make}>{item.make}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-gray-500 mb-1 block">
                     Modèle
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Corolla"
+                  <select
                     value={form.model}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, model: e.target.value }))
                     }
+                    disabled={!form.make}
                     className={inputStyle}
-                  />
+                  >
+                    <option value="">{form.make ? "Tous" : "Choisir marque"}</option>
+                    {modelOptions.map((model) => (
+                      <option key={model} value={model}>{model}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

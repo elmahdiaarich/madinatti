@@ -72,6 +72,10 @@ export async function getListings({
   status = '',
   search = '',
   userId = '',
+  make = '',
+  model = '',
+  sortBy = '',
+  sortDir = '',
   page = 1,
   token = null,
 } = {}) {
@@ -80,6 +84,10 @@ export async function getListings({
   if (status)  params.set('status', status)
   if (search)  params.set('search', search)
   if (userId)  params.set('userId', userId)
+  if (make)    params.set('make', make)
+  if (model)   params.set('model', model)
+  if (sortBy)  params.set('sortBy', sortBy)
+  if (sortDir) params.set('sortDir', sortDir)
 
   const json = await apiFetch(`/api/admin/listings?${params}`, {}, token)
   return {
