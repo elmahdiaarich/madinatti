@@ -114,6 +114,16 @@ const IconCompass = () => (
   </svg>
 )
 
+const IconHealth = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M12 3l7 4v5c0 4.5 -3 7.5 -7 9c-4 -1.5 -7 -4.5 -7 -9v-5z" />
+    <path d="M9 12h6" />
+    <path d="M12 9v6" />
+  </svg>
+)
+
 // Chevron left/right for the collapse button
 const IconChevron = ({ left }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
@@ -141,6 +151,7 @@ const NAV_ITEMS = [
   { key: 'immobilier',   label: 'Immobilier',       href: '/admin/real-estate', icon: IconBuilding   },
   { key: 'vehicule',     label: 'Véhicules',        href: '/admin/vehicles',    icon: IconCar        },
   { key: 'tourisme',     label: 'Tourisme',         href: '/admin/tourism',     icon: IconCompass    }, // <-- Added
+  { key: 'sante',        label: 'Santé',            href: '/admin/health',      icon: IconHealth     },
   { key: 'miniJobs',     label: 'Mini-jobs · Profils', href: '/admin/mini-jobs', icon: IconBriefcase },
   { key: 'taskRequests', label: 'Mini-jobs · Demandes', href: '/admin/task-requests', icon: IconClipboard },
   { key: 'categories',   label: 'Catégories',       href: '/admin/categories',  icon: IconCategories },

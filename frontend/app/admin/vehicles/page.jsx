@@ -17,6 +17,7 @@ import ListingDetailModal from '@/components/admin/ListingDetailModal'
 import { getListings, approveListing, rejectListing, updateListingStatus } from '../../../lib/adminApi'
 import { useAuth } from '../../../context/AuthContext'
 import { useToast } from '@/context/ToastContext'
+import { carsService } from '@/services/carsService'
 
 // ── Status label map ──────────────────────────────────────────────────────────
 
@@ -105,7 +106,13 @@ export default function AdminVehiclesPage() {
   const [selectedUser, setSelectedUser] = useState(null)
   const [searchInput, setSearchInput]   = useState('')
   const [search, setSearch]             = useState('')
+  const [make, setMake]                 = useState('')
+  const [model, setModel]               = useState('')
+  const [sort, setSort]                 = useState('createdAt_desc')
+  const [catalog, setCatalog]           = useState([])
   const [page, setPage]                 = useState(1)
+
+  const modelOptions = catalog.find((item) => item.make === make)?.models || []
 
   // ── Load ──────────────────────────────────────────────────────────────────
 
@@ -117,6 +124,10 @@ export default function AdminVehiclesPage() {
         module: 'automobile',
         status,
         search,
+        make,
+        model,
+        sortBy: sort.split('_')[0],
+        sortDir: sort.split('_')[1],
         page,
         token,
         userId: selectedUser?.id || '',
@@ -126,10 +137,16 @@ export default function AdminVehiclesPage() {
     } finally {
       setTableLoading(false)
     }
-  }, [status, search, page, token, selectedUser])
+  }, [status, search, make, model, sort, page, token, selectedUser])
 
   useEffect(() => { loadListings() }, [loadListings])
-  useEffect(() => { setPage(1) }, [status, search, selectedUser])
+  useEffect(() => { setPage(1) }, [status, search, make, model, sort, selectedUser])
+
+  useEffect(() => {
+    carsService.getCatalog()
+      .then((res) => setCatalog(res.data || []))
+      .catch(() => setCatalog([]))
+  }, [])
 
   // Search debounce
   useEffect(() => {
@@ -206,7 +223,7 @@ export default function AdminVehiclesPage() {
     toast({ message: `Statut mis à jour → ${label}`, type: toastType })
   }, [loadListings, toast])
 
-  const hasActiveFilters = search || status !== 'PENDING' || selectedUser
+  const hasActiveFilters = search || status !== 'PENDING' || selectedUser || make || model || sort !== 'createdAt_desc'
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -250,6 +267,46 @@ export default function AdminVehiclesPage() {
           />
         </div>
 
+        <div className="flex flex-col sm:flex-row gap-2">
+          <select
+            value={make}
+            onChange={(e) => { setMake(e.target.value); setModel('') }}
+            className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D5016] bg-white text-gray-700"
+          >
+            <option value="">Toutes les marques</option>
+            {catalog.map((item) => (
+              <option key={item.make} value={item.make}>{item.make}</option>
+            ))}
+          </select>
+
+          <select
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            disabled={!make}
+            className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D5016] bg-white text-gray-700 disabled:bg-gray-50 disabled:text-gray-400"
+          >
+            <option value="">{make ? 'Tous les modèles' : 'Choisir une marque'}</option>
+            {modelOptions.map((item) => (
+              <option key={item} value={item}>{item}</option>
+            ))}
+          </select>
+
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D5016] bg-white text-gray-700"
+          >
+            <option value="createdAt_desc">Plus récentes</option>
+            <option value="createdAt_asc">Plus anciennes</option>
+            <option value="make_asc">Marque A-Z</option>
+            <option value="model_asc">Modèle A-Z</option>
+            <option value="price_desc">Prix décroissant</option>
+            <option value="price_asc">Prix croissant</option>
+            <option value="year_desc">Année décroissante</option>
+            <option value="year_asc">Année croissante</option>
+          </select>
+        </div>
+
         {/* Status tabs */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-semibold text-gray-400 mr-1">Statut :</span>
@@ -287,8 +344,17 @@ export default function AdminVehiclesPage() {
                 onRemove={() => setSelectedUser(null)}
               />
             )}
+            {make && (
+              <FilterChip label={`Marque: ${make}`} onRemove={() => { setMake(''); setModel('') }} />
+            )}
+            {model && (
+              <FilterChip label={`Modèle: ${model}`} onRemove={() => setModel('')} />
+            )}
+            {sort !== 'createdAt_desc' && (
+              <FilterChip label="Tri personnalisé" onRemove={() => setSort('createdAt_desc')} />
+            )}
             <button
-              onClick={() => { setStatus('PENDING'); setSearch(''); setSearchInput(''); setSelectedUser(null) }}
+              onClick={() => { setStatus('PENDING'); setSearch(''); setSearchInput(''); setSelectedUser(null); setMake(''); setModel(''); setSort('createdAt_desc') }}
               className="text-xs text-gray-400 hover:text-red-500 underline underline-offset-2 ml-1 transition-colors"
             >
               Tout effacer

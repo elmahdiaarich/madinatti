@@ -30,58 +30,73 @@ enum PropertyType {
 }
 
 enum ListingStatus {
-  PENDING      // Awaiting admin validation (Default)
-  APPROVED     // Moderation passed, eligible to be live
-  REJECTED     // Denied validation (never went live)
-  SUSPENDED    // Admin revoked approval after it was live (The "Undo" button)
-  EXPIRED      // The listing's paid or free time limit ran out
-  ARCHIVED     // Soft-deleted or successfully sold/rented
+  PENDING // Awaiting admin validation (Default)
+  APPROVED // Moderation passed, eligible to be live
+  REJECTED // Denied validation (never went live)
+  SUSPENDED // Admin revoked approval after it was live (The "Undo" button)
+  EXPIRED // The listing's paid or free time limit ran out
+  ARCHIVED // Soft-deleted or successfully sold/rented
+}
+
+enum HealthPlaceSource {
+  GOOGLE
+  MADINATI
+  IMPORT
+}
+
+enum HealthPlaceStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+  ARCHIVED
 }
 
 model User {
-  id                String         @id @default(uuid())
-  name              String
-  email             String         @unique
-  password          String?
-  phone             String?
-  avatar            String?
-  city              String?
-  roleId            String
-  isActive          Boolean        @default(true)
-  emailVerifiedAt   DateTime?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  profileCompleted  Boolean        @default(false)
-    // Company fields (business only)
-  companyName       String?
-  companyLogo       String?
-  companyWebsite    String?
-  notifications     Notification[]
+  id               String         @id @default(uuid())
+  name             String
+  email            String         @unique
+  password         String?
+  phone            String?
+  avatar           String?
+  city             String?
+  roleId           String
+  isActive         Boolean        @default(true)
+  emailVerifiedAt  DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  profileCompleted Boolean        @default(false)
+  // Company fields (business only)
+  companyName      String?
+  companyLogo      String?
+  companyWebsite   String?
+  notifications    Notification[]
 
-  role              Role           @relation(fields: [roleId], references: [id])
-  oauthProviders    OAuthProvider[]
-  passwordReset     PasswordResetToken?
-  subscriptions     Subscription[]
-  favorites         Favorite[]
-  jobListings       JobListing[]
-  jobApplications   JobApplication[]
-  jobAlerts         Alert[]        @relation("JobAlerts")
-  realEstateListings RealEstateListing[]
-  propertyInquiries PropertyInquiry[]
-  reports           Report[]
-  messages          BusinessMessage[]
-  carListings    CarListing[]
-  carInquiries   CarInquiry[]
-  touristicListings  TouristicListing[]
-  workerProfiles        WorkerProfile[]
-  taskRequestsAsClient  TaskRequest[]   @relation("TaskRequestsAsClient")
-  bookingsAsClient      Booking[]       @relation("BookingsAsClient")
-  reviews               Review[]
+  role                 Role                @relation(fields: [roleId], references: [id])
+  oauthProviders       OAuthProvider[]
+  passwordReset        PasswordResetToken?
+  subscriptions        Subscription[]
+  favorites            Favorite[]
+  jobListings          JobListing[]
+  jobApplications      JobApplication[]
+  jobAlerts            Alert[]             @relation("JobAlerts")
+  realEstateListings   RealEstateListing[]
+  propertyInquiries    PropertyInquiry[]
+  reports              Report[]
+  messages             BusinessMessage[]
+  carListings          CarListing[]
+  carInquiries         CarInquiry[]
+  touristicListings    TouristicListing[]
+  healthPlaces         HealthPlace[]
+  workerProfiles       WorkerProfile[]
+  taskRequestsAsClient TaskRequest[]       @relation("TaskRequestsAsClient")
+  bookingsAsClient     Booking[]           @relation("BookingsAsClient")
+  reviews              Review[]
 }
 
 model Role {
-  id          String   @id @default(uuid())
-  name        String   @unique
+  id          String  @id @default(uuid())
+  name        String  @unique
   description String?
   users       User[]
 }
@@ -93,7 +108,7 @@ model OAuthProvider {
   providerId String
   createdAt  DateTime @default(now())
 
-  user       User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 }
 
 model PasswordResetToken {
@@ -103,7 +118,7 @@ model PasswordResetToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 }
 
 model Plan {
@@ -129,23 +144,24 @@ model Subscription {
   startedAt DateTime
   expiresAt DateTime
 
-  user      User     @relation(fields: [userId], references: [id])
-  plan      Plan     @relation(fields: [planId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+  plan Plan @relation(fields: [planId], references: [id])
 }
 
 model Favorite {
-  id        String   @id @default(uuid())
-  userId    String
-  itemId    String
-  itemType  String   // "REAL_ESTATE" | "JOB" | etc.
+  id       String @id @default(uuid())
+  userId   String
+  itemId   String
+  itemType String // "REAL_ESTATE" | "JOB" | etc.
 
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   @@unique([userId, itemId, itemType])
   @@index([userId])
 }
+
 //for tourisme listings
 enum CategoryDisplayType {
   PLACE
@@ -156,16 +172,16 @@ model Category {
   id                 String              @id @default(uuid())
   name               String
   slug               String              @unique
-  module             String              // "emploi" | "immobilier" | "vehicule"
-  displayType CategoryDisplayType @default(PLACE)   // ← new
+  module             String // "emploi" | "immobilier" | "vehicule"
+  displayType        CategoryDisplayType @default(PLACE) // ← new
   isActive           Boolean             @default(true)
   jobListings        JobListing[]
   realEstateListings RealEstateListing[]
-  carListings    CarListing[]
+  carListings        CarListing[]
   touristicListings  TouristicListing[]
-  workerProfiles WorkerProfile[]
-  taskRequests   TaskRequest[]
-
+  healthPlaces       HealthPlace[]
+  workerProfiles     WorkerProfile[]
+  taskRequests       TaskRequest[]
 }
 
 enum EducationLevel {
@@ -197,14 +213,15 @@ enum ContractType {
   ALTERNANCE
   STATUTAIRE
 }
+
 enum RemoteType {
-  ON_SITE      // Présentiel
-  REMOTE       // Full remote
-  HYBRID       // Hybride / parfois
+  ON_SITE // Présentiel
+  REMOTE // Full remote
+  HYBRID // Hybride / parfois
 }
 
 model JobListing {
-  id                  String        @id @default(uuid())
+  id                  String           @id @default(uuid())
   userId              String
   categoryId          String
   title               String
@@ -219,30 +236,30 @@ model JobListing {
   salaryMax           Decimal?
   salaryPeriod        String?
   applicationDeadline DateTime?
-  status              ListingStatus @default(PENDING)
-  isFeatured          Boolean       @default(false)
-  isSponsored         Boolean       @default(false)
+  status              ListingStatus    @default(PENDING)
+  isFeatured          Boolean          @default(false)
+  isSponsored         Boolean          @default(false)
   boostExpiresAt      DateTime?
-  viewsCount          Int           @default(0)
+  viewsCount          Int              @default(0)
   skills              Json?
   adminNotes          String?
   reviewedAt          DateTime?
   reviewedBy          String?
   publishedAt         DateTime?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
   contractType        ContractType
-  educationLevel      EducationLevel[]  @default([])
+  educationLevel      EducationLevel[] @default([])
   experienceLevel     ExperienceLevel?
   region              String?
-  remote              RemoteType    @default(ON_SITE)
+  remote              RemoteType       @default(ON_SITE)
   languages           Json?
-  deletedByOwner  Boolean  @default(false)
-  deletedAt       DateTime?
+  deletedByOwner      Boolean          @default(false)
+  deletedAt           DateTime?
 
-  user                User          @relation(fields: [userId], references: [id])
-  category            Category      @relation(fields: [categoryId], references: [id])
-  applications        JobApplication[]
+  user         User             @relation(fields: [userId], references: [id])
+  category     Category         @relation(fields: [categoryId], references: [id])
+  applications JobApplication[]
 
   @@index([status])
   @@index([categoryId])
@@ -260,10 +277,10 @@ model JobApplication {
   reviewedAt    DateTime?
   createdAt     DateTime  @default(now())
 
-  jobListing    JobListing @relation(fields: [jobListingId], references: [id])
-  user          User       @relation(fields: [userId], references: [id])
+  jobListing JobListing @relation(fields: [jobListingId], references: [id])
+  user       User       @relation(fields: [userId], references: [id])
+
   @@unique([userId, jobListingId])
-  
 }
 
 model Alert {
@@ -274,66 +291,66 @@ model Alert {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  user      User     @relation("JobAlerts", fields: [userId], references: [id])
+  user User @relation("JobAlerts", fields: [userId], references: [id])
 }
 
 model RealEstateListing {
-  id            String         @id @default(uuid())
-  userId        String
-  categoryId    String
-  title         String
-  slug          String?        @unique
-  description   String
-  listingType   ListingType
-  propertyType  PropertyType
-  price         Decimal
-  surface       Decimal?
-  rooms         Int?
-  bathrooms     Int?
-  floor         Int?
-  city          String     // SIMPLE + SAFE (no City table yet)
-  location      String
-  latitude      Decimal?
-  longitude     Decimal?
-  contactPhone  String?
-  images        Json?          // [{ url, isCover }]
-  features      Json?          // flexible key/value
-  status        ListingStatus  @default(PENDING)
-  isActive      Boolean        @default(true)
-  isFeatured    Boolean        @default(false)
-  isSponsored   Boolean        @default(false)
+  id             String            @id @default(uuid())
+  userId         String
+  categoryId     String
+  title          String
+  slug           String?           @unique
+  description    String
+  listingType    ListingType
+  propertyType   PropertyType
+  price          Decimal
+  surface        Decimal?
+  rooms          Int?
+  bathrooms      Int?
+  floor          Int?
+  city           String // SIMPLE + SAFE (no City table yet)
+  location       String
+  latitude       Decimal?
+  longitude      Decimal?
+  contactPhone   String?
+  images         Json? // [{ url, isCover }]
+  features       Json? // flexible key/value
+  status         ListingStatus     @default(PENDING)
+  isActive       Boolean           @default(true)
+  isFeatured     Boolean           @default(false)
+  isSponsored    Boolean           @default(false)
   boostExpiresAt DateTime?
-  viewsCount    Int            @default(0)
-  adminNotes    String?
-  reviewedAt    DateTime?
-  reviewedBy    String?
-  publishedAt   DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  user          User           @relation(fields: [userId], references: [id])
-  category      Category       @relation(fields: [categoryId], references: [id])
-  inquiries     PropertyInquiry[]
-  region        String?
-  deletedByOwner  Boolean  @default(false)
-  deletedAt       DateTime?
+  viewsCount     Int               @default(0)
+  adminNotes     String?
+  reviewedAt     DateTime?
+  reviewedBy     String?
+  publishedAt    DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  user           User              @relation(fields: [userId], references: [id])
+  category       Category          @relation(fields: [categoryId], references: [id])
+  inquiries      PropertyInquiry[]
+  region         String?
+  deletedByOwner Boolean           @default(false)
+  deletedAt      DateTime?
 
   @@index([categoryId])
   @@index([status])
   @@index([price])
   @@index([city])
   @@index([createdAt])
-} 
+}
 
 model PropertyInquiry {
   id           String            @id @default(uuid())
   listingId    String
   userId       String
   message      String
-  contactPhone  String?
-  contactEmail  String?
-  status       String           @default("pending")
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  contactPhone String?
+  contactEmail String?
+  status       String            @default("pending")
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
   listing      RealEstateListing @relation(fields: [listingId], references: [id])
   user         User              @relation(fields: [userId], references: [id])
 
@@ -349,8 +366,8 @@ enum ReportTarget {
   USER
   CAR
   TOURISM
-  TASK_REQUEST  
-  REVIEW 
+  TASK_REQUEST
+  REVIEW
   WORKER_PROFILE
 }
 
@@ -375,8 +392,8 @@ model Report {
   targetId      String
   reason        ReportReason
   description   String?
-  reporterEmail String?      // Pour visiteurs anonymes
-  userId        String?      // Null si visiteur anonyme
+  reporterEmail String? // Pour visiteurs anonymes
+  userId        String? // Null si visiteur anonyme
   ipAddress     String?
   status        ReportStatus @default(PENDING)
   adminNotes    String?
@@ -410,12 +427,13 @@ model BusinessMessage {
   isRead       Boolean     @default(false)
   createdAt    DateTime    @default(now())
 
-  user         User        @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([isRead])
   @@index([createdAt])
 }
+
 model Notification {
   id        String   @id @default(uuid())
   userId    String
@@ -426,7 +444,7 @@ model Notification {
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([isRead])
@@ -436,8 +454,8 @@ model Notification {
 model ListingView {
   id          String   @id @default(uuid())
   listingId   String
-  listingType String   // "JOB" | "REAL_ESTATE"
-  userId      String?  // null si visiteur anonyme/non connecté
+  listingType String // "JOB" | "REAL_ESTATE"
+  userId      String? // null si visiteur anonyme/non connecté
   viewedAt    DateTime @default(now())
 
   @@index([listingId, listingType])
@@ -489,11 +507,11 @@ enum BodyType {
 // ── Car Models ────────────────────────────────────────────────────────────────
 
 model CarListing {
-  id             String        @id @default(uuid())
+  id             String         @id @default(uuid())
   userId         String
   categoryId     String
   title          String
-  slug           String?       @unique
+  slug           String?        @unique
   description    String
   listingType    CarListingType
   condition      CarCondition
@@ -510,33 +528,33 @@ model CarListing {
   engineSize     Float?
   horsePower     Int?
   price          Decimal
-  isNegotiable   Boolean       @default(false)
+  isNegotiable   Boolean        @default(false)
   city           String?
   region         String?
   location       String
   latitude       Decimal?
   longitude      Decimal?
   contactPhone   String?
-  images         Json?         // [{ url, isCover }]
-  features       Json?         // flexible key/value
-  status         ListingStatus @default(PENDING)
-  isActive       Boolean       @default(true)
-  isFeatured     Boolean       @default(false)
-  isSponsored    Boolean       @default(false)
+  images         Json? // [{ url, isCover }]
+  features       Json? // flexible key/value
+  status         ListingStatus  @default(PENDING)
+  isActive       Boolean        @default(true)
+  isFeatured     Boolean        @default(false)
+  isSponsored    Boolean        @default(false)
   boostExpiresAt DateTime?
-  viewsCount     Int           @default(0)
+  viewsCount     Int            @default(0)
   adminNotes     String?
   reviewedAt     DateTime?
   reviewedBy     String?
   publishedAt    DateTime?
-  deletedByOwner Boolean       @default(false)
+  deletedByOwner Boolean        @default(false)
   deletedAt      DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
-  user           User          @relation(fields: [userId], references: [id])
-  category       Category      @relation(fields: [categoryId], references: [id])
-  inquiries      CarInquiry[]
+  user      User         @relation(fields: [userId], references: [id])
+  category  Category     @relation(fields: [categoryId], references: [id])
+  inquiries CarInquiry[]
 
   @@index([userId])
   @@index([categoryId])
@@ -549,18 +567,18 @@ model CarListing {
 }
 
 model CarInquiry {
-  id           String     @id @default(uuid())
+  id           String   @id @default(uuid())
   listingId    String
   userId       String
   message      String
   contactPhone String?
   contactEmail String?
-  status       String     @default("pending")
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  status       String   @default("pending")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  listing      CarListing @relation(fields: [listingId], references: [id])
-  user         User       @relation(fields: [userId], references: [id])
+  listing CarListing @relation(fields: [listingId], references: [id])
+  user    User       @relation(fields: [userId], references: [id])
 
   @@index([listingId])
   @@index([userId])
@@ -568,43 +586,96 @@ model CarInquiry {
 
 //// ── tourisme Models ────────────────────────────────────────────────────────────────
 model TouristicListing {
-  id            String    @id @default(uuid())
-  categoryId    String
-  name          String
-  slug          String?   @unique
-  description   String?
-  neighborhood  String?
-  city          String?
-  region        String?
-  location      String?
-  latitude      Decimal?
-  longitude     Decimal?
-  contactPhone  String?
-  contactEmail  String?
-  fileUrl        String?     // the PDF
-  publishedAt    DateTime?   // magazine issue date, or map's last update
-  downloadsCount Int         @default(0)
-  images        Json?     // [{ url, isCover }]  — same shape as RealEstateListing/CarListing
-  attributes    Json?     // category-specific fields: rating, priceRange, hours, cuisine, roomCount...
-  isActive      Boolean   @default(true)
-  isFeatured    Boolean   @default(false)
-  viewsCount    Int       @default(0)
-  createdBy     String?   // admin who added it — audit only, no ownership logic
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id             String    @id @default(uuid())
+  categoryId     String
+  name           String
+  slug           String?   @unique
+  description    String?
+  neighborhood   String?
+  city           String?
+  region         String?
+  location       String?
+  latitude       Decimal?
+  longitude      Decimal?
+  contactPhone   String?
+  contactEmail   String?
+  fileUrl        String? // the PDF
+  publishedAt    DateTime? // magazine issue date, or map's last update
+  downloadsCount Int       @default(0)
+  images         Json? // [{ url, isCover }]  — same shape as RealEstateListing/CarListing
+  attributes     Json? // category-specific fields: rating, priceRange, hours, cuisine, roomCount...
+  isActive       Boolean   @default(true)
+  isFeatured     Boolean   @default(false)
+  viewsCount     Int       @default(0)
+  createdBy      String? // admin who added it — audit only, no ownership logic
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  category      Category  @relation(fields: [categoryId], references: [id])
-  creator       User?     @relation(fields: [createdBy], references: [id])
+  category Category @relation(fields: [categoryId], references: [id])
+  creator  User?    @relation(fields: [createdBy], references: [id])
 
   @@index([categoryId])
   @@index([city])
   @@index([isActive])
   @@index([createdAt])
 }
+
+model HealthPlace {
+  id                  String            @id @default(uuid())
+  googlePlaceId       String?           @unique
+  source              HealthPlaceSource @default(MADINATI)
+  name                String
+  slug                String            @unique
+  categoryId          String?
+  subcategory         String
+  googleTypes         String[]          @default([])
+  description         String?
+  address             String?
+  neighborhood        String?
+  city                String?
+  region              String?
+  postalCode          String?
+  country             String            @default("MA")
+  latitude            Decimal?
+  longitude           Decimal?
+  phones              Json?
+  contactEmail        String?
+  website             String?
+  images              Json?
+  googleMapsUri       String?
+  businessStatus      String?
+  rating              Decimal?
+  userRatingCount     Int?
+  regularHours        Json?
+  currentHours        Json?
+  openNow             Boolean?
+  lastGoogleRefreshAt DateTime?
+  status              HealthPlaceStatus @default(PENDING)
+  isVerified          Boolean           @default(false)
+  ownerId             String?
+  reviewedAt          DateTime?
+  reviewedBy          String?
+  adminNotes          String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  category Category? @relation(fields: [categoryId], references: [id])
+  owner    User?     @relation(fields: [ownerId], references: [id])
+
+  @@index([googlePlaceId])
+  @@index([subcategory])
+  @@index([city])
+  @@index([neighborhood])
+  @@index([source])
+  @@index([status])
+  @@index([isVerified])
+  @@index([latitude, longitude])
+  @@index([createdAt])
+}
+
 // ============================================================
 // MINI-JOBS MODULE
 // ENUMS
-
 
 enum WorkerProfileStatus {
   PENDING
@@ -651,47 +722,47 @@ enum ReviewTargetType {
 }
 
 model WorkerProfile {
-  id              String              @id @default(uuid())
-  userId          String
-  user            User                @relation(fields: [userId], references: [id])
-  categoryId      String
-  category        Category            @relation(fields: [categoryId], references: [id])
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
 
-  headline        String
-  description     String
-  city            String
-  region          String?
-  latitude        Decimal?
-  longitude       Decimal?
-  serviceRadius   Int?                // km
+  headline      String
+  description   String
+  city          String
+  region        String?
+  latitude      Decimal?
+  longitude     Decimal?
+  serviceRadius Int? // km
 
-  pricingUnit     PricingUnit
-  rate            Decimal
-  isNegotiable    Boolean             @default(false)
+  pricingUnit  PricingUnit
+  rate         Decimal
+  isNegotiable Boolean     @default(false)
 
-  photo           String?             // Cloudinary URL
-  portfolioImages Json?               // [{url}]
+  photo           String? // Cloudinary URL
+  portfolioImages Json? // [{url}]
   yearsExperience Int?
-  availability    Json?               // {mon:[9,18], tue:[...], ...}
+  availability    Json? // {mon:[9,18], tue:[...], ...}
 
-  status          WorkerProfileStatus @default(PENDING)
-  isActive        Boolean             @default(true)
-  isFeatured      Boolean             @default(false)
-  viewsCount      Int                 @default(0)
-  ratingAvg       Decimal?            @default(0)
-  ratingCount     Int                 @default(0)
+  status      WorkerProfileStatus @default(PENDING)
+  isActive    Boolean             @default(true)
+  isFeatured  Boolean             @default(false)
+  viewsCount  Int                 @default(0)
+  ratingAvg   Decimal?            @default(0)
+  ratingCount Int                 @default(0)
 
-  adminNotes      String?
-  reviewedAt      DateTime?
-  reviewedBy      String?
-  publishedAt     DateTime?
-  deletedByOwner  Boolean             @default(false)
-  deletedAt       DateTime?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  adminNotes     String?
+  reviewedAt     DateTime?
+  reviewedBy     String?
+  publishedAt    DateTime?
+  deletedByOwner Boolean   @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  bookings        Booking[]
-  applications    TaskApplication[]
+  bookings     Booking[]
+  applications TaskApplication[]
 
   @@index([userId])
   @@index([categoryId])
@@ -704,36 +775,36 @@ model WorkerProfile {
 // MODEL: TaskRequest  (Model B — client posts a task)
 
 model TaskRequest {
-  id             String            @id @default(uuid())
-  userId         String            // the client posting the task
-  user           User              @relation("TaskRequestsAsClient", fields: [userId], references: [id])
-  categoryId     String
-  category       Category          @relation(fields: [categoryId], references: [id])
+  id         String   @id @default(uuid())
+  userId     String // the client posting the task
+  user       User     @relation("TaskRequestsAsClient", fields: [userId], references: [id])
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
 
-  title          String
-  description    String
-  city           String
-  region         String?
-  latitude       Decimal?
-  longitude      Decimal?
-  location       String?  
-  budget         Decimal?          // estimated/proposed rate, optional
-  neededDate     DateTime
+  title       String
+  description String
+  city        String
+  region      String?
+  latitude    Decimal?
+  longitude   Decimal?
+  location    String?
+  budget      Decimal? // estimated/proposed rate, optional
+  neededDate  DateTime
 
-  status         TaskRequestStatus @default(OPEN)
-  viewsCount     Int               @default(0)
+  status     TaskRequestStatus @default(OPEN)
+  viewsCount Int               @default(0)
 
   // reactive moderation only (no PENDING gate) — admin can still act after the fact
-  adminNotes     String?
-  reviewedAt     DateTime?
-  reviewedBy     String?
+  adminNotes String?
+  reviewedAt DateTime?
+  reviewedBy String?
 
-  deletedByOwner Boolean           @default(false)
+  deletedByOwner Boolean   @default(false)
   deletedAt      DateTime?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  applications   TaskApplication[]
+  applications TaskApplication[]
 
   @@index([userId])
   @@index([categoryId])
@@ -746,27 +817,26 @@ model TaskRequest {
 // MODEL: TaskApplication  (worker applies to a TaskRequest)
 
 model TaskApplication {
-  id              String                 @id @default(uuid())
+  id              String        @id @default(uuid())
   taskRequestId   String
-  taskRequest     TaskRequest            @relation(fields: [taskRequestId], references: [id])
+  taskRequest     TaskRequest   @relation(fields: [taskRequestId], references: [id])
   workerProfileId String
-  workerProfile   WorkerProfile          @relation(fields: [workerProfileId], references: [id])
+  workerProfile   WorkerProfile @relation(fields: [workerProfileId], references: [id])
 
-  message         String?
-  status          TaskApplicationStatus  @default(PENDING)
-  cancelReason    String?
+  message      String?
+  status       TaskApplicationStatus @default(PENDING)
+  cancelReason String?
 
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  review          Review?                
+  review Review?
 
   @@unique([taskRequestId, workerProfileId])
   @@index([taskRequestId])
   @@index([workerProfileId])
   @@index([status])
 }
-
 
 // MODEL: Booking  (Model A — direct booking request)
 
@@ -784,10 +854,10 @@ model Booking {
   workerNote      String?
   clientPhone     String?
 
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  review          Review?       
+  review Review?
 
   @@index([workerProfileId])
   @@index([clientId])
@@ -795,28 +865,26 @@ model Booking {
   @@index([createdAt])
 }
 
-
 // MODEL: Review  (universal — reused across future verticals too)
 
 model Review {
-  id                String            @id @default(uuid())
+  id                String           @id @default(uuid())
   targetType        ReviewTargetType
-  targetId          String            
+  targetId          String
   userId            String
-  user              User              @relation(fields: [userId], references: [id])
-  bookingId         String?           @unique
-  booking           Booking?          @relation(fields: [bookingId], references: [id])
-  taskApplicationId String?           @unique
-  taskApplication   TaskApplication?  @relation(fields: [taskApplicationId], references: [id])
+  user              User             @relation(fields: [userId], references: [id])
+  bookingId         String?          @unique
+  booking           Booking?         @relation(fields: [bookingId], references: [id])
+  taskApplicationId String?          @unique
+  taskApplication   TaskApplication? @relation(fields: [taskApplicationId], references: [id])
 
-  rating            Int               // 1-5
-  comment           String?
-  isVerified        Boolean           @default(false) // true when bookingId or taskApplicationId is set
+  rating     Int // 1-5
+  comment    String?
+  isVerified Boolean @default(false) // true when bookingId or taskApplicationId is set
 
-  createdAt         DateTime          @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([userId, targetId, targetType])
   @@index([targetType, targetId])
   @@index([userId])
 }
-

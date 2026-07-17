@@ -1,167 +1,93 @@
-# Madinatti
+# Madinatti / YourTown
 
-Plateforme locale multi-services type Madinatti.ma
-
-## Stack technique
-
-- Frontend : Next.js + Tailwind CSS
-- Backend : Node.js + Express
-- Base de données : PostgreSQL + Prisma v6
-- Auth : JWT
-
-## Prérequis
-
-- Node.js v22+
-- PostgreSQL v18 installé et en cours d'exécution
-- Git
+Plateforme locale multi-services avec frontend Next.js, backend Express, PostgreSQL et Prisma 6.
 
 ## Installation
 
-### 1 — Cloner le projet
-
-git clone LIEN_DU_REPO
-cd madinatti
-
-### 2 — Frontend
-
-cd frontend
+```bash
 npm install
+npm install --prefix frontend
+npm install --prefix backend
+```
+
+Copier les exemples d'environnement puis remplacer uniquement par vos propres valeurs locales:
+
+```bash
+copy .env.example .env.local
+copy backend\.env.example backend\.env
+copy frontend\.env.example frontend\.env.local
+```
+
+Ne commitez jamais de vrais secrets. Des secrets historiques ont ete exposes dans ce depot; ils doivent etre revoques dans Google Cloud, Cloudinary, l'email provider et tout service concerne.
+
+## Commandes
+
+```bash
 npm run dev
+npm run build --prefix frontend
+npm run lint --prefix frontend
+npm run seed --prefix backend
+npx.cmd prisma generate --schema backend/prisma/schema.prisma
+npx.cmd prisma migrate dev --schema backend/prisma/schema.prisma
+```
 
-Le frontend tourne sur http://localhost:3000
+Le frontend tourne sur `http://localhost:3000` et le backend sur `http://localhost:5000`.
 
-### 3 — Backend
+## Module Sante
 
+La route frontend `/sante` affiche les sept sous-categories:
+
+- `pharmacy`
+- `hospital-clinic`
+- `medical-laboratory`
+- `doctor-office`
+- `dentist`
+- `radiology-center`
+- `parapharmacy`
+
+Le backend expose:
+
+- `GET /api/health/subcategories`
+- `GET /api/health/places`
+- `GET /api/health/places/:id`
+- `POST /api/health/places`
+- `PUT /api/health/places/:id`
+- `POST /api/health/places/:id/claim`
+- `PATCH /api/health/places/:id/moderate`
+
+Les resultats combinent les fiches locales MADINATI approuvees et, si la cle serveur est configuree, Google Places API (New). Les donnees Google sont recuperees a la demande avec Field Masks minimaux, timeout, cache court, rayon limite et deduplication par `googlePlaceId`.
+
+## Google Cloud
+
+Activer la facturation Google Cloud et les APIs suivantes:
+
+- Maps JavaScript API pour la carte navigateur.
+- Places API (New) pour Nearby Search, Text Search et Place Details cote backend.
+
+Restrictions recommandees:
+
+- `GOOGLE_MAPS_SERVER_API_KEY`: restriction par adresse IP serveur, API restriction sur Places API (New), jamais exposee au frontend, jamais en `NEXT_PUBLIC_*`.
+- `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY`: restriction HTTP referrers sur localhost et domaines de production, API restriction sur Maps JavaScript API.
+- Configurer quotas, budgets et alertes de facturation.
+
+Nearby Search est limitee par rayon et ne fournit pas une liste exhaustive du Maroc. La recherche est dynamique autour du GPS, d'une ville ou du centre de la carte.
+
+## Prisma
+
+Appliquer les migrations en developpement:
+
+```bash
 cd backend
-npm install
-npm run dev
+npx.cmd prisma migrate dev
+npx.cmd prisma generate
+npm run seed
+```
 
-Le backend tourne sur http://localhost:5000
+En production, utiliser `prisma migrate deploy`.
 
-### 4 — Base de données
+## Securite
 
-Créer la base de données madinatti dans PostgreSQL :
-
-psql -U postgres -h localhost
-CREATE DATABASE madinatti;
-\q
-
-### 5 — Prisma
-
-Appliquer les migrations :
-npx prisma migrate deploy
-
-Générer le client :
-npx prisma generate
-
-Vérifier les tables :
-npx prisma studio
-
-excute the seeder:
-npx prisma db seed
-
-## Variables d'environnement
-
-### Backend — créer un fichier .env dans le dossier backend
-
-PORT=5000
-JWT_SECRET=ton_secret_ici
-DATABASE_URL=postgresql://postgres:ton_mot_de_passe@localhost:5432/madinatti
-
-### Frontend — créer un fichier .env.local dans le dossier frontend
-
-NEXT_PUBLIC_API_URL=http://localhost:5000
-
-## Dépendances Backend
-
-- express
-- cors
-- dotenv
-- bcryptjs
-- jsonwebtoken
-- prisma@6
-- @prisma/client@6
-- nodemon (dev)
-
-## Dépendances Frontend
-
-- next
-- react
-- tailwindcss
-- postcss
-- autoprefixer
-- axios
-
-## for mehdi
-git pull
-
-cd frontend
-rm -rf node_modules
-npm install
-
-cd ../backend
-rm -rf node_modules
-npm install
-npx prisma generate
-
-## pour tester reset-password ajouter en .env
-EMAIL_USER=mehdiultra20@gmail.com
-EMAIL_PASS=svev kvqu asig wlbw
-installer nodemailer :
-cd backend
-npm install nodemailer
-
-## pour google auth 
-executer les commandes :
-cd frontend 
-npm install @react-oauth/google
-cd ..
-cd backend
- npm install google-auth-library
- npx prisma migrate deploy
- npx prisma generate
-
- ajouter dans backend/.env :
- GOOGLE_CLIENT_ID=1002924147550-vn0hud4gv8r975gibga2crva2qvqms3i.apps.googleusercontent.com
-
- ajouter dans frontend/.env.local:
-
-NEXT_PUBLIC_API_URL=http://localhost:5000
-GOOGLE_CLIENT_ID=1002924147550-vn0hud4gv8r975gibga2crva2qvqms3i.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=REMOVED
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=mysecretkey123
-NEXT_PUBLIC_GOOGLE_CLIENT_ID=1002924147550-vn0hud4gv8r975gibga2crva2qvqms3i.apps.googleusercontent.com
-
-La table Role doit contenir au minimum :
-
-citizen
-business
-admin
-
-Sinon Google login ne pourra pas créer l'utilisateur.
-
-### to apply new seeder
-
-node prisma/seed.js
-
-Seed complet. Comptes de test :
-   admin@yourtown.ma     / admin123
-   immo.atlas@yourtown.ma / password123  (business)
-   dar.invest@yourtown.ma / password123  (business)
-   youssef@yourtown.ma   / password123  (citizen)
-   salma@yourtown.ma     / password123  (citizen)
-
-## cloudinary setup
-
-cd backend
-npm install cloudinary multer
-cd ..
-cd frontend
-npm install morocco-cities
-
-ajouter dans .env
-
-CLOUDINARY_CLOUD_NAME=driwajlgx
-CLOUDINARY_API_KEY=REMOVED
-CLOUDINARY_API_SECRET=REMOVED
+- Ne reutilisez aucun secret ancien du README historique.
+- Revoquez les anciennes cles exposees.
+- Ne journalisez pas les cles Google.
+- Ne placez jamais `GOOGLE_CLIENT_SECRET` ou une cle serveur dans une variable `NEXT_PUBLIC_*`.

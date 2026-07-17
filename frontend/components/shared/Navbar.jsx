@@ -18,6 +18,7 @@ import {
   Briefcase,
   Home,
   Car,
+  HeartPulse,
 } from "lucide-react";
 import GoogleAuth from "../../components/auth/GoogleAuth";
 import Logo from "./logos/Logo";
@@ -27,6 +28,7 @@ const MODULE_LINKS = [
   { label: "Emploi", href: "/jobs", icon: Briefcase },
   { label: "Immobilier", href: "/real-estate", icon: Home },
   { label: "Véhicule", href: "/cars", icon: Car },
+  { label: "Santé", href: "/sante", icon: HeartPulse },
 ];
 
 // ── ALL CATEGORIES (shown inside the "Catégories" left drawer) ───────────────
@@ -97,11 +99,13 @@ const NAV_SERVICES = [
     label: "Santé",
     href: "/sante",
     categories: [
-      "Cliniques",
-      "Médecine",
+      "Hôpitaux et cliniques",
+      "Laboratoires d'analyses",
       "Pharmacies",
-      "Pharmacie de garde",
-      "Para",
+      "Médecins et cabinets",
+      "Dentistes",
+      "Radiologie",
+      "Parapharmacies",
     ],
   },
   {

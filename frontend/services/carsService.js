@@ -20,6 +20,12 @@ export const carsService = {
     return res.json();
   },
 
+  getCatalog: async () => {
+    const res = await fetch(`${API_URL}/cars/catalog`);
+    if (!res.ok) throw new Error("Erreur lors de la récupération des marques et modèles");
+    return res.json();
+  },
+
   getListingById: async (id) => {
     const res = await fetch(`${API_URL}/cars/${id}`);
     if (!res.ok) throw new Error("Annonce introuvable");
