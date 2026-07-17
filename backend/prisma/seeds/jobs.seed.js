@@ -13,9 +13,11 @@ const COORDS = {
 }
 
 async function seedJobs(prisma, { business }, {
-  catInfo, catMarketing, catFinance, catRH,
-  catBTP, catVente, catSante, catLogistique,
-  catJuridique, catEnseignement
+  catInfo, catIndustrie, catBTP, catEnergie,
+  catMarketing, catFinance, catRH,
+  catVente, catRelationClient, catTourismeHotellerie,
+  catSante, catLogistique, catJuridique, catEnseignement,
+  catTextileCuir, catAgriculture
 }) {
 
   // ── USERS BUSINESS ────────────────────────────────────────
@@ -549,9 +551,9 @@ Profil :
     },
 
     // ── 18
-    {
+{
       title: 'Ingénieur Énergie Renouvelable',
-      user: e10, category: catBTP,
+      user: e10, category: catEnergie,
       location: 'Ouarzazate', region: 'Drâa-Tafilalet',
       latitude: COORDS.Ouarzazate.lat, longitude: COORDS.Ouarzazate.lng,
       contractType: 'CDI', remote: 'ON_SITE',
@@ -576,9 +578,9 @@ Profil :
     },
 
     // ── 19
-    {
+{
       title: 'Électricien Industriel',
-      user: e5, category: catBTP,
+      user: e5, category: catIndustrie,
       location: 'Tanger', region: 'Tanger-Tétouan-Al Hoceïma',
       latitude: COORDS.Tanger.lat, longitude: COORDS.Tanger.lng,
       contractType: 'CDI', remote: 'ON_SITE',
@@ -656,9 +658,9 @@ Profil :
     },
 
     // ── 22
-    {
+{
       title: 'Conseiller Clientèle Bancaire',
-      user: e9, category: catVente,
+      user: e9, category: catRelationClient,
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'CDI', remote: 'ON_SITE',
@@ -683,9 +685,9 @@ Profil :
     },
 
     // ── 23
-    {
+{
       title: 'Commercial Anapec — Chargé de Clientèle',
-      user: e3, category: catVente,
+      user: e3, category: catRelationClient,
       location: 'Casablanca', region: 'Casablanca-Settat',
       latitude: COORDS.Casablanca.lat, longitude: COORDS.Casablanca.lng,
       contractType: 'ANAPEC', remote: 'ON_SITE',
@@ -868,7 +870,7 @@ Profil :
 - Pédagogie et patience`,
     },
 
-    // ── 30
+   // ── 30
     {
       title: 'Responsable Compliance & AML',
       user: e4, category: catJuridique,
@@ -893,6 +895,88 @@ Missions :
 Profil :
 - Expert compliance bancaire
 - Certifié CAMS apprécié`,
+    },
+
+    // ── 31 · TOURISME & HÔTELLERIE ─────────────────────────
+    {
+      title: 'Réceptionniste Hôtel 5 Étoiles',
+      user: e6, category: catTourismeHotellerie,
+      location: 'Marrakech', region: 'Marrakech-Safi',
+      latitude: COORDS.Marrakech.lat, longitude: COORDS.Marrakech.lng,
+      contractType: 'CDI', remote: 'ON_SITE',
+      educationLevel: ['BAC_PLUS_2'], experienceLevel: 'JUNIOR_LESS_2',
+      salaryMin: 4500, salaryMax: 6500, isFeatured: false,
+      languages: [
+        { language: 'arabe',    level: 'maternelle'    },
+        { language: 'français', level: 'courant'       },
+        { language: 'anglais',  level: 'bon niveau'    },
+        { language: 'espagnol', level: 'intermédiaire' },
+      ],
+      skills: ['Accueil', 'Opera PMS', 'Relation client', 'Réservations'],
+      description: `Réceptionniste pour hôtel 5 étoiles au cœur de Marrakech.
+
+Missions :
+- Accueil et check-in/check-out des clients
+- Gestion des réservations sur Opera PMS
+- Répondre aux demandes de la clientèle internationale
+
+Profil :
+- Formation hôtellerie Bac+2
+- Excellente présentation et sens du service`,
+    },
+
+    // ── 32 · TEXTILE & CUIR ─────────────────────────────────
+    {
+      title: 'Responsable Production Textile',
+      user: e5, category: catTextileCuir,
+      location: 'Tanger', region: 'Tanger-Tétouan-Al Hoceïma',
+      latitude: COORDS.Tanger.lat, longitude: COORDS.Tanger.lng,
+      contractType: 'CDI', remote: 'ON_SITE',
+      educationLevel: ['BAC_PLUS_3'], experienceLevel: 'MID_2_TO_5',
+      salaryMin: 8000, salaryMax: 12000, isFeatured: false,
+      languages: [
+        { language: 'arabe',    level: 'maternelle'    },
+        { language: 'français', level: 'courant'       },
+        { language: 'anglais',  level: 'intermédiaire' },
+      ],
+      skills: ['Production textile', 'Lean Manufacturing', 'Contrôle qualité', 'Gestion d\'équipe'],
+      description: `Responsable de production pour unité de confection export.
+
+Missions :
+- Superviser les lignes de production
+- Garantir les délais et la qualité
+- Manager une équipe de 30 opérateurs
+
+Profil :
+- Bac+3 Génie textile ou équivalent
+- Expérience en confection/export souhaitée`,
+    },
+
+    // ── 33 · AGRICULTURE & AGROALIMENTAIRE ──────────────────
+    {
+      title: 'Ingénieur Agronome',
+      user: e10, category: catAgriculture,
+      location: 'Marrakech', region: 'Marrakech-Safi',
+      latitude: COORDS.Marrakech.lat, longitude: COORDS.Marrakech.lng,
+      contractType: 'CDI', remote: 'ON_SITE',
+      educationLevel: ['BAC_PLUS_5_PLUS'], experienceLevel: 'MID_2_TO_5',
+      salaryMin: 9000, salaryMax: 13000, isFeatured: false,
+      languages: [
+        { language: 'arabe',    level: 'maternelle'    },
+        { language: 'français', level: 'courant'       },
+        { language: 'anglais',  level: 'intermédiaire' },
+      ],
+      skills: ['Agronomie', 'Irrigation', 'Gestion des cultures', 'Certification bio'],
+      description: `Ingénieur agronome pour exploitation agricole d'export.
+
+Missions :
+- Optimiser les rendements des cultures
+- Superviser les systèmes d'irrigation
+- Assurer le suivi des certifications qualité
+
+Profil :
+- Diplôme d'ingénieur agronome
+- Connaissance des cultures d'export (agrumes, maraîchage)`,
     },
   ]
 

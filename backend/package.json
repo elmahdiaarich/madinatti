@@ -26,9 +26,11 @@
     "jsonwebtoken": "^9.0.3",
     "morocco-cities": "^1.0.3",
     "multer": "^2.1.1",
+    "node-cron": "^4.6.0",
     "nodemailer": "^8.0.8",
     "pg": "^8.21.0",
-    "prisma": "^6.19.3"
+    "prisma": "^6.19.3",
+    "rss-parser": "^3.13.0"
   },
   "prisma": {
     "seed": "node prisma/seeds/index.js"

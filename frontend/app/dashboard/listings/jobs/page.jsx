@@ -9,7 +9,9 @@ import { jobsService } from "@/services/jobsService";
 import JobListingFilters from "@/components/jobs/JobListingFilters";
 import ApplicationsDrawer from "@/components/jobs/ApplicationsDrawer";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
+import ConfirmModal from "@/components/shared/ConfirmModal";
 import { useToast } from "@/context/ToastContext";
+import { loadJobDraft, clearJobDraft, formatRelativeTime } from "@/lib/jobDraft";
 
 const fmtDate = (d) =>
   d
@@ -158,7 +160,7 @@ function JobCard({ job, onDelete, onViewApplications }) {
                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
                 <circle cx="12" cy="9" r="2.5" />
               </svg>
-              {job.location || "—"}
+               {job.city || "—"}
               <span className="opacity-30">·</span>
               {job.category?.name || "—"}
               {job.contractType && (
@@ -275,7 +277,7 @@ export default function BusinessJobsDashboard() {
 }
 
 function DashboardContent() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -284,8 +286,10 @@ function DashboardContent() {
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({});
-  const [page, setPage] = useState(1);
-  const [selectedJob, setSelectedJob] = useState(null);
+const [page, setPage] = useState(1);
+const [selectedJob, setSelectedJob] = useState(null);
+  const [jobToDelete, setJobToDelete] = useState(null);
+  const [draft, setDraft] = useState(null);
 
   useEffect(() => {
     if (searchParams.get("created") === "1") {
@@ -298,8 +302,11 @@ function DashboardContent() {
     }
   }, []);
 
-  useEffect(() => { loadAll(); }, []);
+ useEffect(() => { loadAll(); }, []);
   useEffect(() => { load(); }, [page, filters]);
+  useEffect(() => {
+    if (user?.id) setDraft(loadJobDraft(user.id));
+  }, [user?.id]);
 
   const loadAll = async () => {
     try {
@@ -331,8 +338,13 @@ function DashboardContent() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Supprimer cette offre d'emploi ?")) return;
+  const handleDelete = (id) => {
+    setJobToDelete(id);
+  };
+
+  const confirmDelete = async () => {
+    const id = jobToDelete;
+    setJobToDelete(null);
     try {
       await jobsService.deleteMyJob(id, token);
       setJobs((prev) => prev.filter((j) => j.id !== id));
@@ -352,8 +364,32 @@ function DashboardContent() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-5">
 
-        {/* Stats bar */}
+       {/* Stats bar */}
         {allJobs.length > 0 && <StatsBar jobs={allJobs} />}
+
+        {/* Brouillon en cours */}
+        {draft && (
+          <div className="flex items-center justify-between gap-3 bg-[#E8F5D0] border border-[#A7D129]/50 rounded-2xl px-4 py-3 text-sm">
+            <span className="text-[#2D5016]">
+              📝 Vous avez une offre en cours de rédaction — dernière modification {formatRelativeTime(draft.savedAt)}
+            </span>
+            <div className="flex items-center gap-2 shrink-0">
+              <Link
+                href="/dashboard/listings/jobs/create"
+                className="px-3 py-1.5 rounded-xl bg-[#2D5016] text-white text-xs font-bold hover:bg-[#A7D129] hover:text-[#2D5016] transition"
+              >
+                Continuer
+              </Link>
+              <button
+                type="button"
+                onClick={() => { clearJobDraft(user?.id); setDraft(null); }}
+                className="px-3 py-1.5 rounded-xl border border-gray-200 text-gray-500 text-xs font-semibold hover:border-red-200 hover:text-red-500 transition"
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Filters + Publish button */}
         <div className="flex items-center gap-3">
@@ -420,7 +456,7 @@ function DashboardContent() {
         )}
       </div>
 
-      {selectedJob && (
+{selectedJob && (
         <ApplicationsDrawer
           jobId={selectedJob.id}
           jobTitle={selectedJob.title}
@@ -428,6 +464,16 @@ function DashboardContent() {
           token={token}
         />
       )}
+
+      <ConfirmModal
+        open={!!jobToDelete}
+        title="Supprimer cette offre ?"
+        message="Cette action est définitive et supprimera aussi toutes les candidatures reçues."
+        confirmLabel="Supprimer"
+        danger
+        onConfirm={confirmDelete}
+        onCancel={() => setJobToDelete(null)}
+      />
     </div>
   );
 }

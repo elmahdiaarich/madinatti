@@ -1,7 +1,10 @@
 'use client';
-
 import { useState } from 'react';
-
+const CONTRACT_LABELS = {
+  CDI: 'CDI', CDD: 'CDD', STAGE: 'Stage', FREELANCE: 'Freelance',
+  INTERIM: 'Intérim', ALTERNANCE: 'Alternance', ANAPEC: 'Anapec',
+  TEMPS_PARTIEL: 'Temps partiel', STATUTAIRE: 'Statutaire',
+};
 const STATUS_OPTIONS = [
   { label: 'Tous les statuts', value: '' },
   { label: 'En attente', value: 'PENDING' },
@@ -67,8 +70,8 @@ export default function JobListingFilters({ onChange, showStatus = true, jobs = 
             className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
           >
             <option value="">Tous les contrats</option>
-            {contractTypes.map(t => (
-              <option key={t} value={t}>{t}</option>
+           {contractTypes.map(t => (
+              <option key={t} value={t}>{CONTRACT_LABELS[t] ?? t}</option>
             ))}
           </select>
         )}

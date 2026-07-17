@@ -17,7 +17,7 @@ export default function Footer() {
           <div className="flex flex-col gap-2">
             <a href="/jobs" className="text-sm text-gray-300 hover:text-white">Emplois</a>
             <a href="/vehicules" className="text-sm text-gray-300 hover:text-white">Véhicules</a>
-            <a href="/actualites" className="text-sm text-gray-300 hover:text-white">Actualités</a>
+            <a href="/press" className="text-sm text-gray-300 hover:text-white">Actualités</a>
             <a href="/evenements" className="text-sm text-gray-300 hover:text-white">Événements</a>
           </div>
         </div>

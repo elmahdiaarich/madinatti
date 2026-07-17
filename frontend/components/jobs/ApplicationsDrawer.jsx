@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { X, Download, ChevronDown, ChevronUp, Users } from 'lucide-react'
 import { jobsService } from '@/services/jobsService'
+import { useToast } from '@/context/ToastContext'
 
 function StatusBadge({ status }) {
   const config = {
@@ -107,6 +108,7 @@ function ApplicantCard({ application, onRetain, isRetaining }) {
 }
 
 export default function ApplicationsDrawer({ jobId, jobTitle, onClose, token }) {
+  const { toast } = useToast()
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -142,7 +144,7 @@ export default function ApplicationsDrawer({ jobId, jobTitle, onClose, token }) 
         prev.map(a => a.id === appId ? { ...a, status: 'accepted' } : a)
       )
     } catch (e) {
-      alert('Erreur : ' + e.message)
+      toast.error(e.message || 'Erreur lors de la mise à jour du candidat')
     } finally {
       setRetaining(null)
     }

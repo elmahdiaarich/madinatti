@@ -116,7 +116,7 @@ const NAV_SERVICES = [
   },
   {
     label: "Actualités",
-    href: "/presse",
+    href: "/press",
     categories: ["Journaux", "Presse locale", "Télé locale", "Radio locale"],
   },
   {

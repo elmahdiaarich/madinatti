@@ -142,7 +142,7 @@ function EditJobForm() {
           title:               d.title || "",
           categoryId:          d.categoryId || "",
           categorySlug:        d.category?.slug || "",
-          location:            d.location || "",
+          city:                d.city || "",
           region:              d.region || "",
           remote:              d.remote || "ON_SITE",
           contractType:        d.contractType || "",
@@ -177,9 +177,10 @@ function EditJobForm() {
     );
   };
 
-  const addSkill = () => {
+   const addSkill = () => {
     const s = skillInput.trim();
-    if (s && !form.skills.includes(s) && form.skills.length < 10) {
+    const exists = form.skills.some((sk) => sk.toLowerCase() === s.toLowerCase());
+    if (s && !exists && form.skills.length < 10) {
       set("skills", [...form.skills, s]);
       setSkillInput("");
     }
@@ -201,14 +202,17 @@ function EditJobForm() {
     if (!form.title.trim()) { setError("Le titre est requis."); return; }
     if (!form.contractType) { setError("Le type de contrat est requis."); return; }
     if (!form.description.trim()) { setError("La description est requise."); return; }
+    if (form.salaryMin && form.salaryMax && Number(form.salaryMin) > Number(form.salaryMax)) {
+      setError("Le salaire minimum ne peut pas être supérieur au salaire maximum.");
+      return;
+    }
 
     setSubmitting(true);
     setError(null);
     try {
       const payload = {
         title:               form.title,
-        city: form.city,
-        location: form.location || '',
+        city:                form.city,
         region:              form.region,
         remote:              form.remote,
         contractType:        form.contractType,
@@ -306,7 +310,7 @@ function EditJobForm() {
                 value={form.region}
                 onChange={(e) => {
                   set("region", e.target.value);
-                  set("location", ""); // reset city when region changes
++                 set("city", ""); // reset city when region changes
                 }}
                 className={selectCls}
               >
@@ -317,9 +321,9 @@ function EditJobForm() {
               </select>
             </Field>
             <Field label="Ville *">
-              <select
-                value={form.location}
-                onChange={(e) => set("location", e.target.value)}
+                    <select
+               value={form.city}
+               onChange={(e) => set("city", e.target.value)}
                 disabled={!form.region}
                 className={selectCls}
               >
@@ -384,6 +388,7 @@ function EditJobForm() {
             <Field label="Salaire min (MAD/mois)">
               <input
                 type="number"
+                min="0"
                 value={form.salaryMin}
                 onChange={(e) => set("salaryMin", e.target.value)}
                 placeholder="Ex: 8000"
@@ -393,6 +398,7 @@ function EditJobForm() {
             <Field label="Salaire max (MAD/mois)">
               <input
                 type="number"
+                min="0"
                 value={form.salaryMax}
                 onChange={(e) => set("salaryMax", e.target.value)}
                 placeholder="Ex: 12000"

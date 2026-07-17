@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { jobsService } from '@/services/jobsService';
@@ -8,6 +8,7 @@ import ProtectedRoute from '@/components/shared/ProtectedRoute';
 import { cities } from 'morocco-cities';
 import PricingModal from '@/components/shared/PricingModal';
 import { useToast } from '@/context/ToastContext';
+import { saveJobDraft, loadJobDraft, clearJobDraft, hasMeaningfulContent, formatRelativeTime } from '@/lib/jobDraft';
 
 const CONTRACT_TYPES = [
   { value: 'CDI',           label: 'CDI',           desc: 'Contrat à durée indéterminée' },
@@ -204,14 +205,9 @@ function PublierJobContent() {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [categories, setCategories] = useState([]);
-
-  useEffect(() => {
-    jobsService.getCategories()
-      .then((res) => {
-        setCategories(res.data.map((c) => ({ label: c.name, slug: c.slug })));
-      })
-      .catch((err) => console.error('Erreur chargement catégories:', err));
-  }, []);
+  const [draftBanner, setDraftBanner] = useState(null); // { savedAt } quand un brouillon vient d'être restauré
+  const draftCheckedRef = useRef(false);
+  const saveTimeoutRef = useRef(null);
 
   const [form, setForm] = useState({
     title: '',
@@ -237,6 +233,39 @@ function PublierJobContent() {
     whyJoin: [''],
   });
 
+  useEffect(() => {
+    jobsService.getCategories()
+      .then((res) => {
+        setCategories(res.data.map((c) => ({ label: c.name, slug: c.slug })));
+      })
+      .catch((err) => console.error('Erreur chargement catégories:', err));
+  }, []);
+
+  // ── Restaurer un brouillon existant (une seule fois, dès que l'utilisateur est connu) ──
+  useEffect(() => {
+    if (draftCheckedRef.current || !user?.id) return;
+    draftCheckedRef.current = true;
+    const draft = loadJobDraft(user.id);
+    if (draft) {
+      setForm((prev) => ({ ...prev, ...draft.form }));
+      setStep(draft.step || 1);
+      setDraftBanner({ savedAt: draft.savedAt });
+    }
+  }, [user?.id]);
+
+  // ── Sauvegarde automatique (debounced) tant qu'il y a du contenu et hors écran de succès ──
+  useEffect(() => {
+    if (!draftCheckedRef.current || !user?.id) return; // attendre la tentative de restauration d'abord
+    if (step === 6) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      if (hasMeaningfulContent(form)) {
+        saveJobDraft(user.id, form, step);
+      }
+    }, 1000);
+    return () => clearTimeout(saveTimeoutRef.current);
+  }, [form, step, user?.id]);
+
   const set = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setErrors((prev) => ({ ...prev, [key]: '' }));
@@ -251,7 +280,7 @@ function PublierJobContent() {
     );
   };
 
-  const validate = () => {
+const validate = () => {
     const e = {};
     if (step === 1) {
       if (!form.title.trim()) e.title = 'Le titre est requis';
@@ -261,6 +290,9 @@ function PublierJobContent() {
     }
     if (step === 2) {
       if (!form.contractType) e.contractType = 'Choisissez un type de contrat';
+      if (form.salaryMin && form.salaryMax && Number(form.salaryMin) > Number(form.salaryMax)) {
+        e.salaryMax = 'Le salaire max doit être supérieur au salaire min';
+      }
     }
     if (step === 4) {
       if (form.descMode === 'paste') {
@@ -287,7 +319,8 @@ function PublierJobContent() {
 
   const addSkill = () => {
     const s = form.skillInput.trim();
-    if (s && !form.skills.includes(s) && form.skills.length < 10) {
+    const exists = form.skills.some((sk) => sk.toLowerCase() === s.toLowerCase());
+    if (s && !exists && form.skills.length < 10) {
       set('skills', [...form.skills, s]);
       set('skillInput', '');
     }
@@ -355,6 +388,7 @@ function PublierJobContent() {
         description:         form.descMode === 'paste' ? form.description : buildDescription(),
         plan:                planId,
       }, token);
+     clearJobDraft(user?.id);
       toast.success("Offre soumise avec succès ! Elle sera visible après validation.", {
         title: "Annonce envoyée ✦",
         duration: 6000,
@@ -415,8 +449,38 @@ function PublierJobContent() {
               </p>
             </div>
           )}
-        </div>
+       </div>
       </div>
+
+      {/* Bandeau brouillon restauré */}
+      {draftBanner && step !== 6 && (
+        <div className="max-w-3xl mx-auto px-4 pt-4">
+          <div className="flex items-center justify-between gap-3 bg-[#E8F5D0] border border-[#A7D129]/50 rounded-xl px-4 py-2.5 text-sm">
+            <span className="text-[#2D5016]">
+              📝 Brouillon restauré (dernière modification {formatRelativeTime(draftBanner.savedAt)})
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                clearJobDraft(user?.id);
+                setDraftBanner(null);
+                setStep(1);
+                setForm({
+                  title: '', categorySlug: '', city: '', location: '', region: '',
+                  remote: 'ON_SITE', contractType: '', salaryMin: '', salaryMax: '',
+                  applicationDeadline: '', educationLevel: [], experienceLevel: '',
+                  skills: [], skillInput: '', languages: [],
+                  descMode: 'paste', description: '',
+                  missions: [''], profil: [''], avantages: [''], whyJoin: [''],
+                });
+              }}
+              className="shrink-0 text-xs font-semibold text-[#2D5016]/70 hover:text-red-600 underline transition"
+            >
+              Repartir de zéro
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="max-w-3xl mx-auto px-4 py-8">
@@ -551,15 +615,16 @@ function PublierJobContent() {
               <div>
                 <FieldLabel>Fourchette salariale <span className="text-gray-400 font-normal">(optionnel)</span></FieldLabel>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Input type="number" value={form.salaryMin} onChange={(e) => set('salaryMin', e.target.value)} placeholder="Min (ex: 8000)" />
+                 <div>
+                    <Input type="number" min="0" value={form.salaryMin} onChange={(e) => set('salaryMin', e.target.value)} placeholder="Min (ex: 8000)" />
                     <p className="text-xs text-gray-400 mt-1">MAD / mois</p>
                   </div>
                   <div>
-                    <Input type="number" value={form.salaryMax} onChange={(e) => set('salaryMax', e.target.value)} placeholder="Max (ex: 12000)" />
+                    <Input type="number" min="0" value={form.salaryMax} onChange={(e) => set('salaryMax', e.target.value)} placeholder="Max (ex: 12000)" />
                     <p className="text-xs text-gray-400 mt-1">MAD / mois</p>
                   </div>
                 </div>
+                <ErrorMsg msg={errors.salaryMax} />
                 <div className="mt-2 px-3 py-2 bg-[#E8F5D0] rounded-lg text-xs text-[#2D5016] font-medium">
                   💡 Les offres avec salaire affiché reçoivent 3× plus de candidatures
                 </div>
@@ -860,8 +925,8 @@ function PublierJobContent() {
                             {CONTRACT_TYPES.find((c) => c.value === form.contractType)?.label}
                           </span>
                         )}
-                        {form.location && (
-                          <span className="px-2 py-0.5 bg-white/20 rounded-full text-xs">📍 {form.location}</span>
+                        {form.city && (
+                          <span className="px-2 py-0.5 bg-white/20 rounded-full text-xs">📍 {form.city}</span>
                         )}
                         {form.remote && (
                           <span className="px-2 py-0.5 bg-white/20 rounded-full text-xs">
@@ -977,6 +1042,7 @@ function PublierJobContent() {
               </button>
               <button
                 onClick={() => {
+                  clearJobDraft(user?.id);
                   setStep(1);
                   setForm({
                     title: '', categorySlug: '', city: '', location: '', region: '',

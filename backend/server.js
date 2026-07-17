@@ -12,6 +12,8 @@ const carsRouter = require('./routes/cars');
 const tourismRoutes = require('./routes/tourism');
 
 const googleAuthRoutes = require("./routes/googleAuth")
+const pressRoutes = require('./routes/press');
+const { startPressScheduler } = require('./scheduled/scheduler');
 
 
 app.use('/api/auth', authRoutes)
@@ -58,8 +60,10 @@ app.use('/api/task-applications', require('./routes/taskApplications'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/business/stats', require('./routes/stats'));
-
+app.use('/api/press', pressRoutes);
 app.use('/api/uploads', require('./routes/uploadRoutes'));
+
+startPressScheduler();
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)

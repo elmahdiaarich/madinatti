@@ -20,17 +20,23 @@ async function main() {
   await seedPlans(prisma);
   const categories = await seedCategories(prisma);
 
-  const jobCategories = {
-    catInfo:         categories.emploi['informatique'],
-    catMarketing:    categories.emploi['marketing'],
-    catFinance:      categories.emploi['finance'],
-    catRH:           categories.emploi['rh'],
-    catBTP:          categories.emploi['btp'],
-    catVente:        categories.emploi['vente'],
-    catSante:        categories.emploi['sante'],
-    catLogistique:   categories.emploi['logistique'],
-    catJuridique:    categories.emploi['juridique'],
-    catEnseignement: categories.emploi['enseignement'],
+const jobCategories = {
+    catInfo:              categories.emploi['informatique'],
+    catIndustrie:         categories.emploi['industrie'],
+    catBTP:                categories.emploi['btp'],
+    catEnergie:            categories.emploi['energie'],
+    catMarketing:          categories.emploi['marketing'],
+    catFinance:            categories.emploi['finance'],
+    catRH:                 categories.emploi['rh'],
+    catVente:              categories.emploi['vente'],
+    catRelationClient:     categories.emploi['relation-client'],
+    catTourismeHotellerie: categories.emploi['tourisme-hotellerie'],
+    catSante:              categories.emploi['sante'],
+    catLogistique:         categories.emploi['logistique'],
+    catJuridique:          categories.emploi['juridique'],
+    catEnseignement:       categories.emploi['enseignement'],
+    catTextileCuir:        categories.emploi['textile-cuir'],
+    catAgriculture:        categories.emploi['agriculture'],
   };
 
   // Run existing module seeders

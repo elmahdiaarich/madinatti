@@ -114,7 +114,7 @@ export const SERVICES = [
     icon: Newspaper,
     label: "Actualités",
     description: "Presse, TV, radio & vidéo",
-    href: "/presse",
+    href: "/press",
     color: "bg-indigo-50 text-indigo-600",
     categories: ["Journaux", "Presse locale", "Télé locale", "Radio locale"],
   },
