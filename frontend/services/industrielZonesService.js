@@ -1,3 +1,4 @@
+// frontend/services/industrielZonesService.js
 import axios from "axios";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
@@ -28,6 +29,16 @@ export const industrielZonesService = {
   },
   delete: async (id) => {
     const response = await axios.delete(`${API_URL}/${id}`, getAuthHeaders());
+    return response.data;
+  },
+  
+  // ADD THESE TWO FUNCTIONS:
+  getFavorites: async (token) => {
+    const response = await axios.get(`${API_URL}/favorites/me`, getAuthHeaders());
+    return response.data;
+  },
+  toggleFavorite: async (id, token) => {
+    const response = await axios.post(`${API_URL}/favorites/${id}/toggle`, {}, getAuthHeaders());
     return response.data;
   },
 };

@@ -307,6 +307,82 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+            {/* FAQ & CONTACT */}
+      <section className="bg-gray-50 border-t border-gray-100 py-20 px-6">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
+          {/* FAQ */}
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Aide & FAQ</h2>
+            <div className="space-y-4">
+              <details className="group rounded-2xl bg-white border border-gray-100 p-4 [&_summary::-webkit-details-marker]:hidden">
+                <summary className="flex items-center justify-between cursor-pointer focus:outline-none">
+                  <h3 className="font-semibold text-sm text-gray-800">Comment publier une annonce sur Madinatti ?</h3>
+                  <span className="ml-1.5 flex-shrink-0 rounded-full bg-gray-50 p-1 text-gray-400 group-open:rotate-180 transition">
+                    <ChevronDown size={14} />
+                  </span>
+                </summary>
+                <p className="mt-3 text-xs leading-relaxed text-gray-500">
+                  Pour publier une annonce, vous devez créer un compte professionnel. Une fois connecté, cliquez sur "Publier une annonce" dans la barre de navigation et remplissez les détails de votre offre.
+                </p>
+              </details>
+
+              <details className="group rounded-2xl bg-white border border-gray-100 p-4 [&_summary::-webkit-details-marker]:hidden">
+                <summary className="flex items-center justify-between cursor-pointer focus:outline-none">
+                  <h3 className="font-semibold text-sm text-gray-800">Quels sont les frais de publication ?</h3>
+                  <span className="ml-1.5 flex-shrink-0 rounded-full bg-gray-50 p-1 text-gray-400 group-open:rotate-180 transition">
+                    <ChevronDown size={14} />
+                  </span>
+                </summary>
+                <p className="mt-3 text-xs leading-relaxed text-gray-500">
+                  La publication d'annonces de base est entièrement gratuite. Des options de mise en avant payantes sont disponibles pour augmenter la visibilité de vos offres.
+                </p>
+              </details>
+
+              <details className="group rounded-2xl bg-white border border-gray-100 p-4 [&_summary::-webkit-details-marker]:hidden">
+                <summary className="flex items-center justify-between cursor-pointer focus:outline-none">
+                  <h3 className="font-semibold text-sm text-gray-800">Comment contacter un annonceur ?</h3>
+                  <span className="ml-1.5 flex-shrink-0 rounded-full bg-gray-50 p-1 text-gray-400 group-open:rotate-180 transition">
+                    <ChevronDown size={14} />
+                  </span>
+                </summary>
+                <p className="mt-3 text-xs leading-relaxed text-gray-500">
+                  Vous pouvez contacter directement l'annonceur par téléphone ou par email en utilisant les boutons de contact disponibles sur la page de détails de chaque annonce.
+                </p>
+              </details>
+            </div>
+          </div>
+
+          {/* CONTACT */}
+          <div className="flex flex-col justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Nous contacter</h2>
+              <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+                Une question, une suggestion ou besoin d'assistance ? Notre équipe est à votre écoute pour vous aider à tout moment. Remplissez le formulaire de contact ou utilisez nos coordonnées directes.
+              </p>
+              <div className="space-y-3 text-sm text-gray-600">
+                <p className="flex items-center gap-2">
+                  <span className="font-semibold text-[#2D5016]">Téléphone:</span> +212 5 37 37 12 34
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="font-semibold text-[#2D5016]">Email:</span> contact@madinatti.ma
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="font-semibold text-[#2D5016]">Adresse:</span> CCIS, Avenue Mohammed Diouri, Kénitra
+                </p>
+              </div>
+            </div>
+            
+            <form onSubmit={(e) => e.preventDefault()} className="mt-8 space-y-3 bg-white p-6 rounded-3xl border border-gray-100 shadow-xs">
+              <input type="text" placeholder="Votre nom" className="w-full text-xs rounded-xl border border-gray-100 px-3 py-2 outline-none focus:border-[#2D5016] bg-gray-50" />
+              <input type="email" placeholder="Votre email" className="w-full text-xs rounded-xl border border-gray-100 px-3 py-2 outline-none focus:border-[#2D5016] bg-gray-50" />
+              <textarea placeholder="Votre message" rows={3} className="w-full text-xs rounded-xl border border-gray-100 px-3 py-2 outline-none focus:border-[#2D5016] bg-gray-50 resize-none" />
+              <button className="w-full py-2 bg-[#2D5016] text-white text-xs font-bold rounded-xl hover:bg-[#1e3a0f] transition shadow-sm">
+                Envoyer le message
+              </button>
+            </form>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }

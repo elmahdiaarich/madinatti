@@ -355,6 +355,7 @@ enum ReportTarget {
   TASK_REQUEST  
   REVIEW 
   WORKER_PROFILE
+  PROFESSIONAL_SPACE
 }
 
 enum ReportReason {

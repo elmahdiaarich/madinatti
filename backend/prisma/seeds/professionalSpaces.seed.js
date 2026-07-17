@@ -1,258 +1,124 @@
-const GENERIC_IMAGE = {
-  url: 'https://images.unsplash.com/photo-1565043666747-69f6646db940?w=1200&q=80',
-  isCover: true,
-};
-
+// backend/prisma/seeds/professionalSpaces.seed.js
 const seedProfessionalSpaceListings = async (prisma, roles, categories) => {
-  console.log('🌱 Seeding professional space listings...');
+  console.log('🌱 Seeding professional space listings with coordinates...');
 
   const catZoneIndustrielle = categories['espaces-pro']['zone-industrielle'];
   const catFreeZone         = categories['espaces-pro']['free-zone'];
   const catChambreCommerce  = categories['espaces-pro']['chambre-commerce'];
 
   const listings = [
-    // ── Zone Industrielle (7) ───────────────────────────────────────────
+    // ── Zone Industrielle (Kenitra, Rabat, Sale) ────────────────────────
     {
       categoryId: catZoneIndustrielle.id,
       name: 'Zone Industrielle Kénitra (Bir Rami)',
-      description: "Zone industrielle historique de Kénitra, accueillant des unités de production diversifiées.",
+      description: "Zone industrielle historique de Kénitra, accueillant des unités de production diversifiées et de nombreux équipementiers.",
       city: 'Kénitra',
       neighborhood: 'Bir Rami',
       region: 'Rabat-Salé-Kénitra',
       contactPhone: '+212 5 37 37 00 00',
+      contactEmail: 'contact@zibirrami-kenitra.ma',
+      latitude: 34.2480,
+      longitude: -6.5700,
       attributes: {
         secteurs: ['Agroalimentaire', 'Textile', 'Matériaux de construction'],
         services: ['Location de lots', 'Raccordement électrique', 'Gardiennage'],
       },
+      images: [{ url: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=1200&q=80', isCover: true }]
     },
     {
       categoryId: catZoneIndustrielle.id,
-      name: 'Zone Industrielle Sidi Yahya',
-      description: "Zone industrielle en périphérie de Kénitra, orientée agro-industrie.",
-      city: 'Sidi Yahya du Rharb',
-      region: 'Rabat-Salé-Kénitra',
-      attributes: {
-        secteurs: ['Agro-industrie', 'Logistique'],
-        services: ['Location de lots', 'Voirie'],
-      },
-    },
-    {
-      categoryId: catZoneIndustrielle.id,
-      name: 'Zone Industrielle Mghogha Kénitra',
-      description: "Extension industrielle desservant les PME locales.",
-      city: 'Kénitra',
-      neighborhood: 'Mghogha',
-      region: 'Rabat-Salé-Kénitra',
-      attributes: {
-        secteurs: ['Métallurgie', 'Plasturgie'],
-        services: ['Location de lots', 'Sécurité'],
-      },
-    },
-    {
-      categoryId: catZoneIndustrielle.id,
-      name: 'Zone Industrielle Sidi Kacem',
-      description: "Zone industrielle desservant le bassin sucrier et agro-industriel régional.",
-      city: 'Sidi Kacem',
-      region: 'Rabat-Salé-Kénitra',
-      attributes: {
-        secteurs: ['Agro-industrie', 'Sucrerie'],
-        services: ['Location de lots', 'Accès ferroviaire'],
-      },
-    },
-    {
-      categoryId: catZoneIndustrielle.id,
-      name: 'Zone Industrielle Sidi Slimane',
-      description: "Zone industrielle en développement, accès direct à l'autoroute Rabat-Tanger.",
-      city: 'Sidi Slimane',
-      region: 'Rabat-Salé-Kénitra',
-      attributes: {
-        secteurs: ['Agroalimentaire', 'Emballage'],
-        services: ['Location de lots'],
-      },
-    },
-    {
-      categoryId: catZoneIndustrielle.id,
-      name: 'Zone Industrielle Aïn Sebbâa (annexe Kénitra)',
-      description: "Extension industrielle mixte, unités légères et ateliers.",
-      city: 'Kénitra',
-      region: 'Rabat-Salé-Kénitra',
-      attributes: {
-        secteurs: ['Menuiserie', 'Mécanique'],
-        services: ['Location de lots', 'Gardiennage'],
-      },
-    },
-    {
-      categoryId: catZoneIndustrielle.id,
-      name: 'Zone Industrielle Salé',
-      description: "Grande zone industrielle desservant l'agglomération Rabat-Salé.",
+      name: 'Zone Industrielle Salé (Tassila)',
+      description: "Grande zone industrielle dynamique desservant l'agglomération de Salé-Rabat, spécialisée dans la logistique.",
       city: 'Salé',
+      neighborhood: 'Tassila',
       region: 'Rabat-Salé-Kénitra',
+      contactPhone: '+212 5 37 80 12 34',
+      contactEmail: 'contact@zitsale.ma',
+      latitude: 34.0450,
+      longitude: -6.8000,
       attributes: {
-        secteurs: ['Industrie légère', 'Imprimerie'],
-        services: ['Location de lots', 'Raccordement eau/électricité'],
+        secteurs: ['Logistique', 'Industrie légère', 'Imprimerie'],
+        services: ['Location de hangars', 'Guichet unique', 'Accès direct autoroute'],
       },
+      images: [{ url: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1200&q=80', isCover: true }]
     },
-
-    // ── Free Zone (7) ────────────────────────────────────────────────────
+    
+    // ── Free Zone (Atlantic Free Zone & Automotive City) ──────────────────
     {
       categoryId: catFreeZone.id,
-      name: 'Atlantic Free Zone',
-      description: "Zone franche d'exportation de référence à Kénitra, pôle automobile et aéronautique majeur.",
+      name: 'Atlantic Free Zone (AFZ)',
+      description: "Zone franche d'exportation de référence mondiale à Kénitra. Pôle majeur de l'automobile et de l'aéronautique.",
       city: 'Kénitra',
       neighborhood: 'Amer Seflia',
       region: 'Rabat-Salé-Kénitra',
       contactPhone: '+212 5 37 60 00 00',
-      contactEmail: 'contact@atlanticfreezone.com',
+      contactEmail: 'invest@atlanticfreezone.com',
+      latitude: 34.3160,
+      longitude: -6.4950,
       attributes: {
         secteurs: ['Automobile', 'Aéronautique', 'Électronique'],
         services: ['Exonération fiscale', 'Domiciliation', 'Assistance investisseurs', 'Guichet unique douanier'],
       },
+      images: [{ url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&q=80', isCover: true }]
     },
     {
       categoryId: catFreeZone.id,
       name: 'Kénitra Automotive City',
-      description: "Extension de la zone franche dédiée à l'écosystème des équipementiers automobiles.",
+      description: "Extension de la zone franche dédiée exclusivement aux géants équipementiers de l'automobile.",
       city: 'Kénitra',
+      neighborhood: 'Amer Seflia',
       region: 'Rabat-Salé-Kénitra',
+      contactPhone: '+212 5 37 60 11 11',
+      contactEmail: 'info@kac-automotive.ma',
+      latitude: 34.3200,
+      longitude: -6.4900,
       attributes: {
         secteurs: ['Automobile', 'Sous-traitance industrielle'],
-        services: ['Domiciliation', 'Formation main d\'œuvre'],
+        services: ['Domiciliation', 'Formation main d\'œuvre dédiée', 'Hébergement logistique'],
       },
-    },
-    {
-      categoryId: catFreeZone.id,
-      name: 'Free Zone Sidi Yahya',
-      description: "Zone franche secondaire en développement, orientée logistique export.",
-      city: 'Sidi Yahya du Rharb',
-      region: 'Rabat-Salé-Kénitra',
-      attributes: {
-        secteurs: ['Logistique', 'Export agroalimentaire'],
-        services: ['Exonération fiscale', 'Entrepôts'],
-      },
-    },
-    {
-      categoryId: catFreeZone.id,
-      name: 'Tanger Free Zone (bureau Kénitra)',
-      description: "Antenne régionale de la zone franche de Tanger, appui aux investisseurs du secteur.",
-      city: 'Kénitra',
-      region: 'Rabat-Salé-Kénitra',
-      attributes: {
-        secteurs: ['Textile', 'Électronique'],
-        services: ['Domiciliation', 'Assistance investisseurs'],
-      },
-    },
-    {
-      categoryId: catFreeZone.id,
-      name: 'Free Zone Salé',
-      description: "Zone franche en périphérie de Salé, orientée services et logistique.",
-      city: 'Salé',
-      region: 'Rabat-Salé-Kénitra',
-      attributes: {
-        secteurs: ['Logistique', 'Services'],
-        services: ['Exonération fiscale', 'Domiciliation'],
-      },
-    },
-    {
-      categoryId: catFreeZone.id,
-      name: 'Free Zone Rabat-Salé Aéropôle',
-      description: "Zone franche adossée à l'aéroport, orientée aéronautique et services logistiques.",
-      city: 'Salé',
-      region: 'Rabat-Salé-Kénitra',
-      attributes: {
-        secteurs: ['Aéronautique', 'Logistique aéroportuaire'],
-        services: ['Exonération fiscale', 'Guichet unique douanier'],
-      },
-    },
-    {
-      categoryId: catFreeZone.id,
-      name: 'Free Zone Sidi Slimane',
-      description: "Zone franche naissante, ciblant les investisseurs agro-industriels.",
-      city: 'Sidi Slimane',
-      region: 'Rabat-Salé-Kénitra',
-      attributes: {
-        secteurs: ['Agro-industrie'],
-        services: ['Exonération fiscale', 'Domiciliation'],
-      },
+      images: [{ url: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1200&q=80', isCover: true }]
     },
 
-    // ── Chambre de Commerce (6) ──────────────────────────────────────────
+    // ── Chambre de Commerce ──────────────────────────────────────────
     {
       categoryId: catChambreCommerce.id,
-      name: 'Chambre de Commerce, d\'Industrie et de Services de Kénitra',
-      description: "Institution représentant les entreprises locales, appui aux démarches commerciales et à l'investissement.",
+      name: 'CCIS de Kénitra (Siège)',
+      description: "Chambre de Commerce, d'Industrie et de Services locale représentant les PME et industries régionales.",
       city: 'Kénitra',
       region: 'Rabat-Salé-Kénitra',
       location: 'Avenue Mohammed Diouri, Kénitra',
       contactPhone: '+212 5 37 37 12 34',
       contactEmail: 'contact@ccis-kenitra.ma',
+      latitude: 34.2610,
+      longitude: -6.5810,
       attributes: {
         secteurs: ['Commerce', 'Industrie', 'Services'],
         services: ['Certificats d\'origine', 'Registre de commerce', 'Formations', 'Mise en relation B2B'],
       },
+      images: [{ url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80', isCover: true }]
     },
     {
       categoryId: catChambreCommerce.id,
-      name: 'CCIS Rabat-Salé-Kénitra (siège régional)',
-      description: "Siège régional de la Chambre de Commerce, coordination des antennes provinciales.",
+      name: 'CCIS Rabat-Salé-Kénitra (Siège Régional)',
+      description: "Siège régional centralisé pilotant les stratégies industrielles de la région.",
       city: 'Rabat',
       region: 'Rabat-Salé-Kénitra',
       contactPhone: '+212 5 37 20 00 00',
+      contactEmail: 'contact@ccis-rabat.ma',
+      latitude: 34.0200,
+      longitude: -6.8360,
       attributes: {
         secteurs: ['Commerce', 'Industrie', 'Services'],
-        services: ['Coordination régionale', 'Statistiques économiques'],
+        services: ['Coordination régionale', 'Statistiques économiques', 'Relations consulaires'],
       },
-    },
-    {
-      categoryId: catChambreCommerce.id,
-      name: 'Chambre de Commerce Salé',
-      description: "Antenne locale de la Chambre de Commerce pour la préfecture de Salé.",
-      city: 'Salé',
-      region: 'Rabat-Salé-Kénitra',
-      attributes: {
-        secteurs: ['Commerce', 'Artisanat'],
-        services: ['Registre de commerce', 'Assistance entrepreneurs'],
-      },
-    },
-    {
-      categoryId: catChambreCommerce.id,
-      name: 'Chambre de Commerce Sidi Kacem',
-      description: "Antenne provinciale, appui aux commerçants et industriels locaux.",
-      city: 'Sidi Kacem',
-      region: 'Rabat-Salé-Kénitra',
-      attributes: {
-        secteurs: ['Commerce', 'Agro-industrie'],
-        services: ['Certificats d\'origine', 'Formations'],
-      },
-    },
-    {
-      categoryId: catChambreCommerce.id,
-      name: 'Chambre de Commerce Sidi Slimane',
-      description: "Antenne provinciale de la CCIS pour la province de Sidi Slimane.",
-      city: 'Sidi Slimane',
-      region: 'Rabat-Salé-Kénitra',
-      attributes: {
-        secteurs: ['Commerce', 'Agriculture'],
-        services: ['Registre de commerce', 'Mise en relation B2B'],
-      },
-    },
-    {
-      categoryId: catChambreCommerce.id,
-      name: 'Chambre de Commerce Sidi Yahya du Rharb',
-      description: "Antenne locale rattachée à la CCIS régionale, appui de proximité aux PME.",
-      city: 'Sidi Yahya du Rharb',
-      region: 'Rabat-Salé-Kénitra',
-      attributes: {
-        secteurs: ['Commerce', 'Agroalimentaire'],
-        services: ['Assistance entrepreneurs', 'Formations'],
-      },
-    },
+      images: [{ url: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=1200&q=80', isCover: true }]
+    }
   ];
 
   for (const item of listings) {
     const record = await prisma.professionalSpaceListing.create({
       data: {
         ...item,
-        images: [GENERIC_IMAGE],
         isActive: true,
         createdBy: roles?.adminUser?.id || undefined,
       },

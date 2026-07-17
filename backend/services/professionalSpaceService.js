@@ -1,7 +1,15 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { cloudinary } = require('../config/cloudinary');
+const { cities: MOROCCO_CITIES } = require('morocco-cities');
 
+function regionFor(cityName) {
+  if (!cityName) return null;
+  const match = MOROCCO_CITIES.find(
+    (c) => c.name.toLowerCase() === cityName.toLowerCase().trim()
+  );
+  return match?.region_name || null;
+}
 const getProfessionalSpaceListings = async (filters) => {
   const { categorySlug, city, search, page = 1, limit = 20, isActive } = filters;
 
@@ -24,10 +32,10 @@ const getProfessionalSpaceListings = async (filters) => {
     where.category.slug = categorySlug;
   }
 
-  if (city) {
-    where.city = { contains: city.trim(), mode: 'insensitive' };
-  }
-
+  // NOTE: `city` is intentionally NOT added to `where` anymore — it's a
+  // ranking signal (searched city first, same-region cities next, others
+  // after), not a hard filter.
+  
   if (search) {
     where.OR = [
       { name: { contains: search, mode: 'insensitive' } },
@@ -37,18 +45,38 @@ const getProfessionalSpaceListings = async (filters) => {
 
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
   const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
-  const skip = (pageNum - 1) * limitNum;
 
-  const [listings, total] = await Promise.all([
+  const [allMatching, total] = await Promise.all([
     prisma.professionalSpaceListing.findMany({
       where,
       include: { category: true },
       orderBy: { createdAt: 'desc' },
-      skip,
-      take: limitNum,
     }),
     prisma.professionalSpaceListing.count({ where }),
   ]);
+
+  const searchedRegion = city ? regionFor(city) : null;
+
+  const cityRank = (listing) => {
+    if (!city) return 2; // no city filter active — everyone's equal
+    if (listing.city?.toLowerCase().trim() === city.toLowerCase().trim()) return 0; // exact city match
+    if (searchedRegion && listing.region === searchedRegion) return 1; // same region
+    return 2; // elsewhere
+  };
+
+  const sorted = [...allMatching].sort((a, b) => {
+    const cr = cityRank(a) - cityRank(b);
+    if (cr !== 0) return cr;
+
+    // Featured listings surface first within their city/region group
+    const featuredDiff = (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
+    if (featuredDiff !== 0) return featuredDiff;
+
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+
+  const skip = (pageNum - 1) * limitNum;
+  const listings = sorted.slice(skip, skip + limitNum);
 
   return {
     listings,
@@ -67,11 +95,11 @@ const getProfessionalSpaceListingById = async (id) => {
     include: { category: true }
   });
 };
-
 const createProfessionalSpaceListing = async (data, adminId) => {
+  const { mapUrl, ...rest } = data;
   return await prisma.professionalSpaceListing.create({
     data: {
-      ...data,
+      ...rest,
       createdBy: adminId,
       isActive: data.isActive !== undefined ? data.isActive : true,
       images: data.images ? JSON.parse(JSON.stringify(data.images)) : [],
@@ -82,10 +110,11 @@ const createProfessionalSpaceListing = async (data, adminId) => {
 };
 
 const updateProfessionalSpaceListing = async (id, data) => {
+  const { mapUrl, ...rest } = data;
   return await prisma.professionalSpaceListing.update({
     where: { id },
     data: {
-      ...data,
+      ...rest,
       images: data.images ? JSON.parse(JSON.stringify(data.images)) : undefined,
       attributes: data.attributes ? JSON.parse(JSON.stringify(data.attributes)) : undefined,
     },

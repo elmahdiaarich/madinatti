@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "ReportTarget" ADD VALUE 'PROFESSIONAL_SPACE';

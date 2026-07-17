@@ -39,4 +39,12 @@ export const tourismService = {
     const response = await axios.delete(`${API_URL}/${id}`, getAuthHeaders());
     return response.data;
   },
+    getFavorites: async (token) => {
+    const response = await axios.get(`${API_URL}/favorites/me`, getAuthHeaders());
+    return response.data;
+  },
+  toggleFavorite: async (id, token) => {
+    const response = await axios.post(`${API_URL}/favorites/${id}/toggle`, {}, getAuthHeaders());
+    return response.data;
+  },
 };

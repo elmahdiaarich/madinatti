@@ -50,7 +50,16 @@ const [activeCategory, setActiveCategory] = useState(() => {
   const match = CATEGORY_LIST.find((c) => c.label === label);
   return match ? match.slug : "all";
 });
-  const [filters, setFilters] = useState({});
+  const [filters, setFilters] = useState(() => {
+    const city = searchParams.get("city") || "";
+    const region = searchParams.get("region") || "";
+    const search = searchParams.get("search") || "";
+    return {
+      ...(city && { city }),
+      ...(region && { region }),
+      ...(search && { search }),
+    };
+  });
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -206,7 +215,7 @@ useEffect(() => {
         {/* Results — this is the ONLY part that scrolls. */}
 <div
   ref={listingsRef}
-  className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5"
+  className="min-h-0 flex-1 overflow-y-auto overscroll-auto px-6 py-5"
 >          {!loading && !error && listings.length > 0 && (
             <p className="mb-3 text-sm text-black/40">
               <span className="font-semibold text-black/70">

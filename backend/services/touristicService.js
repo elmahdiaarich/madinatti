@@ -12,9 +12,9 @@ function regionFor(cityName) {
 }
 
 const PRICE_BUCKETS = {
-  low:  { max: 75 },
-  mid:  { min: 75, max: 150 },
-  high: { min: 150 },
+  low:  { max: 100 },
+  mid:  { min: 100, max: 250 },
+  high: { min: 250 },
 };
 
 const getTouristicListings = async (filters) => {
@@ -96,21 +96,29 @@ const getTouristicListings = async (filters) => {
   };
   const priceRank = (listing) => (priceMatches(listing) ? 0 : 1);
 
-  const sorted = [...allMatching].sort((a, b) => {
-    const cr = cityRank(a) - cityRank(b);
-    if (cr !== 0) return cr;
+ const sorted = [...allMatching].sort((a, b) => {
+  const cr = cityRank(a) - cityRank(b);
+  if (cr !== 0) return cr;
 
-    const rr = ratingRank(a) - ratingRank(b);
-    if (rr !== 0) return rr;
+  // Featured listings surface first within their city/region group —
+  // above the rating/price boost tiers, matching how "Recommandé" reads
+  // on the card (a curated pick, not just a high number).
+  const featuredDiff = (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
+  if (featuredDiff !== 0) return featuredDiff;
 
-    const pr = priceRank(a) - priceRank(b);
-    if (pr !== 0) return pr;
+  const rr = ratingRank(a) - ratingRank(b);
+  if (rr !== 0) return rr;
 
-    // Tiebreak: higher rating first, then most recent.
-    const ratingDiff = (Number(b.rating) || 0) - (Number(a.rating) || 0);
-    if (ratingDiff !== 0) return ratingDiff;
-    return new Date(b.createdAt) - new Date(a.createdAt);
-  });
+  const pr = priceRank(a) - priceRank(b);
+  if (pr !== 0) return pr;
+
+  // No further sort by absolute rating value here — that's what was
+  // making every filter (3+, 4+) look identical, since it always bubbled
+  // 5★ to the top regardless of the chosen threshold. Once a listing
+  // clears the threshold, its exact score no longer changes its position;
+  // recency is the only remaining tiebreak.
+  return new Date(b.createdAt) - new Date(a.createdAt);
+});
 
   const skip = (pageNum - 1) * limitNum;
   const listings = sorted.slice(skip, skip + limitNum);
