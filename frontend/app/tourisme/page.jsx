@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef  } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CATEGORY_LIST } from "@/constants/tourismCategories";
 import { Loader2 } from "lucide-react";
@@ -62,7 +62,32 @@ const [activeCategory, setActiveCategory] = useState(() => {
 
   });
   const [neighborhoodsByCity, setNeighborhoodsByCity] = useState({});
-  
+  const listingsRef = useRef(null);
+
+useEffect(() => {
+  const el = listingsRef.current;
+  if (!el) return;
+
+  const handleWheel = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    const atTop = scrollTop <= 0;
+    const atBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+    // If we're at an edge and still trying to scroll further in that
+    // direction, don't let the browser get stuck waiting for a mousemove
+    // to re-target — just let the event pass through naturally without
+    // manually scrolling (prevents the Chromium trackpad lock bug).
+    if ((atTop && e.deltaY < 0) || (atBottom && e.deltaY > 0)) {
+      return;
+    }
+
+    e.preventDefault();
+    el.scrollTop += e.deltaY;
+  };
+
+  el.addEventListener("wheel", handleWheel, { passive: false });
+  return () => el.removeEventListener("wheel", handleWheel);
+}, []);
 
   const fetchListings = useCallback(async () => {
     setLoading(true);
@@ -179,8 +204,10 @@ const [activeCategory, setActiveCategory] = useState(() => {
         </div>
 
         {/* Results — this is the ONLY part that scrolls. */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-          {!loading && !error && listings.length > 0 && (
+<div
+  ref={listingsRef}
+  className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5"
+>          {!loading && !error && listings.length > 0 && (
             <p className="mb-3 text-sm text-black/40">
               <span className="font-semibold text-black/70">
                 {pagination.total}
@@ -207,8 +234,7 @@ const [activeCategory, setActiveCategory] = useState(() => {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {listings.map((item) => (
+<div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2">              {listings.map((item) => (
                 <PlaceCard
                   key={item.id}
                   item={item}

@@ -12,7 +12,6 @@ const { seedWorkerProfiles }  = require('./workerProfiles.seed');
 const { seedTaskRequests }    = require('./taskRequests.seed');     
 const { seedProfessionalSpaceListings } = require('./professionalSpaces.seed');
 
-
 const prisma = new PrismaClient();
 
 async function main() {

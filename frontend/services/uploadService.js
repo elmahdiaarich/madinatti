@@ -22,4 +22,11 @@ export const uploadService = {
     const response = await axios.post(`${BASE}/document`, form, authHeaders(token));
     return response.data; // { success, url, publicId }
   },
+  deleteUpload: async (publicId, resourceType, token) => {
+    const response = await axios.delete(BASE, {
+      data: { publicId, resourceType },
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  },
 };

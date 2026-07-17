@@ -13,7 +13,7 @@ const daysAgo = (n) => {
  */
 const getOverview = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     const [jobListings, realEstateListings] = await Promise.all([
       prisma.jobListing.findMany({
@@ -70,7 +70,7 @@ const getOverview = async (req, res) => {
  */
 const getViewsTimeline = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId;
     const days = Math.min(parseInt(req.query.days) || 30, 90);
     const type = req.query.type; // optionnel : "JOB" ou "REAL_ESTATE"
     const since = daysAgo(days);
@@ -112,7 +112,7 @@ const getViewsTimeline = async (req, res) => {
  */
 const getTopListings = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId;
     const limit = Math.min(parseInt(req.query.limit) || 5, 20);
 
     const [topJobs, topRealEstate] = await Promise.all([
@@ -150,7 +150,7 @@ const getTopListings = async (req, res) => {
  */
 const getBoostImpact = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     const [jobListings, realEstateListings] = await Promise.all([
       prisma.jobListing.findMany({ where: { userId, deletedByOwner: false }, select: { viewsCount: true, isFeatured: true, isSponsored: true } }),

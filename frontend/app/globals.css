@@ -14,10 +14,11 @@
   --font-sans: 'Inter', sans-serif;
 }
 
-body {
+html, body {
   font-family: var(--font-sans);
   color: #000000;
   background-color: #FFFFFF;
+  overscroll-behavior-y: contain;
 }
 
 /* register and login inputs */

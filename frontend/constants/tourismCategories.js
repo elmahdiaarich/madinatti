@@ -107,20 +107,22 @@ export const FIELD_LABELS = {
 // falling back to the `attributes` jsonb blob for category-specific data.
 const TOP_LEVEL_FIELDS = new Set([
   "id", "category", "name", "city", "neighborhood", "contactPhone",
-  "rating", "isFeatured", "latitude", "longitude", "images",
+  "rating", "prix", "hours", "facebook", "instagram", "website",
+  "isFeatured", "latitude", "longitude", "images",
 ]);
 
 export function getListingField(listing, key) {
   if (!listing) return undefined;
-  if (key === "photoCount") return listing.images?.length || listing.attributes?.photoCount;
+  if (key === "photoCount") return listing.images?.length || 0;
   if (TOP_LEVEL_FIELDS.has(key)) return listing[key];
-  return listing.attributes?.[key];
+  return undefined; // attributes blob no longer exists as a fallback
 }
 
 export function formatListingField(key, value) {
   if (value === undefined || value === null || value === "") return null;
   if (key === "photoCount") return `${value} photo${value > 1 ? "s" : ""}`;
   if (key === "rating") return `${Number(value).toFixed(1)} / 5`;
+    if (key === "prix") return Number(value) === 0 ? "Gratuit" : `${value} DH`;
   return String(value);
 }
 

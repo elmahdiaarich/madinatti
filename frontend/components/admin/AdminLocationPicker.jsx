@@ -36,6 +36,7 @@ function loadLeaflet() {
  */
 export default function AdminLocationPicker({ latitude, longitude, onChange }) {
   const mapElRef = useRef(null);
+  const internalChange = useRef(false);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
   const onChangeRef = useRef(onChange);
@@ -67,10 +68,11 @@ export default function AdminLocationPicker({ latitude, longitude, onChange }) {
       markerRef.current = marker;
 
       const emit = (latlng) => {
-        onChangeRef.current(
-          Math.round(latlng.lat * 1e6) / 1e6,
-          Math.round(latlng.lng * 1e6) / 1e6
-        );
+        internalChange.current = true;
+  onChangeRef.current(
+    Math.round(latlng.lat * 1e6) / 1e6,
+    Math.round(latlng.lng * 1e6) / 1e6
+  );
       };
 
       marker.on("dragend", () => emit(marker.getLatLng()));
@@ -93,6 +95,21 @@ export default function AdminLocationPicker({ latitude, longitude, onChange }) {
     // itself, not re-synced from props (avoids fighting the user's drag).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+  if (internalChange.current) {
+    internalChange.current = false;
+    return;
+  }
+  if (!mapRef.current || !markerRef.current) return;
+  if (latitude == null || longitude == null || latitude === "" || longitude === "") return;
+
+  const next = [parseFloat(latitude), parseFloat(longitude)];
+  if (Number.isNaN(next[0]) || Number.isNaN(next[1])) return;
+
+  markerRef.current.setLatLng(next);
+  mapRef.current.setView(next, 15);
+}, [latitude, longitude]);
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200">

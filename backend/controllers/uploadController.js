@@ -66,4 +66,17 @@ const uploadDocument = async (req, res) => {
   }
 };
 
-module.exports = { uploadImage, uploadDocument };
+const deleteUpload = async (req, res) => {
+  try {
+    const { publicId, resourceType = 'image' } = req.body;
+    if (!publicId) return res.status(400).json({ message: 'publicId requis.' });
+
+    await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Cloudinary delete error:', error);
+    res.status(500).json({ message: "Échec de la suppression." });
+  }
+};
+
+module.exports = { uploadImage, uploadDocument, deleteUpload };
