@@ -101,6 +101,27 @@ export default function IndustrieExplorerPage() {
 
   const listingsRef = useRef(null);
 
+  useEffect(() => {
+  const el = listingsRef.current;
+  if (!el) return;
+
+  const handleWheel = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    const atTop = scrollTop <= 0;
+    const atBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+    if ((atTop && e.deltaY < 0) || (atBottom && e.deltaY > 0)) {
+      return;
+    }
+
+    e.preventDefault();
+    el.scrollTop += e.deltaY;
+  };
+
+  el.addEventListener("wheel", handleWheel, { passive: false });
+  return () => el.removeEventListener("wheel", handleWheel);
+}, []);
+
   const citiesInRegion = useMemo(() => {
     return selectedRegion
       ? ALL_CITIES.filter((c) => c.region === selectedRegion).map((c) => c.name).sort((a, b) => a.localeCompare(b))
