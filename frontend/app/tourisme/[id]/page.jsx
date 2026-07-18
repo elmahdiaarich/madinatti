@@ -480,13 +480,6 @@ const hasSocialLinks = facebookUrl || instagramUrl || websiteUrl;
                 >
                   <Share2 size={14} /> Partager
                 </button>
-                                <button
-                  type="button"
-                  onClick={handleShare}
-                  className="inline-flex items-center gap-1.5 rounded-lg border-2 border-black/10 px-3.5 py-2 text-sm font-medium text-black/70 transition hover:border-black/20"
-                >
-                  <Share2 size={14} /> Partager
-                </button>
                 {/* Add Signaler Button: */}
                 <button
                   type="button"
