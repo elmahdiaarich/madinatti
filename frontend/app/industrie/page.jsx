@@ -1,7 +1,7 @@
 // frontend/app/industrie/page.jsx
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Loader2, MapPin, Search } from "lucide-react";
 import Link from "next/link";

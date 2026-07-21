@@ -1,7 +1,7 @@
 // frontend/app/tourisme/page.jsx
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, useRef  } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef , Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CATEGORY_LIST } from "@/constants/tourismCategories";
 import { Loader2 } from "lucide-react";

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect , Suspense} from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Wrench, ClipboardList, Search, Plus, UserPlus } from 'lucide-react';
@@ -11,6 +11,7 @@ import TaskRequestCard from '@/components/mini-jobs/TaskRequestCard';
 import TaskRequestFilter from '@/components/mini-jobs/TaskRequestFilter';
 import InlineRegisterSection from '@/components/mini-jobs/InlineRegisterSection';
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
+
 
 
 // Mirrors EMPLOI_SIBLINGS in app/jobs/page.jsx — same sibling group, viewed
