@@ -10,6 +10,8 @@ import WorkerProfileFilter from '@/components/mini-jobs/WorkerProfileFilter';
 import TaskRequestCard from '@/components/mini-jobs/TaskRequestCard';
 import TaskRequestFilter from '@/components/mini-jobs/TaskRequestFilter';
 import InlineRegisterSection from '@/components/mini-jobs/InlineRegisterSection';
+import LoadingSpinner from "@/components/shared/LoadingSpinner";
+
 
 // Mirrors EMPLOI_SIBLINGS in app/jobs/page.jsx — same sibling group, viewed
 // from the Mini-jobs side, so navigation feels consistent in both directions.
@@ -70,7 +72,7 @@ function EmptyState({ icon: Icon, text }) {
   );
 }
 
-export default function MiniJobsPage() {
+function MiniJobs() {
   const { user, token } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -296,5 +298,13 @@ export default function MiniJobsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function MiniJobsPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner message="Chargement…" />}>
+      <MiniJobs />
+    </Suspense>
   );
 }
