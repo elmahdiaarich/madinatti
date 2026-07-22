@@ -126,17 +126,25 @@ function TaskCard({ task, token, toast, onRefresh }) {
             <div className="flex flex-col gap-3">
               {applications.map((app) => (
                 <div key={app.id} className="flex items-center justify-between gap-3 bg-gray-50 rounded-xl p-3 flex-wrap">
-                  <div>
+                 <div>
                     <p className="text-sm font-semibold text-gray-800">{app.workerProfile?.headline}</p>
                     {app.message && <p className="text-xs text-gray-500 mt-0.5">{app.message}</p>}
                     <span className="text-[10px] font-bold text-gray-400 uppercase">{app.status}</span>
                   </div>
-                  {task.status === 'OPEN' && app.status === 'PENDING' && (
-                    <button onClick={() => handleAccept(app)} disabled={busy}
-                      className="text-xs font-bold px-3 py-1.5 rounded-full bg-[#2D5016] text-white hover:bg-[#A7D129] hover:text-[#2D5016] transition disabled:opacity-60">
-                      Accepter
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {app.workerProfile?.id && (
+                      <Link href={`/mini-jobs/profiles/${app.workerProfile.id}`} target="_blank"
+                        className="text-xs font-bold px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-100 transition">
+                        Voir le profil
+                      </Link>
+                    )}
+                    {task.status === 'OPEN' && app.status === 'PENDING' && (
+                      <button onClick={() => handleAccept(app)} disabled={busy}
+                        className="text-xs font-bold px-3 py-1.5 rounded-full bg-[#2D5016] text-white hover:bg-[#A7D129] hover:text-[#2D5016] transition disabled:opacity-60">
+                        Accepter
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

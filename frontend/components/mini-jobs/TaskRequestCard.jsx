@@ -29,6 +29,9 @@ export default function TaskRequestCard({ task }) {
             {task.category.name}
           </span>
         )}
+        {task.user?.name && (
+          <p className="text-xs text-gray-400 mt-1.5">Par {task.user.name}</p>
+        )}
         <p dir="auto" className="text-sm text-gray-500 mt-2 line-clamp-2">
           {task.description}
         </p>

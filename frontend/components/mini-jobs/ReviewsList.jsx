@@ -17,8 +17,7 @@ function StarRow({ value, size = 14 }) {
   );
 }
 
-export default function ReviewsList({ targetType = 'WORKER_PROFILE', targetId, bookingId, taskApplicationId }) {
-  const { user } = useAuth();
+export default function ReviewsList({ targetType = 'WORKER_PROFILE', targetId, bookingId, taskApplicationId, canReview = true }) {  const { user } = useAuth();
   const { toast } = useToast();
   const [reviews, setReviews] = useState([]);
   const [ratingAvg, setRatingAvg] = useState(0);
@@ -59,7 +58,7 @@ export default function ReviewsList({ targetType = 'WORKER_PROFILE', targetId, b
             </span>
           )}
         </div>
-        {user && !alreadyReviewed && (
+        {user && !alreadyReviewed && canReview && (
           <button onClick={() => setShowForm(true)}
             className="text-xs font-bold px-3 py-1.5 rounded-full bg-[#2D5016] text-white hover:bg-[#A7D129] hover:text-[#2D5016] transition">
             Laisser un avis

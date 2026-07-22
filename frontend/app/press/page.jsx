@@ -131,18 +131,18 @@ export default function PressPage() {
       className={`min-h-screen  ${pressFontVars}`}
     >
       {/* MASTHEAD */}
-      <header className="border-b-4 border-double border-[#191714]">
+      <header className="border-b-4 border-double border-primary-dark">
         <div className="mx-auto max-w-[1160px] px-5 pb-5 pt-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p
-                className="text-xs font-semibold uppercase tracking-[0.2em] text-[#736C5E] capitalize"
+                className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-dark/80 capitalize"
                 style={{ fontFamily: 'var(--font-meta)' }}
               >
                 {dateline} · Madinatti
               </p>
               <h1
-                className="mt-1 text-5xl font-black tracking-tight text-[#191714] sm:text-6xl"
+                className="mt-1 text-5xl font-black tracking-tight text-primary-dark sm:text-6xl"
                 style={{ fontFamily: displayFont }}
               >
                 {t.masthead}
@@ -152,14 +152,14 @@ export default function PressPage() {
             <div className="flex items-center gap-3 pt-2 text-sm font-semibold" style={{ fontFamily: 'var(--font-meta)' }}>
               <button
                 onClick={() => setLanguage('FR')}
-                className={`border-b-2 pb-1 transition-colors ${language === 'FR' ? 'border-[#A6231E] text-[#191714]' : 'border-transparent text-[#9C9484] hover:text-[#191714]'}`}
+                className={`border-b-2 pb-1 transition-colors ${language === 'FR' ? 'border-accent text-primary-dark' : 'border-transparent text-primary-dark/60 hover:text-primary-dark'}`}
               >
                 FRANÇAIS
               </button>
-              <span className="text-[#DDD6C6]">/</span>
+              <span className="text-primary-sage">/</span>
               <button
                 onClick={() => setLanguage('AR')}
-                className={`border-b-2 pb-1 transition-colors ${language === 'AR' ? 'border-[#A6231E] text-[#191714]' : 'border-transparent text-[#9C9484] hover:text-[#191714]'}`}
+                className={`border-b-2 pb-1 transition-colors ${language === 'AR' ? 'border-accent text-primary-dark' : 'border-transparent text-primary-dark/60 hover:text-primary-dark'}`}
               >
                 العربية
               </button>
@@ -167,7 +167,7 @@ export default function PressPage() {
           </div>
 
           <div
-            className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-[#DDD6C6] pt-3 text-xs text-[#736C5E]"
+            className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-primary-sage pt-3 text-xs text-primary-dark/80"
             style={{ fontFamily: 'var(--font-meta)' }}
           >
             <p>{t.subtitle}</p>
@@ -183,8 +183,8 @@ export default function PressPage() {
                 onClick={() => setSelectedCategoryId('')}
                 className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
                   selectedCategoryId === '' 
-                    ? 'bg-[#191714] text-[#FAF8F3]' 
-                    : 'bg-[#F1ECE0] text-[#736C5E] hover:bg-[#DDD6C6] hover:text-[#191714]'
+                    ? 'bg-primary-dark text-white' 
+                    : 'bg-primary-mint text-primary-dark/80 hover:bg-primary-sage hover:text-primary-dark'
                 }`}
                 style={{ fontFamily: 'var(--font-meta)' }}
               >
@@ -196,8 +196,8 @@ export default function PressPage() {
                   onClick={() => setSelectedCategoryId(cat.id)}
                   className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
                     selectedCategoryId === cat.id 
-                      ? 'bg-[#191714] text-[#FAF8F3]' 
-                      : 'bg-[#F1ECE0] text-[#736C5E] hover:bg-[#DDD6C6] hover:text-[#191714]'
+                      ? 'bg-primary-dark text-white' 
+                      : 'bg-primary-mint text-primary-dark/80 hover:bg-primary-sage hover:text-primary-dark'
                   }`}
                   style={{ fontFamily: 'var(--font-meta)' }}
                 >
@@ -213,37 +213,37 @@ export default function PressPage() {
       <div className="mx-auto max-w-[1160px] px-5 py-8">
         {loading ? (
           <div className="space-y-8">
-            <div className="grid animate-pulse gap-6 border-b-2 border-[#191714] pb-8 sm:grid-cols-5">
+            <div className="grid animate-pulse gap-6 border-b-2 border-primary-dark pb-8 sm:grid-cols-5">
               <div className="space-y-3 sm:col-span-3">
-                <div className="h-3 w-24 bg-[#DDD6C6]" />
-                <div className="h-8 w-full bg-[#DDD6C6]" />
-                <div className="h-4 w-3/4 bg-[#DDD6C6]" />
+                <div className="h-3 w-24 bg-primary-sage" />
+                <div className="h-8 w-full bg-primary-sage" />
+                <div className="h-4 w-3/4 bg-primary-sage" />
               </div>
-              <div className="h-56 border border-[#DDD6C6] bg-[#F1ECE0] sm:col-span-2" />
+              <div className="h-56 border border-primary-sage bg-primary-mint sm:col-span-2" />
             </div>
             <div className="columns-1 gap-10 sm:columns-2 lg:columns-3">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="mb-8 animate-pulse space-y-3 break-inside-avoid">
-                  <div className="h-40 border border-[#DDD6C6] bg-[#F1ECE0]" />
-                  <div className="h-3 w-16 bg-[#DDD6C6]" />
-                  <div className="h-5 w-full bg-[#DDD6C6]" />
+                  <div className="h-40 border border-primary-sage bg-primary-mint" />
+                  <div className="h-3 w-16 bg-primary-sage" />
+                  <div className="h-5 w-full bg-primary-sage" />
                 </div>
               ))}
             </div>
           </div>
         ) : error ? (
-          <div className="border border-[#A6231E]/30 bg-[#A6231E]/5 py-10 text-center text-sm text-[#A6231E]">
+          <div className="border border-accent/30 bg-accent/5 py-10 text-center text-sm text-accent">
             {error}
           </div>
         ) : articles.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 border border-[#DDD6C6] py-20 text-center">
-            <Newspaper className="text-[#C9C2AF]" size={40} />
-            <p className="text-sm text-[#736C5E]">{t.empty}</p>
+          <div className="flex flex-col items-center gap-3 border border-primary-sage py-20 text-center">
+            <Newspaper className="text-primary-sage/60" size={40} />
+            <p className="text-sm text-primary-dark/80">{t.empty}</p>
           </div>
         ) : (
           <>
             {!loading && (
-              <p className="mb-6 text-xs text-[#736C5E]" style={{ fontFamily: 'var(--font-meta)' }}>
+              <p className="mb-6 text-xs text-primary-dark/80" style={{ fontFamily: 'var(--font-meta)' }}>
                 {t.results(pagination.total)}
               </p>
             )}
@@ -256,7 +256,7 @@ export default function PressPage() {
 
             <div className="columns-1 gap-10 sm:columns-2 lg:columns-3">
               {rest.map((article) => (
-                <div key={article.id} className="mb-8 border-b border-[#DDD6C6] pb-6 break-inside-avoid">
+                <div key={article.id} className="mb-8 border-b border-primary-sage pb-6 break-inside-avoid">
                   <PressCard article={article} language={language} initialFavorited={favoritedIds.has(article.id)} />
                 </div>
               ))}
@@ -266,7 +266,7 @@ export default function PressPage() {
 
         {/* SENTINEL FOR INFINITE SCROLL */}
         {hasMore && (
-          <div ref={observerRef} className="mt-8 py-4 text-center text-sm text-[#736C5E]" style={{ fontFamily: 'var(--font-meta)' }}>
+          <div ref={observerRef} className="mt-8 py-4 text-center text-sm text-primary-dark/80" style={{ fontFamily: 'var(--font-meta)' }}>
             {t.loadingMore}
           </div>
         )}

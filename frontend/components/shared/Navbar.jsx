@@ -16,24 +16,30 @@ import {
   X,
   Grid3x3,
   HeartPulse,
+  Briefcase,
+  Home,
+  Car,
+  Newspaper,
+  Compass,
+  Factory,
 } from "lucide-react";
 import GoogleAuth from "../../components/auth/GoogleAuth";
 import Logo from "./logos/Logo";
 
 // ── FEATURE FLAG (code-only, no UI control) ───────────────────────────────────
 // Passe à true pour réactiver le dropdown de sous-catégories au survol du sous-nav.
-const ENABLE_SUBCATEGORY_HOVER = true;
+const ENABLE_SUBCATEGORY_HOVER = false;
 
 // ── TOP-LEVEL CORE MODULE LINKS (now inline with the logo/profile row) ───────
 // Actualités placée juste après Véhicules, comme demandé.
 const SUB_NAV_LINKS = [
-  { label: "Emploi", href: "/jobs", emoji: "💼" },
-  { label: "Immobilier", href: "/real-estate", emoji: "🏠" },
-  { label: "Véhicules", href: "/cars", emoji: "🚗" },
-  { label: "Actualités", href: "/press", emoji: "📰" },
-  { label: "Tourisme", href: "/tourisme", emoji: "🧭" },
-  { label: "Industrie", href: "/industrie", emoji: "🏭" },
-  { label: "Santé", href: "/sante", emoji: "🩺" },
+  { label: "Emploi", href: "/jobs", icon: Briefcase },
+  { label: "Immobilier", href: "/real-estate", icon: Home },
+  { label: "Véhicules", href: "/cars", icon: Car },
+  { label: "Actualités", href: "/press", icon: Newspaper },
+  { label: "Tourisme", href: "/tourisme", icon: Compass },
+  { label: "Industrie", href: "/industrie", icon: Factory },
+  { label: "Santé", href: "/sante", icon: HeartPulse },
 ];
  /* const SUB_NAV_LINKS = [
   { label: "Emploi", href: "/jobs" },
@@ -711,10 +717,11 @@ export default function Navbar() {
           const svc = ENABLE_SUBCATEGORY_HOVER
               ? NAV_SERVICES.find((s) => s.href === link.href)
               : null;
-            const isHovered = hoveredModule === link.label;
+           const isHovered = hoveredModule === link.label;
             const active =
               isModuleActive(link.href) ||
               (link.href === "/" ? isActive("/") : false);
+            const LinkIcon = link.icon;
 
             return (
               <div
@@ -730,7 +737,7 @@ export default function Navbar() {
                       : "text-gray-400 hover:text-[#2D5016] hover:bg-gray-50"
                   }`}
                 >
-                  <span className="text-sm leading-none">{link.emoji}</span>
+                  {LinkIcon && <LinkIcon size={13} className="shrink-0" />}
                   {link.label}
                   {svc && (
                     <ChevronDown
@@ -1035,19 +1042,23 @@ export default function Navbar() {
             exit={{ height: 0, opacity: 0 }}
             className="md:hidden border-t border-gray-200 bg-white px-6 py-4 flex flex-col gap-1 overflow-hidden"
           >
-            {SUB_NAV_LINKS.map((mod) => (
-              <a
-                key={mod.label}
-                href={mod.href}
-                className={`text-sm py-2 px-2 rounded-lg font-medium transition ${
-                  isModuleActive(mod.href)
-                    ? "text-[#2D5016] font-semibold bg-[#E8F5D0]"
-                    : "text-gray-700"
-                }`}
-              >
-                {mod.label}
-              </a>
-            ))}
+            {SUB_NAV_LINKS.map((mod) => {
+              const ModIcon = mod.icon;
+              return (
+                <a
+                  key={mod.label}
+                  href={mod.href}
+                  className={`flex items-center gap-2.5 text-sm py-2 px-2 rounded-lg font-medium transition ${
+                    isModuleActive(mod.href)
+                      ? "text-[#2D5016] font-semibold bg-[#E8F5D0]"
+                      : "text-gray-700"
+                  }`}
+                >
+                  {ModIcon && <ModIcon size={16} className="text-gray-400 shrink-0" />}
+                  {mod.label}
+                </a>
+              );
+            })}
 
             <button
               type="button"

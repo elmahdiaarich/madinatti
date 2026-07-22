@@ -60,6 +60,7 @@ export default function WorkerProfileDetailPage() {
 
   const portfolio = Array.isArray(profile.portfolioImages) ? profile.portfolioImages : [];
   const availability = profile.availability && typeof profile.availability === 'object' ? profile.availability : null;
+  const isOwner = user && String(profile.userId ?? profile.user?.id) === String(user.id);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -81,6 +82,9 @@ export default function WorkerProfileDetailPage() {
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl md:text-3xl font-extrabold leading-tight mb-1">{profile.headline}</h1>
+              {profile.user?.name && (
+                <p className="text-white/70 text-sm mb-1.5">Par {profile.user.name}</p>
+              )}
               {profile.category?.name && <p className="text-[#A7D129] font-bold text-base mb-3">{profile.category.name}</p>}
               <div className="flex flex-wrap gap-2 items-center">
                 {profile.city && <span className="px-3 py-1 bg-white/15 rounded-full text-xs font-semibold">📍 {profile.city}</span>}
@@ -95,24 +99,33 @@ export default function WorkerProfileDetailPage() {
               </div>
             </div>
 
-            <div className="hidden md:flex shrink-0 self-center gap-2">
-              {profile.user?.phone && (
-                <>
-                  <a href={`tel:${profile.user.phone}`}
-                    className="px-5 py-3 bg-white/15 text-white font-bold rounded-full text-sm hover:bg-white/25 transition-all duration-200 flex items-center gap-2">
-                    📞 Appeler
-                  </a>
-                  <a href={`https://wa.me/${toWhatsAppNumber(profile.user.phone)}`} target="_blank" rel="noreferrer"
-                    className="px-5 py-3 bg-[#25D366] text-white font-bold rounded-full text-sm hover:bg-[#1ebe5b] transition-all duration-200 flex items-center gap-2">
-                    💬 WhatsApp
-                  </a>
-                </>
-              )}
-              <button onClick={handleReserver}
-                className="px-8 py-3 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-full text-sm shadow-lg hover:bg-white transition-all duration-200 hover:scale-[1.03] active:scale-100">
-                Réserver
-              </button>
-            </div>
+          {!isOwner && (
+              <div className="hidden md:flex shrink-0 self-center gap-2">
+                {profile.user?.phone && (
+                  <>
+                    <a href={`tel:${profile.user.phone}`}
+                      className="px-5 py-3 bg-white/15 text-white font-bold rounded-full text-sm hover:bg-white/25 transition-all duration-200 flex items-center gap-2">
+                      📞 Appeler
+                    </a>
+                    <a href={`https://wa.me/${toWhatsAppNumber(profile.user.phone)}`} target="_blank" rel="noreferrer"
+                      className="px-5 py-3 bg-[#25D366] text-white font-bold rounded-full text-sm hover:bg-[#1ebe5b] transition-all duration-200 flex items-center gap-2">
+                      💬 WhatsApp
+                    </a>
+                  </>
+                )}
+                <button onClick={handleReserver}
+                  className="px-8 py-3 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-full text-sm shadow-lg hover:bg-white transition-all duration-200 hover:scale-[1.03] active:scale-100">
+                  Réserver
+                </button>
+              </div>
+            )}
+            {isOwner && (
+              <div className="hidden md:flex shrink-0 self-center">
+                <span className="px-5 py-3 bg-white/15 text-white/80 font-bold rounded-full text-sm">
+                  C'est votre profil
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -171,26 +184,27 @@ export default function WorkerProfileDetailPage() {
 
         <MapFrame latitude={profile.latitude} longitude={profile.longitude} location={profile.city} city={profile.city} />
 
-        <ReviewsList targetType="WORKER_PROFILE" targetId={profile.id} />
-
-        <div className="md:hidden flex flex-col gap-2">
-          {profile.user?.phone && (
-            <div className="flex gap-2">
-              <a href={`tel:${profile.user.phone}`}
-                className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-full text-sm text-center hover:bg-gray-200 transition-all duration-200">
-                📞 Appeler
-              </a>
-              <a href={`https://wa.me/${toWhatsAppNumber(profile.user.phone)}`} target="_blank" rel="noreferrer"
-                className="flex-1 py-3 bg-[#25D366] text-white font-bold rounded-full text-sm text-center hover:bg-[#1ebe5b] transition-all duration-200">
-                💬 WhatsApp
-              </a>
-            </div>
-          )}
-          <button onClick={handleReserver}
-            className="w-full py-3.5 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-full text-sm shadow hover:bg-[#2D5016] hover:text-white transition-all duration-200">
-            Réserver
-          </button>
-        </div>
+<ReviewsList targetType="WORKER_PROFILE" targetId={profile.id} canReview={!isOwner} />
+     {!isOwner && (
+          <div className="md:hidden flex flex-col gap-2">
+            {profile.user?.phone && (
+              <div className="flex gap-2">
+                <a href={`tel:${profile.user.phone}`}
+                  className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-full text-sm text-center hover:bg-gray-200 transition-all duration-200">
+                  📞 Appeler
+                </a>
+                <a href={`https://wa.me/${toWhatsAppNumber(profile.user.phone)}`} target="_blank" rel="noreferrer"
+                  className="flex-1 py-3 bg-[#25D366] text-white font-bold rounded-full text-sm text-center hover:bg-[#1ebe5b] transition-all duration-200">
+                  💬 WhatsApp
+                </a>
+              </div>
+            )}
+            <button onClick={handleReserver}
+              className="w-full py-3.5 bg-[#A7D129] text-[#2D5016] font-extrabold rounded-full text-sm shadow hover:bg-[#2D5016] hover:text-white transition-all duration-200">
+              Réserver
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

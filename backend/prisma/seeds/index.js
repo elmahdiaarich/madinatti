@@ -39,19 +39,19 @@ const jobCategories = {
     catAgriculture:        categories.emploi['agriculture'],
   };
 
-  // Run existing module seeders
-  // await seedJobs(prisma, roles, jobCategories);
-  // await seedRealEstate(prisma, roles, categories);
-  // await seedCars(prisma, roles, categories);
+  
+  await seedJobs(prisma, roles, jobCategories);
+  await seedRealEstate(prisma, roles, categories);
+  await seedCars(prisma, roles, categories);
 
-  // 2. Execute Tourism listings, passing the roles and newly created categories
-  // await seedTourismListings(prisma, roles, categories); 
-  // await seedJobs(prisma, roles, jobCategories);
-  // await seedRealEstate(prisma, roles, categories);
-  // await seedCars(prisma, roles, categories);
+  
+  await seedTourismListings(prisma, roles, categories); 
+  await seedJobs(prisma, roles, jobCategories);
+  await seedRealEstate(prisma, roles, categories);
+  await seedCars(prisma, roles, categories);
 
-  // await seedWorkerProfiles(prisma, categories);   
-  // await seedTaskRequests(prisma, categories);     
+  await seedWorkerProfiles(prisma, categories);   
+  await seedTaskRequests(prisma, categories);     
   await seedProfessionalSpaceListings(prisma, roles, categories);
 
 }

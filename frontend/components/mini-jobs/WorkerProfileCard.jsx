@@ -47,6 +47,10 @@ export default function WorkerProfileCard({ profile }) {
               )}
             </div>
 
+            {profile.user?.name && (
+              <p className="text-xs text-gray-500 mt-0.5">Par {profile.user.name}</p>
+            )}
+
             {profile.category?.name && (
               <span className="inline-block text-[11px] font-bold text-primary-dark bg-primary-mint px-2.5 py-0.5 rounded-full mt-1.5">
                 {profile.category.name}

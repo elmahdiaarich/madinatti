@@ -93,7 +93,7 @@ export default function PressDetailPage() {
 
   if (loading) {
     return (
-      <div className={`flex min-h-screen items-center justify-center bg-[#FAF8F3] text-[#736C5E] ${pressFontVars}`} style={{ fontFamily: 'var(--font-meta)' }}>
+      <div className={`flex min-h-screen items-center justify-center bg-white text-primary-dark/80 ${pressFontVars}`} style={{ fontFamily: 'var(--font-meta)' }}>
         {LABELS.FR.loading}
       </div>
     );
@@ -101,15 +101,15 @@ export default function PressDetailPage() {
 
   if (error || !article) {
     return (
-      <div className={`flex min-h-screen flex-col items-center justify-center gap-4 bg-[#FAF8F3] px-4 text-center ${pressFontVars}`}>
-        <Newspaper className="text-[#C9C2AF]" size={56} />
-        <h1 className="text-2xl font-bold text-[#191714]" style={{ fontFamily: 'var(--font-display-fr)' }}>
+      <div className={`flex min-h-screen flex-col items-center justify-center gap-4 bg-white px-4 text-center ${pressFontVars}`}>
+        <Newspaper className="text-primary-sage/60" size={56} />
+        <h1 className="text-2xl font-bold text-primary-dark" style={{ fontFamily: 'var(--font-display-fr)' }}>
           {LABELS.FR.notFound}
         </h1>
-        <p className="text-sm text-[#736C5E]">{LABELS.FR.notFoundSub}</p>
+        <p className="text-sm text-primary-dark/80">{LABELS.FR.notFoundSub}</p>
         <Link
           href="/press"
-          className="mt-2 border-2 border-[#191714] px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-[#191714] transition-colors hover:bg-[#191714] hover:text-[#FAF8F3]"
+          className="mt-2 border-2 border-primary-dark px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-primary-dark transition-colors hover:bg-primary-dark hover:text-white"
         >
           {LABELS.FR.back}
         </Link>
@@ -121,13 +121,13 @@ export default function PressDetailPage() {
   const SaveIcon = isFavorited ? BookmarkCheck : Bookmark;
 
   return (
-    <div dir={dir} lang={language === 'AR' ? 'ar' : 'fr'} className={`min-h-screen bg-[#FAF8F3] ${pressFontVars}`}>
+    <div dir={dir} lang={language === 'AR' ? 'ar' : 'fr'} className={`min-h-screen bg-white ${pressFontVars}`}>
       {/* Mini bandeau */}
-      <div className="border-b border-[#191714]">
+      <div className="border-b border-primary-dark">
         <div className="mx-auto flex max-w-[760px] items-center justify-between px-5 py-3">
           <Link
             href="/press"
-            className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#736C5E] transition-colors hover:text-[#191714]"
+            className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary-dark/80 transition-colors hover:text-primary-dark"
             style={{ fontFamily: 'var(--font-meta)' }}
           >
             <ArrowLeft size={14} className="rtl:rotate-180" />
@@ -138,7 +138,7 @@ export default function PressDetailPage() {
               onClick={handleToggleFavorite}
               disabled={favLoading}
               className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${
-                isFavorited ? 'text-[#A6231E]' : 'text-[#736C5E] hover:text-[#191714]'
+                isFavorited ? 'text-accent' : 'text-primary-dark/80 hover:text-primary-dark'
               } ${favLoading ? 'opacity-50' : ''}`}
               style={{ fontFamily: 'var(--font-meta)' }}
             >
@@ -151,21 +151,21 @@ export default function PressDetailPage() {
 
       <article className="mx-auto max-w-[760px] px-5 py-8">
         <p
-          className="mb-3 text-xs font-bold uppercase tracking-[0.14em] text-[#A6231E]"
+          className="mb-3 text-xs font-bold uppercase tracking-[0.14em] text-accent"
           style={{ fontFamily: 'var(--font-meta)' }}
         >
           {article.category || (language === 'AR' ? 'أخبار' : 'Actualité')}
         </p>
 
         <h1
-          className="text-3xl font-bold leading-[1.1] text-[#191714] sm:text-4xl"
+          className="text-3xl font-bold leading-[1.1] text-primary-dark sm:text-4xl"
           style={{ fontFamily: displayFont }}
         >
           {article.title}
         </h1>
 
         <div
-          className="mt-4 flex flex-wrap items-center gap-3 border-y border-[#DDD6C6] py-3 text-xs text-[#736C5E]"
+          className="mt-4 flex flex-wrap items-center gap-3 border-y border-primary-sage py-3 text-xs text-primary-dark/80"
           style={{ fontFamily: 'var(--font-meta)' }}
         >
           <span>{fmtDate(article.publishedAt, language)}</span>
@@ -177,7 +177,7 @@ export default function PressDetailPage() {
           <span>Hespress</span>
         </div>
 
-        <div className="relative mt-6 h-64 w-full overflow-hidden border border-[#DDD6C6] bg-[#F1ECE0] sm:h-96">
+        <div className="relative mt-6 h-64 w-full overflow-hidden border border-primary-sage bg-primary-mint sm:h-96">
           {hasImage ? (
             <img
               src={article.imageUrl}
@@ -186,7 +186,7 @@ export default function PressDetailPage() {
               className="h-full w-full object-cover"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-[#C9C2AF]">
+            <div className="flex h-full w-full items-center justify-center text-primary-sage/60">
               <Newspaper size={48} />
             </div>
           )}
@@ -194,9 +194,9 @@ export default function PressDetailPage() {
 
         {article.description && (
           <p
-            className={`mt-8 text-base leading-relaxed text-[#3F3A32] ${
+            className={`mt-8 text-base leading-relaxed text-primary-dark ${
               language === 'FR'
-                ? 'first-letter:me-2 first-letter:float-start first-letter:text-6xl first-letter:font-bold first-letter:leading-[0.8] first-letter:text-[#191714]'
+                ? 'first-letter:me-2 first-letter:float-start first-letter:text-6xl first-letter:font-bold first-letter:leading-[0.8] first-letter:text-primary-dark'
                 : ''
             }`}
             style={{ fontFamily: bodyFont }}
@@ -209,7 +209,7 @@ export default function PressDetailPage() {
           href={article.sourceUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-10 inline-flex items-center gap-2 border-2 border-[#191714] px-5 py-3 text-sm font-bold uppercase tracking-wide text-[#191714] transition-colors hover:bg-[#191714] hover:text-[#FAF8F3]"
+          className="mt-10 inline-flex items-center gap-2 border-2 border-primary-dark px-5 py-3 text-sm font-bold uppercase tracking-wide text-primary-dark transition-colors hover:bg-primary-dark hover:text-white"
           style={{ fontFamily: 'var(--font-meta)' }}
         >
           {t.readFull}

@@ -146,8 +146,10 @@ export default function TaskRequestDetailPage() {
               {statusInfo.label}
             </span>
           </div>
-          {task.category?.name && <p className="text-primary font-bold text-base mb-3">{task.category.name}</p>}
-          <div className="flex flex-wrap gap-2 items-center">
+{task.category?.name && <p className="text-primary font-bold text-base mb-1.5">{task.category.name}</p>}
+          {task.user?.name && (
+            <p className="text-white/70 text-sm mb-3">Publiée par {task.user.name}</p>
+          )}          <div className="flex flex-wrap gap-2 items-center">
             {task.city && (
               <span className="flex items-center gap-1.5 px-3 py-1 bg-white/15 rounded-full text-xs font-semibold">
                 <MapPin size={12} />{task.location ? `${task.location}, ${task.city}` : task.city}

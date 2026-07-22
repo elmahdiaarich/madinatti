@@ -76,7 +76,7 @@ function SaveButton({ articleId, language, initialSaved = false, compact = false
       disabled={loading}
       title={label}
       className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${
-        saved ? 'text-[#A6231E]' : 'text-[#736C5E] hover:text-[#191714]'
+        saved ? 'text-accent' : 'text-primary-dark/80 hover:text-primary-dark'
       } ${loading ? 'opacity-50' : ''}`}
       style={{ fontFamily: 'var(--font-meta)' }}
     >
@@ -95,34 +95,32 @@ export function LeadStory({ article, language = 'FR', initialFavorited = false }
   return (
     <Link
       href={`/press/${article.id}`}
-      className="group grid gap-6 border-b-2 border-[#191714] pb-8 sm:grid-cols-5"
+      className="group grid gap-6 border-b-2 border-primary-dark pb-8 sm:grid-cols-5"
     >
-      <div className="flex flex-col justify-between sm:col-span-3">
-        <div>
+      <div className="flex flex-col justify-center bg-white p-6 sm:p-10 sm:col-span-3">
+        <p
+          className="mb-4 text-xs font-bold uppercase tracking-[0.14em] text-accent"
+          style={{ fontFamily: 'var(--font-meta)' }}
+        >
+          {article.category || LEAD_KICKER[language]}
+        </p>
+        <h2
+          className="text-3xl font-bold leading-[1.1] text-black sm:text-4xl group-hover:underline"
+          style={{ fontFamily: font.display }}
+        >
+          {article.title}
+        </h2>
+        {article.description && (
           <p
-            className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-[#A6231E]"
-            style={{ fontFamily: 'var(--font-meta)' }}
+            className="mt-4 text-base leading-relaxed text-primary-dark line-clamp-3"
+            style={{ fontFamily: font.body }}
           >
-            {article.category || LEAD_KICKER[language]}
+            {truncate(article.description, 220)}
           </p>
-          <h2
-            className="text-3xl font-bold leading-[1.1] text-[#191714] group-hover:underline sm:text-4xl"
-            style={{ fontFamily: font.display }}
-          >
-            {article.title}
-          </h2>
-          {article.description && (
-            <p
-              className="mt-4 text-base leading-relaxed text-[#3F3A32] line-clamp-3"
-              style={{ fontFamily: font.body }}
-            >
-              {truncate(article.description, 220)}
-            </p>
-          )}
-        </div>
+        )}
 
         <div
-          className="mt-5 flex items-center gap-4 border-t border-[#DDD6C6] pt-3 text-xs text-[#736C5E]"
+          className="mt-5 flex items-center gap-4 border-t border-primary-sage pt-3 text-xs text-primary-dark/80"
           style={{ fontFamily: 'var(--font-meta)' }}
         >
           {article.city && (
@@ -137,7 +135,7 @@ export function LeadStory({ article, language = 'FR', initialFavorited = false }
         </div>
       </div>
 
-      <div className="relative h-56 overflow-hidden border border-[#DDD6C6] bg-[#F1ECE0] sm:col-span-2 sm:h-auto">
+      <div className="relative h-56 overflow-hidden border border-primary-sage bg-primary-mint sm:col-span-2 sm:h-auto">
         {hasImage ? (
           <img
             src={article.imageUrl}
@@ -146,7 +144,7 @@ export function LeadStory({ article, language = 'FR', initialFavorited = false }
             className="h-full w-full object-cover grayscale-[15%] transition-all duration-500 group-hover:grayscale-0"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-[#C9C2AF]">
+          <div className="flex h-full w-full items-center justify-center text-primary-sage/60">
             <Newspaper size={40} />
           </div>
         )}
@@ -163,7 +161,7 @@ export default function PressCard({ article, language = 'FR', initialFavorited =
 
   return (
     <Link href={`/press/${article.id}`} className="group flex flex-col gap-3">
-      <div className="relative h-40 w-full overflow-hidden border border-[#DDD6C6] bg-[#F1ECE0]">
+      <div className="relative h-40 w-full overflow-hidden border border-primary-sage bg-primary-mint">
         {hasImage ? (
           <img
             src={article.imageUrl}
@@ -172,34 +170,34 @@ export default function PressCard({ article, language = 'FR', initialFavorited =
             className="h-full w-full object-cover grayscale-[10%] transition-all duration-500 group-hover:grayscale-0"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-[#C9C2AF]">
+          <div className="flex h-full w-full items-center justify-center text-primary-sage/60">
             <Newspaper size={28} />
           </div>
         )}
       </div>
 
       <p
-        className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#A6231E]"
+        className="text-[11px] font-bold uppercase tracking-[0.12em] text-accent"
         style={{ fontFamily: 'var(--font-meta)' }}
       >
         {article.category || (language === 'AR' ? 'أخبار' : 'Actualité')}
       </p>
 
       <h3
-        className="text-lg font-bold leading-snug text-[#191714] line-clamp-3 group-hover:underline"
+        className="text-lg font-bold leading-snug text-black line-clamp-3 group-hover:underline"
         style={{ fontFamily: font.display }}
       >
         {article.title}
       </h3>
 
       {article.description && (
-        <p className="text-sm leading-relaxed text-[#3F3A32] line-clamp-2" style={{ fontFamily: font.body }}>
+        <p className="text-sm leading-relaxed text-primary-dark line-clamp-2" style={{ fontFamily: font.body }}>
           {truncate(article.description)}
         </p>
       )}
 
       <div
-        className="mt-auto flex items-center gap-3 border-t border-[#DDD6C6] pt-2 text-[11px] text-[#736C5E]"
+        className="mt-auto flex items-center gap-3 border-t border-primary-sage pt-2 text-[11px] text-primary-dark/80"
         style={{ fontFamily: 'var(--font-meta)' }}
       >
         {article.city && (
