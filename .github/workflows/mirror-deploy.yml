@@ -13,14 +13,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Debug - check token access
-        run: |
-          curl -s -o /dev/null -w "%{http_code}\n" \
-            -H "Authorization: Bearer ${{ secrets.DEPLOY_REPO_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/elmantib/yourtown-deploy
-
       - name: Push to deploy repo
         run: |
+          git config --unset-all http.https://github.com/.extraheader || true
           git remote add deploy https://x-access-token:${{ secrets.DEPLOY_REPO_TOKEN }}@github.com/elmantib/yourtown-deploy.git
           git push deploy main --force
