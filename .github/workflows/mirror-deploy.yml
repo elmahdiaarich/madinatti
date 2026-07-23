@@ -16,6 +16,8 @@ jobs:
       - name: Push to deploy repo
         run: |
           git config --unset-all http.https://github.com/.extraheader || true
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions Bot"
           rm -rf .github
           git add -A
           git commit -m "Remove workflow files from mirror" --allow-empty
