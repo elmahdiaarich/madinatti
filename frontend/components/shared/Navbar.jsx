@@ -276,20 +276,14 @@ function AddAccountForm({
           Ajouter un compte
         </button>
       ) : (
-        <form
-          onSubmit={handleAddAccountSubmit}
-          className="flex flex-col gap-2 pt-1 pb-1"
-        >
+        <form onSubmit={handleAddAccountSubmit} className="flex flex-col gap-2 pt-1 pb-1">
           <div className="flex items-center justify-between">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
               Nouveau Compte
             </p>
             <button
               type="button"
-              onClick={() => {
-                setShowAddAccount(false);
-                setAddError("");
-              }}
+              onClick={() => { setShowAddAccount(false); setAddError(""); }}
               className="text-gray-400 hover:text-gray-600"
             >
               <X size={12} />
@@ -300,25 +294,21 @@ function AddAccountForm({
             placeholder="Email"
             required
             autoFocus
+            autoComplete="username"
             value={addForm.email}
-            onChange={(e) =>
-              setAddForm((f) => ({ ...f, email: e.target.value }))
-            }
+            onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))}
             className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#A7D129] transition"
           />
           <input
             type="password"
             placeholder="Mot de passe"
             required
+            autoComplete="current-password"
             value={addForm.password}
-            onChange={(e) =>
-              setAddForm((f) => ({ ...f, password: e.target.value }))
-            }
+            onChange={(e) => setAddForm((f) => ({ ...f, password: e.target.value }))}
             className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#A7D129] transition"
           />
-          {addError && (
-            <p className="text-[10px] text-red-500 font-medium">{addError}</p>
-          )}
+          {addError && <p className="text-[10px] text-red-500 font-medium">{addError}</p>}
           <div className="flex gap-2 mt-0.5">
             <button
               type="submit"
@@ -329,10 +319,7 @@ function AddAccountForm({
             </button>
           </div>
           <div className="scale-90 origin-top">
-            <GoogleAuth
-              onSuccess={() => setUserMenuOpen(false)}
-              redirect={false}
-            />
+            <GoogleAuth onSuccess={() => setUserMenuOpen(false)} redirect={false} />
           </div>
         </form>
       )}
@@ -794,7 +781,7 @@ export default function Navbar() {
                 <span>Espace Admin</span>
               </a>
             )}
-            {!user && (
+            {!loading && !user && (
               <>
                 <a
                   href="/auth/register"
@@ -970,11 +957,23 @@ export default function Navbar() {
                         </div>
 
                         <AccountSwitcher
-                          accounts={accounts}
-                          user={user}
-                          switchingId={switchingId}
-                          onSwitch={handleSwitch}
-                        />
+  accounts={accounts}
+  user={user}
+  switchingId={switchingId}
+  onSwitch={handleSwitch}
+/>
+
+<AddAccountForm
+  showAddAccount={showAddAccount}
+  setShowAddAccount={setShowAddAccount}
+  addForm={addForm}
+  setAddForm={setAddForm}
+  addError={addError}
+  setAddError={setAddError}
+  addLoading={addLoading}
+  handleAddAccountSubmit={handleAddAccountSubmit}
+  setUserMenuOpen={setUserMenuOpen}
+/>
 
                         <div className="py-1">
                           <DropdownItem
@@ -1087,11 +1086,23 @@ export default function Navbar() {
                   </div>
 
                   <AccountSwitcher
-                    accounts={accounts}
-                    user={user}
-                    switchingId={switchingId}
-                    onSwitch={handleSwitch}
-                  />
+  accounts={accounts}
+  user={user}
+  switchingId={switchingId}
+  onSwitch={handleSwitch}
+/>
+
+<AddAccountForm
+  showAddAccount={showAddAccount}
+  setShowAddAccount={setShowAddAccount}
+  addForm={addForm}
+  setAddForm={setAddForm}
+  addError={addError}
+  setAddError={setAddError}
+  addLoading={addLoading}
+  handleAddAccountSubmit={handleAddAccountSubmit}
+  setUserMenuOpen={setUserMenuOpen}
+/>
 
                   <a
                     href={
