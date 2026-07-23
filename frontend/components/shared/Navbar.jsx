@@ -28,7 +28,7 @@ import Logo from "./logos/Logo";
 
 // ── FEATURE FLAG (code-only, no UI control) ───────────────────────────────────
 // Passe à true pour réactiver le dropdown de sous-catégories au survol du sous-nav.
-const ENABLE_SUBCATEGORY_HOVER = true;
+const ENABLE_SUBCATEGORY_HOVER = false;
 
 // ── TOP-LEVEL CORE MODULE LINKS (now inline with the logo/profile row) ───────
 // Actualités placée juste après Véhicules, comme demandé.
@@ -40,7 +40,6 @@ const SUB_NAV_LINKS = [
   { label: "Tourisme", href: "/tourisme", icon: Compass },
   { label: "Industrie", href: "/industrie", icon: Factory },
   { label: "Santé", href: "/sante", icon: HeartPulse },
-  { label: "MEHDIIIII", href: "/sante", icon: HeartPulse },
 ];
  /* const SUB_NAV_LINKS = [
   { label: "Emploi", href: "/jobs" },
