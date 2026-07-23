@@ -1,0 +1,19 @@
+name: Mirror to deploy repo
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to deploy repo
+        run: |
+          git remote add deploy https://elmantib:${{ secrets.DEPLOY_REPO_TOKEN }}@github.com/elmantib/yourtown-deploy.git
+          git push deploy main --force
