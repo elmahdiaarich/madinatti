@@ -40,6 +40,7 @@ const SUB_NAV_LINKS = [
   { label: "Tourisme", href: "/tourisme", icon: Compass },
   { label: "Industrie", href: "/industrie", icon: Factory },
   { label: "Santé", href: "/sante", icon: HeartPulse },
+  { label: "MEHDIIIII", href: "/sante", icon: HeartPulse },
 ];
  /* const SUB_NAV_LINKS = [
   { label: "Emploi", href: "/jobs" },
