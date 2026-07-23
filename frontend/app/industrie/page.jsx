@@ -1,7 +1,7 @@
 // frontend/app/industrie/page.jsx
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Loader2, MapPin, Search } from "lucide-react";
 import Link from "next/link";
@@ -10,6 +10,8 @@ import { categoriesService } from "@/services/categoriesService";
 import SearchableDropdown from "@/components/explore/SearchableDropdown";
 import TourismMap from "@/components/explore/TourismMap";
 import { cities as MOROCCO_CITIES_RAW } from "morocco-cities";
+import LoadingSpinner from "@/components/shared/LoadingSpinner";
+
 
 const PAGE_SIZE = 12;
 const ALL_CITIES = MOROCCO_CITIES_RAW.map((c) => ({ name: c.name, region: c.region_name }));
@@ -84,7 +86,7 @@ function IndustrielCard({ item, basePath = "/industrie" }) {
   );
 }
 
-export default function IndustrieExplorerPage() {
+function IndustrieExplorer() {
   const searchParams = useSearchParams();
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState("all");
@@ -299,5 +301,13 @@ export default function IndustrieExplorerPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function TourismExplorerPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner message="Chargement…" />}>
+      <IndustrieExplorer />
+    </Suspense>
   );
 }

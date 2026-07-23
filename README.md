@@ -91,3 +91,5 @@ En production, utiliser `prisma migrate deploy`.
 - Revoquez les anciennes cles exposees.
 - Ne journalisez pas les cles Google.
 - Ne placez jamais `GOOGLE_CLIENT_SECRET` ou une cle serveur dans une variable `NEXT_PUBLIC_*`.
+ 
+ testing frontend autodeploy

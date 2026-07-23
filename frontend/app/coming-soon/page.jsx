@@ -1,7 +1,10 @@
 'use client';
 
+import { Suspense } from "react";
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import LoadingSpinner from "@/components/shared/LoadingSpinner";
+
 
 function CuteRobot() {
   return (
@@ -55,7 +58,7 @@ function CuteRobot() {
   );
 }
 
-export default function ComingSoonPage() {
+ function ComingSoon() {
   const searchParams = useSearchParams();
   const feature = searchParams.get('feature') || 'Cette section';
 
@@ -75,5 +78,13 @@ export default function ComingSoonPage() {
         Retour à l'accueil
       </Link>
     </div>
+  );
+}
+
+export default function ComingSoonPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner message="Chargement…" />}>
+      < ComingSoon />
+    </Suspense>
   );
 }

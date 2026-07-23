@@ -1,0 +1,25 @@
+name: Mirror to deploy repo
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to deploy repo
+        run: |
+          git config --unset-all http.https://github.com/.extraheader || true
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions Bot"
+          rm -rf .github
+          git add -A
+          git commit -m "Remove workflow files from mirror" --allow-empty
+          git remote add deploy https://x-access-token:${{ secrets.DEPLOY_REPO_TOKEN }}@github.com/elmantib/yourtown-deploy.git
+          git push deploy main --force

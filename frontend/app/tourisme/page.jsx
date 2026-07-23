@@ -1,9 +1,7 @@
 // frontend/app/tourisme/page.jsx
 "use client";
 
-"use client";
-
-import { useEffect, useState, useCallback, useMemo, useRef  } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef , Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CATEGORY_LIST } from "@/constants/tourismCategories";
 import { Loader2 } from "lucide-react";
@@ -13,6 +11,7 @@ import CategoryDropdown from "@/components/explore/CategoryDropdown";
 import FilterBar, { normalizeCityKey } from "@/components/explore/FilterBar";
 import PlaceCard from "@/components/explore/PlaceCard";
 import TourismMap from "@/components/explore/TourismMap";
+import LoadingSpinner from "@/components/shared/LoadingSpinner";
 
 const PAGE_SIZE = 20;
 // How many listings to sample (unfiltered by location) to build the
@@ -41,8 +40,7 @@ function buildPageWindow(current, total) {
   });
   return withEllipses;
 }
-
-export default function TourismExplorerPage() {
+ function TourismExplorer() {
   const searchParams = useSearchParams();
   const router = useRouter();
 const [activeCategory, setActiveCategory] = useState(() => {
@@ -299,5 +297,13 @@ useEffect(() => {
         )}
       </div>
     </div>
+  );
+}
+
+export default function TourismExplorerPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner message="Chargement…" />}>
+      <TourismExplorer />
+    </Suspense>
   );
 }

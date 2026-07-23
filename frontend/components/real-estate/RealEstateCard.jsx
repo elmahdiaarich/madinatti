@@ -196,33 +196,21 @@ function FavoriteButton({ listingId, initialFavorited = false, onToggle }) {
   if (!user) return null;
 
   const handleClick = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!user) {
-      const el = document.getElementById("inscription-realstate");
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-      return;
-    }
-
-    if (loading) return;
-
-    if (onToggle) {
-      onToggle();
-      return;
-    }
-
-    const prev = favorited;
-    setFavorited(!prev);
-    setLoading(true);
-    try {
-      await realEstateService.toggleFavorite(listingId, token);
-    } catch {
-      setFavorited(prev);
-    } finally {
-      setLoading(false);
-    }
-  };
+  e.preventDefault();
+  e.stopPropagation();
+  if (loading) return;
+  if (onToggle) { onToggle(); return; }
+  const prev = favorited;
+  setFavorited(!prev);
+  setLoading(true);
+  try {
+    await realEstateService.toggleFavorite(listingId, token);
+  } catch {
+    setFavorited(prev);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <button
@@ -398,16 +386,16 @@ export default function RealEstateCard({
                 <span className="text-xl font-extrabold text-[#2D5016]">
                   {fmtPrice(listing.price)} MAD
                   {listing.listingType === "RENT" && (
-                    <span className="text-sm font-medium text-gray-400">
+                    <span className="text-sm font-medium text-gray-500">
                       /mois
                     </span>
                   )}
                 </span>
-                {listing.isFeatured && (
-                  
-             <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-[#A7D129] text-[#7BA428] bg-[#E8F5D0]">       ⭐ Premium
-                  </span>
-                )}
+{listing.isFeatured && (
+  <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-[#A7D129] text-[#7BA428] bg-[#E8F5D0]">
+    ⭐ Premium
+  </span>
+)}
               </div>
 
               {/* Title */}
@@ -442,8 +430,7 @@ export default function RealEstateCard({
               </div>
 
               {/* Stats row */}
-              <div className="flex items-center gap-3 text-xs text-gray-500 border-t border-gray-50 pt-3">
-                {listing.surface && (
+<div className="flex items-center gap-3 text-xs text-gray-500 border-t border-gray-50 pt-3 flex-wrap">                {listing.surface && (
                   <div className="flex items-center gap-1">
                     <svg
                       className="w-3.5 h-3.5"
@@ -503,9 +490,9 @@ export default function RealEstateCard({
                     </span>
                   </div>
                 )}
-                <div
-                  className={`ml-auto text-[14px] font-semibold ${isRecent ? "text-green-600" : "text-gray-500"}`}
-                >
+<div
+  className={`ml-auto text-[14px] font-semibold ${isRecent ? "text-green-600" : "text-gray-400"}`}
+>
                   {dateStr}
                 </div>
               </div>
