@@ -28,7 +28,7 @@ import Logo from "./logos/Logo";
 
 // ── FEATURE FLAG (code-only, no UI control) ───────────────────────────────────
 // Passe à true pour réactiver le dropdown de sous-catégories au survol du sous-nav.
-const ENABLE_SUBCATEGORY_HOVER = false;
+const ENABLE_SUBCATEGORY_HOVER = true;
 
 // ── TOP-LEVEL CORE MODULE LINKS (now inline with the logo/profile row) ───────
 // Actualités placée juste après Véhicules, comme demandé.
