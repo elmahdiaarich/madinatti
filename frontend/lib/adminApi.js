@@ -199,12 +199,14 @@ export async function getBusinesses(token = null) {
 
 export async function getSidebarCounts(token = null) {
   try {
-    const [overview, emploiRes, immoRes, autoRes, miniJobsRes, reportStats] = await Promise.all([
+    const [overview, emploiRes, immoRes, autoRes, miniJobsRes, newsRes, journalistsRes, reportStats] = await Promise.all([
       apiFetch('/api/admin/overview', {}, token),
       apiFetch('/api/admin/listings?module=emploi&status=PENDING&limit=1', {}, token),
       apiFetch('/api/admin/listings?module=immobilier&status=PENDING&limit=1', {}, token),
       apiFetch('/api/admin/listings?module=automobile&status=PENDING&limit=1', {}, token),
       apiFetch('/api/admin/listings?module=miniJobs&status=PENDING&limit=1', {}, token),
+      apiFetch('/api/admin/listings?module=news&status=PENDING&limit=1', {}, token),
+      apiFetch('/api/admin/journalists', {}, token),
       apiFetch('/api/admin/reports/stats', {}, token),
     ])
 
@@ -219,14 +221,32 @@ export async function getSidebarCounts(token = null) {
       // TaskRequest has no PENDING concept (publishes immediately, reactive
       // moderation only) — no meaningful pending-queue badge for it.
       taskRequests: 0,
+      news:         newsRes.pagination?.total ?? 0,
+      journalists:  (journalistsRes.data ?? []).length,
       signalements: openReports,
       entreprises:  0,
       utilisateurs: 0,
       tourisme:     0,
     }
   } catch {
-    return { overview: 0, emploi: 0, immobilier: 0, vehicule: 0, miniJobs: 0, taskRequests: 0, signalements: 0, entreprises: 0, utilisateurs: 0 }
+    return { overview: 0, emploi: 0, immobilier: 0, vehicule: 0, miniJobs: 0, taskRequests: 0, news: 0, journalists: 0, signalements: 0, entreprises: 0, utilisateurs: 0 }
   }
+}
+
+// ── JOURNALIST ACCOUNTS ───────────────────────────────────────────────────────
+
+export async function getPendingJournalists(token = null) {
+  const json = await apiFetch('/api/admin/journalists', {}, token)
+  return json.data ?? []
+}
+
+export async function updateJournalistStatus(id, status, token = null) {
+  const json = await apiFetch(
+    `/api/admin/journalists/${id}/status`,
+    { method: 'PATCH', body: JSON.stringify({ status }) },
+    token
+  )
+  return json
 }
 
 // ── CATEGORIES ────────────────────────────────────────────────────────────────

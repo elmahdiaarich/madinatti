@@ -18,7 +18,10 @@ const {
   updateCategory,
   toggleCategoryActive,
   deleteCategory,
-  deleteModule 
+  deleteModule,
+  // Journalist accounts
+  getPendingJournalists,
+  updateJournalistStatus
 } = require('../controllers/adminController')
 
 const {
@@ -97,6 +100,13 @@ router.patch('/users/:id/toggle', toggleUser)
 // ── Businesses ────────────────────────────────────────────────────────────────
 // GET /api/admin/businesses
 router.get('/businesses', getBusinesses)
+
+// ── Journalist account validation (distinct from article moderation via /listings) ──
+// GET /api/admin/journalists  — comptes en attente de validation
+router.get('/journalists', getPendingJournalists)
+
+// PATCH /api/admin/journalists/:id/status   body: { status: 'APPROVED' | 'REJECTED' }
+router.patch('/journalists/:id/status', updateJournalistStatus)
 
 // ── Categories ────────────────────────────────────────────────────────────────
 // GET    /api/admin/categories?parentSlug=emploi|immobilier

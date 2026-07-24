@@ -70,6 +70,12 @@ const MODULE_REGISTRY = {
     targetType:        'TASK_REQUEST',
     frontendPath:      (id) => `/mini-jobs/tasks/${id}`,
   },
+  news: {
+    model:             'newsArticle',
+    cloudinaryFolder:  'madinatti/news',
+    targetType:        'NEWS',
+    frontendPath:      (id) => `/press/${id}`,
+  },
   // ── Add future modules here ────────────────────────────────────────────────
   // services: {
   //   model:            'serviceListing',
@@ -322,7 +328,7 @@ const NORMALIZERS = {
     updatedAt:        w.updatedAt,
   }),
  
-  taskRequests: (t) => ({
+  ttaskRequests: (t) => ({
     id:               t.id,
     module:           'taskRequests',
     title:            t.title,
@@ -347,6 +353,32 @@ const NORMALIZERS = {
     reviewedAt:       t.reviewedAt,
     createdAt:        t.createdAt,
     updatedAt:        t.updatedAt,
+  }),
+
+  news: (n) => ({
+    id:               n.id,
+    module:           'news',
+    title:            n.title,
+    description:      n.description,
+    submittedBy:      n.user?.name || '',
+    submittedByEmail: n.user?.email || '',
+    submittedById:    n.user?.id || '',
+    submittedByLogo:  n.user?.avatar || null,
+    city:             n.city || null,
+    language:         n.language,
+    imageUrl:         n.imageUrl,
+    status:           n.status,
+    adminNote:        n.adminNotes || null,
+    category:         n.category || null,
+    categoryId:       n.categoryId,
+    publishedAt:      n.publishedAt,
+    reviewedBy:       n.reviewedBy,
+    reviewedAt:       n.reviewedAt,
+    createdAt:        n.createdAt,
+    updatedAt:        n.updatedAt,
+    previousTitle:       n.previousTitle || null,
+    previousDescription: n.previousDescription || null,
+    previousImageUrl:    n.previousImageUrl || null,
   }),
 };
 
@@ -433,6 +465,17 @@ const SELECTS = {
     user:     { select: USER_SELECT },
     category: { select: { id: true, name: true, slug: true } },
   },
+
+  news: {
+    id: true, title: true, description: true, imageUrl: true,
+    city: true, language: true, source: true,
+    status: true, adminNotes: true,
+    previousTitle: true, previousDescription: true, previousImageUrl: true,
+    categoryId: true, reviewedAt: true, reviewedBy: true,
+    publishedAt: true, createdAt: true, updatedAt: true,
+    user:     { select: USER_SELECT },
+    category: { select: { id: true, name: true, slug: true } },
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -493,6 +536,19 @@ const WHERE_BUILDERS = {
   }),
  
   taskRequests: ({ status, userId, search }) => ({
+    ...(status && { status }),
+    ...(userId && { userId }),
+    ...(search && {
+      OR: [
+        { title:       { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { city:        { contains: search, mode: 'insensitive' } },
+      ],
+    }),
+  }),
+
+  news: ({ status, userId, search }) => ({
+    source: 'ORIGINAL', // RSS n'a jamais besoin de modération, exclu de cette vue
     ...(status && { status }),
     ...(userId && { userId }),
     ...(search && {
@@ -1069,6 +1125,81 @@ async function handleMiniJobsStatus(req, res, { id, status, adminNotes, adminId,
  * this handler is only reached from a Report resolution flow, typically
  * to set status to ARCHIVED (hide a reported task) or CANCELLED.
  */
+async function handleNewsStatus(req, res, { id, status, adminNotes, adminId, now }) {
+  const { createNotification } = require('./notificationController');
+  const config = MODULE_REGISTRY.news;
+
+  if (!VALID_STATUSES.includes(status)) {
+    return res.status(400).json({ success: false, message: 'Statut invalide' });
+  }
+
+  const record = await prisma.newsArticle.findUnique({ where: { id } });
+  if (!record) return res.status(404).json({ success: false, message: 'Article introuvable' });
+
+  const wasPending = record.status === 'PENDING';
+  let imageUrl = record.imageUrl;
+
+  if (status === 'APPROVED' && wasPending && imageUrl) {
+    imageUrl = (await moveImage({ url: imageUrl }, config.cloudinaryFolder)).url;
+  }
+  if (status === 'REJECTED' && wasPending && imageUrl?.includes('madinatti/temp')) {
+    await destroyImage({ url: imageUrl });
+  }
+
+  // Une fois la nouvelle version approuvée, l'ancienne photo (previousImageUrl,
+  // gardée jusqu'ici pour le diff admin) devient orpheline — on la détruit
+  // maintenant que le diff n'a plus lieu d'être affiché.
+  if (status === 'APPROVED' && wasPending && record.previousImageUrl && record.previousImageUrl !== imageUrl) {
+    await destroyImage({ url: record.previousImageUrl });
+  }
+
+  const updated = await prisma.newsArticle.update({
+    where: { id },
+    data: {
+      status,
+      imageUrl,
+      adminNotes: adminNotes || null,
+      reviewedAt: now,
+      reviewedBy: adminId,
+      // Le diff n'a plus lieu d'être une fois la nouvelle version validée
+      ...(status === 'APPROVED' && wasPending && {
+        previousTitle: null,
+        previousDescription: null,
+        previousImageUrl: null,
+      }),
+    },
+    include: { category: { select: { slug: true } } },
+  });
+
+  if (status === 'APPROVED' && wasPending && updated.userId) {
+    await createNotification(
+      updated.userId, 'NEWS_APPROVED',
+      'Votre article a été publié ✅',
+      `Votre article "${updated.title}" est maintenant visible publiquement.`,
+      config.frontendPath(updated.id),
+    );
+  } else if (status === 'REJECTED' && wasPending && updated.userId) {
+    await createNotification(
+      updated.userId, 'NEWS_REJECTED',
+      'Votre article a été refusé ❌',
+      `Votre article "${updated.title}" a été refusé. Consultez vos messages pour plus de détails.`,
+      '/my-space/messages',
+    );
+    await prisma.businessMessage.create({
+      data: {
+        userId:       updated.userId,
+        type:         'REJECTION',
+        targetType:   'NEWS',
+        targetId:     id,
+        targetTitle:  updated.title,
+        adminMessage: adminNotes || '',
+      },
+    });
+  }
+
+  return res.json({ success: true, message: 'Article mis à jour', data: updated });
+}
+
 const TASK_REQUEST_VALID_STATUSES = ['OPEN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'ARCHIVED'];
  
 async function handleTaskRequestStatus(req, res, { id, status, adminNotes, adminId, now }) {
@@ -1105,6 +1236,7 @@ const STATUS_HANDLERS = {
   automobile:   (req, res, ctx) => handleGenericStatus(req, res, ctx, 'automobile'),
   miniJobs:     handleMiniJobsStatus,
   taskRequests: handleTaskRequestStatus,
+  news:         handleNewsStatus,
   // services:  (req, res, ctx) => handleGenericStatus(req, res, ctx, 'services'),
 };
 
@@ -1688,6 +1820,85 @@ const deleteModule = async (req, res) => {
   }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// JOURNALIST ACCOUNT VALIDATION (distinct from article moderation above)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const getPendingJournalists = async (req, res) => {
+  try {
+    const journalistRole = await prisma.role.findUnique({ where: { name: 'journalist' } });
+    if (!journalistRole) return res.json({ success: true, data: [] });
+
+    const journalists = await prisma.user.findMany({
+      where: { roleId: journalistRole.id, journalistStatus: 'PENDING' },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true, name: true, email: true, phone: true,
+        city: true, avatar: true, createdAt: true,
+      },
+    });
+
+    // Compte-rendu du taux de refus d'articles pour chaque compte en attente —
+    // pertinent si un compte déjà approuvé a soumis des articles avant que
+    // cette page ne soit consultée à nouveau (rare mais possible).
+    const withRejectionStats = await Promise.all(
+      journalists.map(async (j) => {
+        const [rejectedCount, totalCount] = await Promise.all([
+          prisma.newsArticle.count({ where: { userId: j.id, source: 'ORIGINAL', status: 'REJECTED' } }),
+          prisma.newsArticle.count({ where: { userId: j.id, source: 'ORIGINAL' } }),
+        ]);
+        return { ...j, rejectedArticlesCount: rejectedCount, totalArticlesCount: totalCount };
+      })
+    );
+
+    res.json({ success: true, data: withRejectionStats });
+  } catch (error) {
+    console.error('admin getPendingJournalists error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+const updateJournalistStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body; // 'APPROVED' | 'REJECTED'
+
+    if (!['APPROVED', 'REJECTED'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Statut invalide' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: { journalistStatus: status },
+    });
+
+    const { createNotification } = require('./notificationController');
+    if (status === 'APPROVED') {
+      await createNotification(
+        id, 'JOURNALIST_APPROVED',
+        'Votre compte journaliste a été validé ✅',
+        'Vous pouvez maintenant publier des articles sur Madinatti.',
+        '/my-space/newsroom',
+      );
+    } else {
+      await createNotification(
+        id, 'JOURNALIST_REJECTED',
+        'Votre demande de compte journaliste a été refusée',
+        "Votre compte n'a pas été validé en tant que journaliste.",
+        '/',
+      );
+    }
+
+    res.json({ success: true, message: 'Statut journaliste mis à jour', data: updated });
+  } catch (error) {
+    console.error('admin updateJournalistStatus error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
 module.exports = {
   getOverview,
   getListings,
@@ -1707,4 +1918,7 @@ module.exports = {
   toggleCategoryActive,
   deleteCategory,
   deleteModule,
+  // Journalist accounts
+  getPendingJournalists,
+  updateJournalistStatus,
 };

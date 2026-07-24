@@ -206,6 +206,13 @@ const BUSINESS_NAV = [
   },
 ];
 
+const JOURNALIST_NAV = [
+  { key: "profile", label: "Mon profil", href: "/my-space/profile", icon: IconUser },
+  { key: "newsroom", label: "Mes articles", href: "/my-space/newsroom", icon: IconClipboard },
+  { key: "notifications", label: "Notifications", href: "/my-space/notifications", icon: IconBell },
+  { key: "messages", label: "Messages", href: "/my-space/messages", icon: IconMail },
+];
+
 // ── Nav item ──────────────────────────────────────────────────────────────────
 
 function NavItem({ href, icon: Icon, label, active, badge, collapsed }) {
@@ -281,7 +288,8 @@ export default function MySpaceLayout({ children }) {
   };
 
   const isBusiness = user?.role === "business";
-  const activeNav = isBusiness ? BUSINESS_NAV : COMMON_NAV;
+  const isJournalist = user?.role === "journalist";
+  const activeNav = isBusiness ? BUSINESS_NAV : isJournalist ? JOURNALIST_NAV : COMMON_NAV;
 
   const initials = user?.name
     ? user.name
@@ -319,7 +327,7 @@ export default function MySpaceLayout({ children }) {
                 Mon espace
               </p>
               <p className="text-xs text-gray-400 mt-1 font-medium tracking-wide uppercase whitespace-nowrap">
-                {isBusiness ? "Business" : "Citoyen"}
+                {isBusiness ? "Business" : isJournalist ? "Journaliste" : "Citoyen"}
               </p>
             </div>
 

@@ -177,8 +177,15 @@ function RegisterForm() {
         if (rcDocumentFile) data.append("rcDocument", rcDocumentFile);
       }
       const res = await register(data);
-      if (res.token) router.push("/");
-      else setError(res.message);
+      if (res.token) {
+        if (res.user?.role === "journalist") {
+          router.push("/my-space/newsroom");
+        } else {
+          router.push("/");
+        }
+      } else {
+        setError(res.message);
+      }
     } catch {
       setError("Erreur serveur");
     } finally {
@@ -219,12 +226,12 @@ function RegisterForm() {
               <label className="text-xs font-semibold text-[var(--color-primary-dark)] mb-2 block uppercase tracking-wide">
                 Je suis...
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <RoleCard
                   emoji="🙋"
                   title="Citoyen"
                   subtitle="Trouvez un emploi ou un bien immobilier"
-                  active={!isBusiness}
+                  active={formData.role === "citizen"}
                   onClick={() => handleRoleSelect("citizen")}
                 />
                 <RoleCard
@@ -233,6 +240,13 @@ function RegisterForm() {
                   subtitle="Publiez des offres et touchez plus de clients"
                   active={isBusiness}
                   onClick={() => handleRoleSelect("business")}
+                />
+                <RoleCard
+                  emoji="📰"
+                  title="Journaliste"
+                  subtitle="Publiez des news locales, sous validation admin"
+                  active={formData.role === "journalist"}
+                  onClick={() => handleRoleSelect("journalist")}
                 />
               </div>
             </div>

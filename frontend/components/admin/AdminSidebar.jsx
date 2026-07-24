@@ -151,6 +151,28 @@ const IconClipboard = () => (
     <path d="M9 12h6M9 16h4" />
   </svg>
 )
+
+const IconNewspaper = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M8 4h11a2 2 0 0 1 2 2v11a2 2 0 0 1 -2 2h-11a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2z" />
+    <line x1="12" y1="8" x2="17" y2="8" />
+    <line x1="12" y1="12" x2="17" y2="12" />
+    <line x1="12" y1="16" x2="15" y2="16" />
+    <path d="M4 8h1v9a2 2 0 0 1 -2 2a2 2 0 0 1 -2 -2v-1h1" />
+  </svg>
+)
+
+const IconUserCheck = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <circle cx="9" cy="7" r="4" />
+    <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+    <path d="M16 11l2 2l4 -4" />
+  </svg>
+)
 // ── Nav items ─────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS = [
@@ -163,6 +185,8 @@ const NAV_ITEMS = [
   { key: 'sante',        label: 'Santé',            href: '/admin/health',      icon: IconHealth     },
   { key: 'miniJobs',     label: 'Mini-jobs · Profils', href: '/admin/mini-jobs', icon: IconBriefcase },
   { key: 'taskRequests', label: 'Mini-jobs · Demandes', href: '/admin/task-requests', icon: IconClipboard },
+  { key: 'news',         label: 'Presse · Articles', href: '/admin/news',        icon: IconNewspaper },
+  { key: 'journalists',  label: 'Presse · Comptes',  href: '/admin/journalists', icon: IconUserCheck },
   { key: 'categories',   label: 'Catégories',       href: '/admin/categories',  icon: IconCategories },
   { key: 'signalements', label: 'Signalements',     href: '/admin/reports',     icon: IconFlag       },
   { key: 'entreprises',  label: 'Entreprises',      href: '/admin/businesses',  icon: IconCompany    },

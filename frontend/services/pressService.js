@@ -22,8 +22,9 @@ export const pressService = {
     const response = await axios.get(`${API_URL}/cities`, { params: { language } });
     return response.data;
   },
-  getCategories: async () => {
-    const response = await axios.get(`${API_URL}/categories`);
+  getCategories: async (language) => {
+    const params = language ? { language } : {};
+    const response = await axios.get(`${API_URL}/categories`, { params });
     return response.data;
   },
   toggleFavorite: async (id) => {
@@ -32,6 +33,24 @@ export const pressService = {
   },
   getFavorites: async () => {
     const response = await axios.get(`${API_URL}/favorites/me`, getAuthHeaders());
+    return response.data;
+  },
+  // ── JOURNALIST ────────────────────────────────────────────────────────────
+  // L'image est uploadée au préalable via /api/upload/images (même pattern que WorkerProfile.photo)
+  createArticle: async (data) => {
+    const response = await axios.post(API_URL, data, getAuthHeaders());
+    return response.data;
+  },
+  updateArticle: async (id, data) => {
+    const response = await axios.put(`${API_URL}/${id}`, data, getAuthHeaders());
+    return response.data;
+  },
+  getMyArticles: async () => {
+    const response = await axios.get(`${API_URL}/mine/list`, getAuthHeaders());
+    return response.data;
+  },
+  createCategory: async (name) => {
+    const response = await axios.post(`${API_URL}/categories`, { name }, getAuthHeaders());
     return response.data;
   },
 };

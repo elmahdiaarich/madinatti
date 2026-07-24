@@ -86,6 +86,10 @@ const MODULE_CONFIG = {
     label: 'Véhicule',
     className: 'bg-amber-50 text-amber-700 border border-amber-200',
   },
+  news: {
+    label: 'News',
+    className: 'bg-teal-50 text-teal-700 border border-teal-200',
+  },
   signalement: {
     label: 'Signalement',
     className: 'bg-red-50 text-red-700 border border-red-200',
@@ -102,9 +106,13 @@ const ROLE_CONFIG = {
     label: 'Entreprise',
     className: 'bg-[#E8F5D0] text-[#2D5016] border border-[#A7D129]/40',
   },
-  citizen: {
+citizen: {
     label: 'Citoyen',
     className: 'bg-blue-50 text-blue-700 border border-blue-200',
+  },
+  journalist: {
+    label: 'Journaliste',
+    className: 'bg-teal-50 text-teal-700 border border-teal-200',
   },
   visiteur: {
     label: 'Visiteur',

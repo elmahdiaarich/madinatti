@@ -130,7 +130,16 @@ function extractCityFR(item, cleanedTitle, cleanedDescription) {
 
 // ── Utilitaire Slugify ────────────────────────────────────────────────────────
 function slugify(text) {
-  return text.toString().toLowerCase()
+  const str = text.toString().trim();
+  // Pour les textes en arabe (Unicode 0600–06FF), les caractères non-ASCII
+  // sont tous supprimés par le replace /[^\w\-]+/g, ce qui produit un slug
+  // vide — et donc une collision de la contrainte UNIQUE sur slug.
+  // → On génère un slug déterministe préfixé "ar-" + hex des 16 premiers octets.
+  if (/[\u0600-\u06FF]/.test(str)) {
+    const hex = Buffer.from(str.slice(0, 16), 'utf8').toString('hex').slice(0, 28);
+    return `ar-${hex}`;
+  }
+  return str.toLowerCase()
     .replace(/\s+/g, '-')           // Replace spaces with -
     .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
     .replace(/\-\-+/g, '-')         // Replace multiple - with single -

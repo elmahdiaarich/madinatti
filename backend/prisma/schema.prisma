@@ -51,6 +51,16 @@ enum HealthPlaceStatus {
   SUSPENDED
   ARCHIVED
 }
+enum NewsSource {
+  RSS
+  ORIGINAL
+}
+
+enum JournalistStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
 
 model User {
   id               String         @id @default(uuid())
@@ -93,7 +103,8 @@ model User {
   reviews               Review[]
   professionalSpaceListings ProfessionalSpaceListing[]
   healthPlaces         HealthPlace[]
-
+  journalistStatus    JournalistStatus?
+  newsArticles         NewsArticle[]
 }
 
 model Role {
@@ -375,6 +386,7 @@ enum ReportTarget {
   REVIEW
   WORKER_PROFILE
   PROFESSIONAL_SPACE
+  NEWS
 }
 
 enum ReportReason {
@@ -953,16 +965,36 @@ model NewsArticle {
   title       String
   description String       @db.Text
   imageUrl    String?
-  sourceUrl   String       @unique
+  sourceUrl   String?      @unique
   language    NewsLanguage
   city        String?
   categoryId  String?
   category    Category?    @relation(fields: [categoryId], references: [id])
   publishedAt DateTime
+
+  source      NewsSource    @default(RSS)
+  userId      String?
+  user        User?         @relation(fields: [userId], references: [id])
+  status      ListingStatus @default(APPROVED)
+  adminNotes  String?
+  reviewedAt  DateTime?
+  reviewedBy  String?
+
+  // Snapshot de la version APPROVED précédente, pris uniquement lors d'une
+  // édition qui repasse l'article en PENDING — permet d'afficher un diff
+  // à l'admin sans avoir à modéliser un historique complet de versions.
+  previousTitle       String?
+  previousDescription String?  @db.Text
+  previousImageUrl    String?
+
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
   @@index([language, publishedAt])
+  @@index([status])
+  @@index([source])
+  @@index([userId])
+  @@index([city])
   @@map("news_articles")
 }
 

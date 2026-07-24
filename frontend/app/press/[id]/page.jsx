@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink, MapPin, Newspaper, Bookmark, BookmarkCheck } from 'lucide-react';
+import { ArrowLeft, ExternalLink, MapPin, Newspaper, Bookmark, BookmarkCheck, Volume2, Pause, Play, Square } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { pressService } from '@/services/pressService';
 import { pressFontVars } from '@/lib/pressFonts';
@@ -17,6 +17,12 @@ const LABELS = {
     loading: "Chargement de l'article...",
     save: 'Enregistrer',
     saved: 'Enregistré',
+    bySource: 'Madinatti',
+    byAuthor: (name) => `Par ${name} · Madinatti`,
+    listen: "Écouter l'article",
+    playing: "En lecture...",
+    pause: "Pause",
+    stop: "Arrêter",
   },
   AR: {
     back: 'العودة إلى الأخبار',
@@ -26,15 +32,152 @@ const LABELS = {
     loading: 'جارٍ تحميل المقال...',
     save: 'حفظ',
     saved: 'محفوظ',
+    bySource: 'مدينتي',
+    byAuthor: (name) => `بقلم ${name} · مدينتي`,
+    listen: "الاستماع للمقال",
+    playing: "جاري القراءة...",
+    pause: "إيقاف مؤقت",
+    stop: "إيقاف",
   },
 };
 
 const fmtDate = (d, lang) =>
   d
     ? new Date(d).toLocaleDateString(lang === 'AR' ? 'ar-MA' : 'fr-FR', {
-        day: '2-digit', month: 'long', year: 'numeric',
-      })
+      day: '2-digit', month: 'long', year: 'numeric',
+    })
     : '';
+
+function AudioPlayer({ title, description, language }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [supported, setSupported] = useState(true);
+  const [voices, setVoices] = useState([]);
+
+  const t = LABELS[language];
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      const updateVoices = () => {
+        const available = window.speechSynthesis.getVoices();
+        if (available && available.length > 0) {
+          setVoices(available);
+        }
+      };
+      updateVoices();
+      window.speechSynthesis.onvoiceschanged = updateVoices;
+    } else {
+      setSupported(false);
+    }
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const handleTogglePlay = () => {
+    if (!supported || typeof window === 'undefined') return;
+    const synth = window.speechSynthesis;
+
+    if (isPlaying) {
+      if (isPaused) {
+        synth.resume();
+        setIsPaused(false);
+      } else {
+        synth.pause();
+        setIsPaused(true);
+      }
+      return;
+    }
+
+    synth.cancel();
+
+    const textToRead = `${title}. ${description || ''}`;
+    const utterance = new SpeechSynthesisUtterance(textToRead);
+    utterance.rate = 0.95;
+
+    // Récupérer les voix disponibles (si state pas encore à jour, re-forcer getVoices)
+    const currentVoices = voices.length > 0 ? voices : synth.getVoices();
+    const targetPrefix = language === 'AR' ? 'ar' : 'fr';
+    const targetExact = language === 'AR' ? 'ar-MA' : 'fr-FR';
+
+    // Recherche de la meilleure voix de la bonne langue (ex: fr-FR puis fr-CA/fr-BE/fr)
+    const voice =
+      currentVoices.find((v) => v.lang.toLowerCase() === targetExact.toLowerCase()) ||
+      currentVoices.find((v) => v.lang.toLowerCase().startsWith(targetPrefix)) ||
+      currentVoices.find((v) => v.lang.toLowerCase().includes(targetPrefix));
+
+    if (voice) {
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
+    } else {
+      utterance.lang = language === 'AR' ? 'ar-SA' : 'fr-FR';
+    }
+
+    utterance.onend = () => {
+      setIsPlaying(false);
+      setIsPaused(false);
+    };
+
+    utterance.onerror = () => {
+      setIsPlaying(false);
+      setIsPaused(false);
+    };
+
+    synth.speak(utterance);
+    setIsPlaying(true);
+    setIsPaused(false);
+  };
+
+  const handleStop = () => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      setIsPlaying(false);
+      setIsPaused(false);
+    }
+  };
+
+  if (!supported) return null;
+
+  return (
+    <div className="mt-4 flex items-center gap-2 rounded-xl border border-primary-sage bg-primary-mint/40 p-2.5 sm:p-3">
+      <button
+        onClick={handleTogglePlay}
+        className="flex items-center gap-2 rounded-lg bg-primary-dark px-3.5 py-2 text-xs font-bold text-white shadow-sm transition-transform active:scale-95 hover:bg-primary-dark/90"
+        style={{ fontFamily: 'var(--font-meta)' }}
+      >
+        {isPlaying && !isPaused ? (
+          <>
+            <Pause size={15} />
+            <span>{t.pause}</span>
+          </>
+        ) : (
+          <>
+            <Volume2 size={15} className={isPlaying ? 'animate-pulse text-accent' : ''} />
+            <span>{isPlaying && isPaused ? t.listen : (isPlaying ? t.playing : t.listen)}</span>
+          </>
+        )}
+      </button>
+
+      {isPlaying && (
+        <button
+          onClick={handleStop}
+          className="flex items-center gap-1 rounded-lg border border-primary-dark/20 bg-white px-3 py-2 text-xs font-bold text-primary-dark hover:bg-red-50 hover:text-red-600 transition-colors"
+          style={{ fontFamily: 'var(--font-meta)' }}
+          title={t.stop}
+        >
+          <Square size={13} fill="currentColor" />
+          <span>{t.stop}</span>
+        </button>
+      )}
+
+      <span className="ms-auto text-[11px] font-semibold text-primary-dark/70" style={{ fontFamily: 'var(--font-meta)' }}>
+        {isPlaying ? (isPaused ? t.pause : t.playing) : '🔊 Audio'}
+      </span>
+    </div>
+  );
+}
 
 export default function PressDetailPage() {
   const { id } = useParams();
@@ -60,7 +203,7 @@ export default function PressDetailPage() {
           try {
             const favRes = await pressService.getFavorites();
             setIsFavorited((favRes.data ?? []).some((a) => a.id === id));
-          } catch (_) {}
+          } catch (_) { }
         }
       } catch (e) {
         setError(e.message || 'Erreur');
@@ -137,9 +280,8 @@ export default function PressDetailPage() {
             <button
               onClick={handleToggleFavorite}
               disabled={favLoading}
-              className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${
-                isFavorited ? 'text-accent' : 'text-primary-dark/80 hover:text-primary-dark'
-              } ${favLoading ? 'opacity-50' : ''}`}
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${isFavorited ? 'text-accent' : 'text-primary-dark/80 hover:text-primary-dark'
+                } ${favLoading ? 'opacity-50' : ''}`}
               style={{ fontFamily: 'var(--font-meta)' }}
             >
               <SaveIcon size={14} />
@@ -174,8 +316,11 @@ export default function PressDetailPage() {
               <MapPin size={12} /> {article.city}
             </span>
           )}
-          <span>Hespress</span>
+          <span>{article.source === 'ORIGINAL' ? (article.authorName ? t.byAuthor(article.authorName) : t.bySource) : 'Hespress'}</span>
         </div>
+
+        {/* Player de synthèse vocale (Text-to-Speech) */}
+        <AudioPlayer title={article.title} description={article.description} language={language} />
 
         <div className="relative mt-6 h-64 w-full overflow-hidden border border-primary-sage bg-primary-mint sm:h-96">
           {hasImage ? (
@@ -194,28 +339,29 @@ export default function PressDetailPage() {
 
         {article.description && (
           <p
-            className={`mt-8 text-base leading-relaxed text-primary-dark ${
-              language === 'FR'
+            className={`mt-8 text-base leading-relaxed text-primary-dark ${language === 'FR'
                 ? 'first-letter:me-2 first-letter:float-start first-letter:text-6xl first-letter:font-bold first-letter:leading-[0.8] first-letter:text-primary-dark'
                 : ''
-            }`}
+              }`}
             style={{ fontFamily: bodyFont }}
           >
             {article.description}
           </p>
         )}
 
-        <a
-          href={article.sourceUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-10 inline-flex items-center gap-2 border-2 border-primary-dark px-5 py-3 text-sm font-bold uppercase tracking-wide text-primary-dark transition-colors hover:bg-primary-dark hover:text-white"
-          style={{ fontFamily: 'var(--font-meta)' }}
-        >
-          {t.readFull}
-          <ExternalLink size={15} />
-        </a>
+        {article.source !== 'ORIGINAL' && article.sourceUrl && (
+          <a
+            href={article.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-10 inline-flex items-center gap-2 border-2 border-primary-dark px-5 py-3 text-sm font-bold uppercase tracking-wide text-primary-dark transition-colors hover:bg-primary-dark hover:text-white"
+            style={{ fontFamily: 'var(--font-meta)' }}
+          >
+            {t.readFull}
+            <ExternalLink size={15} />
+          </a>
+        )}
       </article>
     </div>
   );
-}
+}

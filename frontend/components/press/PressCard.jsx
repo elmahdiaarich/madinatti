@@ -9,6 +9,20 @@ import { pressService } from '@/services/pressService';
 const SAVE_LABEL = { FR: 'Enregistrer', AR: 'حفظ' };
 const SAVED_LABEL = { FR: 'Enregistré', AR: 'محفوظ' };
 const LEAD_KICKER = { FR: 'À la une', AR: 'العنوان الرئيسي' };
+const ORIGINAL_BADGE = { FR: 'Madinatti', AR: 'مدينتي' };
+
+function SourceBadge({ article, language }) {
+  if (article.source !== 'ORIGINAL') return null;
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent"
+      style={{ fontFamily: 'var(--font-meta)' }}
+      title={article.authorName ? `${ORIGINAL_BADGE[language]} · ${article.authorName}` : ORIGINAL_BADGE[language]}
+    >
+      ✎ {ORIGINAL_BADGE[language]}
+    </span>
+  );
+}
 
 // ── Relative time helper (bilingue FR/AR) ───────────────────────────────────
 export function timeAgo(dateStr, language = 'FR') {
@@ -75,9 +89,8 @@ function SaveButton({ articleId, language, initialSaved = false, compact = false
       onClick={handleClick}
       disabled={loading}
       title={label}
-      className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${
-        saved ? 'text-accent' : 'text-primary-dark/80 hover:text-primary-dark'
-      } ${loading ? 'opacity-50' : ''}`}
+      className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${saved ? 'text-accent' : 'text-primary-dark/80 hover:text-primary-dark'
+        } ${loading ? 'opacity-50' : ''}`}
       style={{ fontFamily: 'var(--font-meta)' }}
     >
       <Icon size={compact ? 14 : 15} strokeWidth={2} />
@@ -98,12 +111,15 @@ export function LeadStory({ article, language = 'FR', initialFavorited = false }
       className="group grid gap-6 border-b-2 border-primary-dark pb-8 sm:grid-cols-5"
     >
       <div className="flex flex-col justify-center bg-white p-6 sm:p-10 sm:col-span-3">
-        <p
-          className="mb-4 text-xs font-bold uppercase tracking-[0.14em] text-accent"
-          style={{ fontFamily: 'var(--font-meta)' }}
-        >
-          {article.category || LEAD_KICKER[language]}
-        </p>
+        <div className="mb-4 flex items-center gap-2 flex-wrap">
+          <p
+            className="text-xs font-bold uppercase tracking-[0.14em] text-accent"
+            style={{ fontFamily: 'var(--font-meta)' }}
+          >
+            {article.category || LEAD_KICKER[language]}
+          </p>
+          <SourceBadge article={article} language={language} />
+        </div>
         <h2
           className="text-3xl font-bold leading-[1.1] text-black sm:text-4xl group-hover:underline"
           style={{ fontFamily: font.display }}
@@ -176,12 +192,15 @@ export default function PressCard({ article, language = 'FR', initialFavorited =
         )}
       </div>
 
-      <p
-        className="text-[11px] font-bold uppercase tracking-[0.12em] text-accent"
-        style={{ fontFamily: 'var(--font-meta)' }}
-      >
-        {article.category || (language === 'AR' ? 'أخبار' : 'Actualité')}
-      </p>
+      <div className="flex items-center gap-2 flex-wrap">
+        <p
+          className="text-[11px] font-bold uppercase tracking-[0.12em] text-accent"
+          style={{ fontFamily: 'var(--font-meta)' }}
+        >
+          {article.category || (language === 'AR' ? 'أخبار' : 'Actualité')}
+        </p>
+        <SourceBadge article={article} language={language} />
+      </div>
 
       <h3
         className="text-lg font-bold leading-snug text-black line-clamp-3 group-hover:underline"
