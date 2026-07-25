@@ -11,6 +11,8 @@ const { seedCars }            = require('./cars.seed');
 const { seedWorkerProfiles }  = require('./workerProfiles.seed');   
 const { seedTaskRequests }    = require('./taskRequests.seed');     
 const { seedProfessionalSpaceListings } = require('./professionalSpaces.seed');
+const { seedHealthPlaces } = require('./health.seed');
+const { seedEvents } = require('./events.seed');
 
 const prisma = new PrismaClient();
 
@@ -53,6 +55,8 @@ const jobCategories = {
   await seedWorkerProfiles(prisma, categories);   
   await seedTaskRequests(prisma, categories);     
   await seedProfessionalSpaceListings(prisma, roles, categories);
+  await seedHealthPlaces(prisma, categories);
+  await seedEvents(prisma, categories);
 
 }
 

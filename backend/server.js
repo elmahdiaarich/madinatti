@@ -3,8 +3,21 @@ const cors = require('cors')
 require('dotenv').config()
 
 const app = express() 
+const allowedOrigins = (process.env.CORS_ORIGINS || [
+  'https://madinatti.ma',
+  'https://www.madinatti.ma',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+].join(','))
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: ["https://madinatti.ma", "https://www.madinatti.ma"],
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`CORS origin not allowed: ${origin}`));
+  },
   credentials: true,
 }));
 app.use(express.json())
@@ -15,6 +28,7 @@ const carsRouter = require('./routes/cars');
 const tourismRoutes = require('./routes/tourism');
 const professionalSpaceRoutes = require('./routes/professionalSpaces');
 const healthRoutes = require('./routes/health');
+const eventRoutes = require('./routes/events');
 
 const googleAuthRoutes = require("./routes/googleAuth")
 const pressRoutes = require('./routes/press');
@@ -29,6 +43,7 @@ app.use('/api/cars', carsRouter);
 app.use('/api/tourism', tourismRoutes);
 app.use('/api/industriel-zones', professionalSpaceRoutes);
 app.use('/api/health', healthRoutes);
+app.use('/api/events', eventRoutes);
 
 
 //to uploas imgs on cloudnary

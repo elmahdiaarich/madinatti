@@ -52,6 +52,31 @@ enum HealthPlaceStatus {
   ARCHIVED
 }
 
+enum EventMode {
+  IN_PERSON
+  ONLINE
+  HYBRID
+}
+
+enum EventRecurrenceType {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+  CUSTOM
+}
+
+enum EventStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  REJECTED
+  CANCELLED
+  POSTPONED
+  FINISHED
+}
+
 model User {
   id               String         @id @default(uuid())
   name             String
@@ -93,6 +118,8 @@ model User {
   reviews               Review[]
   professionalSpaceListings ProfessionalSpaceListing[]
   healthPlaces         HealthPlace[]
+  eventsCreated        Event[]        @relation("EventsCreatedBy")
+  eventsOrganized      Event[]        @relation("EventsOrganizedBy")
 
 }
 
@@ -183,6 +210,7 @@ model Category {
   touristicListings  TouristicListing[]
   news               NewsArticle[]
   healthPlaces       HealthPlace[]
+  events             Event[]
   workerProfiles     WorkerProfile[]
   taskRequests       TaskRequest[]
   professionalSpaceListings ProfessionalSpaceListing[]
@@ -718,6 +746,74 @@ model HealthPlace {
   @@index([source])
   @@index([status])
   @@index([isVerified])
+  @@index([latitude, longitude])
+  @@index([createdAt])
+}
+
+model Event {
+  id                         String              @id @default(uuid())
+  title                      String
+  titleAr                    String?
+  slug                       String              @unique
+  shortDescription           String?
+  description                String
+  categoryId                 String
+  organizerName              String
+  organizerId                String?
+  organizerPhone             String?
+  organizerEmail             String?
+  websiteUrl                 String?
+  eventMode                  EventMode           @default(IN_PERSON)
+  venueName                  String?
+  address                    String?
+  city                       String
+  province                   String?
+  region                     String?
+  latitude                   Decimal?
+  longitude                  Decimal?
+  onlineUrl                  String?
+  timezone                   String              @default("Africa/Casablanca")
+  startsAt                   DateTime
+  endsAt                     DateTime
+  doorsOpenAt                DateTime?
+  recurrenceType             EventRecurrenceType @default(NONE)
+  recurrenceRule             String?
+  recurrenceEndsAt           DateTime?
+  isFree                     Boolean             @default(true)
+  priceMin                   Decimal?
+  priceMax                   Decimal?
+  currency                   String              @default("MAD")
+  ticketUrl                  String?
+  reservationRequired        Boolean             @default(false)
+  capacity                   Int?
+  ageRestriction             String?
+  accessibilityInformation   String?
+  mainImage                  String?
+  gallery                    Json?
+  status                     EventStatus         @default(PENDING_REVIEW)
+  featured                   Boolean             @default(false)
+  verified                   Boolean             @default(false)
+  publishedAt                DateTime?
+  source                     String?
+  sourceUrl                  String?
+  sourceVerifiedAt           DateTime?
+  createdById                String
+  createdAt                  DateTime            @default(now())
+  updatedAt                  DateTime            @updatedAt
+
+  category  Category @relation(fields: [categoryId], references: [id])
+  organizer User?    @relation("EventsOrganizedBy", fields: [organizerId], references: [id])
+  createdBy User     @relation("EventsCreatedBy", fields: [createdById], references: [id])
+
+  @@index([categoryId])
+  @@index([status])
+  @@index([city])
+  @@index([province])
+  @@index([region])
+  @@index([startsAt])
+  @@index([endsAt])
+  @@index([featured])
+  @@index([verified])
   @@index([latitude, longitude])
   @@index([createdAt])
 }

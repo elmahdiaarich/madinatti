@@ -57,6 +57,31 @@ const CATEGORIES = [
   { name: 'Dentistes',                slug: 'dentist',              module: 'sante', displayType: 'PLACE' },
   { name: 'Centres de radiologie',    slug: 'radiology-center',     module: 'sante', displayType: 'PLACE' },
   { name: 'Parapharmacies',           slug: 'parapharmacy',         module: 'sante', displayType: 'PLACE' },
+  // Evenements
+  { name: 'Theatre et spectacle',      slug: 'theatre-spectacle',      module: 'events', displayType: 'PLACE' },
+  { name: 'Concert et musique',        slug: 'concert-musique',        module: 'events', displayType: 'PLACE' },
+  { name: 'Festival',                  slug: 'festival',               module: 'events', displayType: 'PLACE' },
+  { name: 'Marche et souk',            slug: 'marche-souk',            module: 'events', displayType: 'PLACE' },
+  { name: 'Salon et foire',            slug: 'salon-foire',            module: 'events', displayType: 'PLACE' },
+  { name: 'Exposition',                slug: 'exposition',             module: 'events', displayType: 'PLACE' },
+  { name: 'Cinema et projection',      slug: 'cinema-projection',      module: 'events', displayType: 'PLACE' },
+  { name: 'Conference et seminaire',   slug: 'conference-seminaire',   module: 'events', displayType: 'PLACE' },
+  { name: 'Formation et atelier',      slug: 'formation-atelier',      module: 'events', displayType: 'PLACE' },
+  { name: 'Sport',                     slug: 'sport',                  module: 'events', displayType: 'PLACE' },
+  { name: 'Culture',                   slug: 'culture',                module: 'events', displayType: 'PLACE' },
+  { name: 'Religieux',                 slug: 'religieux',              module: 'events', displayType: 'PLACE' },
+  { name: 'Associatif',                slug: 'associatif',             module: 'events', displayType: 'PLACE' },
+  { name: 'Famille et enfants',        slug: 'famille-enfants',        module: 'events', displayType: 'PLACE' },
+  { name: 'Gastronomie',               slug: 'gastronomie',            module: 'events', displayType: 'PLACE' },
+  { name: 'Mode et beaute',            slug: 'mode-beaute',            module: 'events', displayType: 'PLACE' },
+  { name: 'Technologie et innovation', slug: 'technologie-innovation', module: 'events', displayType: 'PLACE' },
+  { name: 'Entrepreneuriat et emploi', slug: 'entrepreneuriat-emploi', module: 'events', displayType: 'PLACE' },
+  { name: 'Tourisme et patrimoine',    slug: 'tourisme-patrimoine',    module: 'events', displayType: 'PLACE' },
+  { name: 'Jeux et esport',            slug: 'jeux-esport',            module: 'events', displayType: 'PLACE' },
+  { name: 'Vie nocturne',              slug: 'vie-nocturne',           module: 'events', displayType: 'PLACE' },
+  { name: 'Portes ouvertes',           slug: 'portes-ouvertes',        module: 'events', displayType: 'PLACE' },
+  { name: 'Brocante et vide-grenier',  slug: 'brocante-vide-grenier',  module: 'events', displayType: 'PLACE' },
+  { name: 'Autre',                     slug: 'autre',                  module: 'events', displayType: 'PLACE' },
   // ── Mini-jobs ────────────────────────────────────────────────────────────
   // Liste simplifiée : catégories larges et facilement identifiables par un client,
   // sans jargon métier. Les besoins proches (vitrerie, serrurerie, carrelage,
@@ -86,7 +111,7 @@ const CATEGORIES = [
 async function seedCategories(prisma) {
   console.log('🌱 Seeding categories...');
 
-  const result = { emploi: {}, immobilier: {}, automobile: {}, tourisme: {} ,'mini-jobs': {}, 'espaces-pro': {}, sante: {}};
+  const result = { emploi: {}, immobilier: {}, automobile: {}, tourisme: {} ,'mini-jobs': {}, 'espaces-pro': {}, sante: {}, events: {}};
 
   for (const cat of CATEGORIES) {
     const record = await prisma.category.upsert({

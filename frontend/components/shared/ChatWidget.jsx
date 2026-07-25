@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -21,6 +22,7 @@ function playNotificationSound() {
 }
 
 export default function ChatWidget() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -133,21 +135,25 @@ export default function ChatWidget() {
     setTimeout(() => sendMessage('bonjour', true), 100);
   };
 
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/dashboard') || pathname?.startsWith('/my-space')) {
+    return null;
+  }
+
   return (
     <>
       {/* ── Bouton flottant ── */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110"
+        className="fixed bottom-4 right-4 z-50 flex h-10 w-10 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-110 sm:bottom-6 sm:right-6 sm:h-14 sm:w-14"
         style={{ backgroundColor: '#A7D129' }}
         aria-label="Ouvrir le chat"
       >
         {isOpen ? (
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         ) : (
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
           </svg>
         )}
@@ -161,8 +167,8 @@ export default function ChatWidget() {
       {/* ── Fenêtre du chat ── */}
       {isOpen && (
         <div
-          className="fixed bottom-24 right-6 z-50 w-80 sm:w-96 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200"
-          style={{ height: '520px', backgroundColor: '#fff' }}
+          className="fixed inset-x-3 bottom-36 z-50 flex max-h-[calc(100dvh-10rem)] flex-col overflow-hidden rounded-2xl border border-gray-200 shadow-2xl sm:inset-x-auto sm:bottom-24 sm:right-6 sm:w-96"
+          style={{ height: 'min(520px, calc(100dvh - 10rem))', backgroundColor: '#fff' }}
         >
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3" style={{ backgroundColor: '#2D5016' }}>

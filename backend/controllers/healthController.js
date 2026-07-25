@@ -70,7 +70,8 @@ async function updatePlace(req, res) {
 
 async function deletePlace(req, res) {
   try {
-    await healthPlaces.deletePlace(req.params.id);
+    const deleted = await healthPlaces.deletePlace(req.params.id);
+    if (!deleted) return res.status(404).json({ success: false, message: 'Etablissement introuvable.' });
     res.json({ success: true, message: 'Etablissement supprime.' });
   } catch (error) {
     console.error('health deletePlace error:', error.message);

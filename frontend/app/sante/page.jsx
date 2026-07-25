@@ -119,17 +119,17 @@ function HealthPageContent() {
   };
 
   return (
-    <main className="flex h-[95vh] min-h-[640px] flex-col overflow-hidden bg-white lg:flex-row">
-      <div className="order-1 sticky top-0 z-10 h-64 w-full shrink-0 lg:order-2 lg:static lg:h-auto lg:max-w-[50%] lg:border-l lg:border-black/[0.06]">
+    <main className="flex min-h-screen flex-col bg-white lg:h-[95vh] lg:min-h-[640px] lg:overflow-hidden lg:flex-row">
+      <div className="order-1 h-56 w-full shrink-0 overflow-hidden sm:h-64 lg:order-2 lg:h-auto lg:max-w-[50%] lg:border-l lg:border-black/[0.06]">
         <div className="flex h-full flex-col">
-          <div className="flex shrink-0 items-center justify-between border-b border-black/[0.06] bg-white px-4 py-2.5">
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-black/[0.06] bg-white px-4 py-2.5">
             <span className="inline-flex items-center gap-2 text-sm font-semibold text-gray-800">
               <MapPinned size={16} /> Carte santé
             </span>
             <button
               type="button"
               onClick={searchInMapArea}
-              className="rounded-full border border-black/10 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-[#2D5016]"
+              className="max-w-[58%] truncate rounded-full border border-black/10 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-[#2D5016] sm:max-w-none"
             >
               Rechercher dans cette zone
             </button>
@@ -147,7 +147,7 @@ function HealthPageContent() {
       </div>
 
       <section className="order-2 flex min-h-0 min-w-0 flex-1 flex-col lg:order-1 lg:min-w-[420px]">
-        <div className="shrink-0 border-b border-black/[0.06] px-6 py-3">
+        <div className="shrink-0 border-b border-black/[0.06] px-4 py-4 sm:px-6 lg:py-3">
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <div>
               <h1 className="text-base font-bold text-black">Santé au Maroc</h1>
@@ -159,7 +159,7 @@ function HealthPageContent() {
               type="button"
               onClick={useGps}
               disabled={gpsLoading}
-              className="inline-flex h-9 items-center gap-2 rounded-full bg-[#2D5016] px-3.5 text-xs font-semibold text-white transition disabled:opacity-60"
+              className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-full bg-[#2D5016] px-3.5 text-xs font-semibold text-white transition disabled:opacity-60 sm:w-auto"
             >
               {gpsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Crosshair size={15} />}
               Autour de moi
@@ -195,7 +195,7 @@ function HealthPageContent() {
             })}
           </div>
 
-          <form onSubmit={submit} className="mt-2.5 grid gap-2 xl:grid-cols-[1fr_150px_120px_145px_auto]">
+          <form onSubmit={submit} className="mt-2.5 grid gap-2 sm:grid-cols-2 xl:grid-cols-[1fr_150px_120px_145px_auto]">
             <label className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
@@ -224,13 +224,13 @@ function HealthPageContent() {
               <input type="checkbox" checked={filters.openNow} onChange={(e) => setFilter("openNow", e.target.checked)} />
               Ouvert maintenant
             </label>
-            <button type="submit" className="h-10 rounded-full bg-[#A7D129] px-5 text-sm font-bold text-[#17250D] transition hover:brightness-95">
+            <button type="submit" className="h-11 rounded-full bg-[#A7D129] px-5 text-sm font-bold text-[#17250D] transition hover:brightness-95 sm:col-span-2 xl:col-span-1 xl:h-10">
               Rechercher
             </button>
           </form>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+        <div className="min-h-0 flex-1 px-4 py-5 sm:px-6 lg:overflow-y-auto">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm text-black/40">
               {loading ? "Recherche en cours..." : `${places.length} resultat${places.length > 1 ? "s" : ""}`}

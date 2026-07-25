@@ -186,6 +186,7 @@ const COMMON_NAV = [
   { key: "worker-profiles", label: "Mes profils prestataire", href: "/my-space/worker-profiles", icon: IconBriefcase },
   { key: "bookings", label: "Mes réservations", href: "/my-space/bookings", icon: IconCalendar },
   { key: "task-requests", label: "Mes demandes", href: "/my-space/task-requests", icon: IconClipboard },
+  { key: "events", label: "Mes evenements", href: "/my-space/events", icon: IconCalendar },
   { key: "favorites", label: "Mes favoris", href: "/my-space/favorites", icon: IconHeart },
   { key: "notifications", label: "Notifications", href: "/my-space/notifications", icon: IconBell },
   { key: "messages", label: "Messages", href: "/my-space/messages", icon: IconMail },
@@ -203,6 +204,12 @@ const BUSINESS_NAV = [
     label: "Mes favoris",
     href: "/my-space/favorites",
     icon: IconHeart,
+  },
+  {
+    key: "events",
+    label: "Mes evenements",
+    href: "/my-space/events",
+    icon: IconCalendar,
   },
 ];
 

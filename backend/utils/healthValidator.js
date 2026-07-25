@@ -2,6 +2,7 @@ const { HEALTH_SUBCATEGORY_MAP } = require('../config/healthCategories');
 const { isMoroccoCoordinate, toNumber } = require('./healthGeo');
 
 const MAX_RADIUS = Number(process.env.HEALTH_SEARCH_MAX_RADIUS_METERS || 50000);
+const VALID_PLACE_STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED', 'ARCHIVED'];
 
 function clampLimit(value) {
   const n = parseInt(value, 10);
@@ -53,6 +54,15 @@ function validatePlacePayload(body, { partial = false } = {}) {
   const subcategory = body.subcategory;
   const lat = toNumber(body.latitude);
   const lng = toNumber(body.longitude);
+  const hasLatField = body.latitude !== undefined;
+  const hasLngField = body.longitude !== undefined;
+  const hasLatValue = body.latitude !== undefined && body.latitude !== null && body.latitude !== '';
+  const hasLngValue = body.longitude !== undefined && body.longitude !== null && body.longitude !== '';
+  const clearsCoordinates =
+    hasLatField &&
+    hasLngField &&
+    (body.latitude === null || body.latitude === '') &&
+    (body.longitude === null || body.longitude === '');
 
   if (!partial || body.name !== undefined) {
     if (!body.name || String(body.name).trim().length < 2) errors.name = 'Nom requis.';
@@ -60,8 +70,13 @@ function validatePlacePayload(body, { partial = false } = {}) {
   if (!partial || body.subcategory !== undefined) {
     if (!HEALTH_SUBCATEGORY_MAP[subcategory]) errors.subcategory = 'Sous-categorie Sante inconnue.';
   }
-  if ((body.latitude !== undefined || body.longitude !== undefined) && (lat === null || lng === null)) {
-    errors.location = 'Latitude et longitude valides requises.';
+  if (body.status !== undefined && !VALID_PLACE_STATUSES.includes(body.status)) {
+    errors.status = 'Statut invalide.';
+  }
+  if ((hasLatField || hasLngField) && !clearsCoordinates) {
+    if (hasLatValue !== hasLngValue || lat === null || lng === null) {
+      errors.location = 'Latitude et longitude valides requises.';
+    }
   }
   if (lat !== null && lng !== null && !isMoroccoCoordinate(lat, lng)) {
     errors.location = 'Les coordonnees doivent etre situees au Maroc.';

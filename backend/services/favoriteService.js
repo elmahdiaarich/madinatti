@@ -40,6 +40,11 @@ const getUserFavorites = async (userId, itemType) => {
       where: { id: { in: ids }, isActive: true },
       include: { category: true },
     });
+  } else if (itemType === "EVENT") {
+    return prisma.event.findMany({
+      where: { id: { in: ids }, status: "PUBLISHED" },
+      include: { category: true },
+    });
   }
 
   return [];

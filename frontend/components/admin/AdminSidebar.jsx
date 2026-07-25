@@ -132,6 +132,15 @@ const IconHealth = () => (
   </svg>
 )
 
+const IconEvents = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="4" y="5" width="16" height="16" rx="2" />
+    <path d="M16 3v4M8 3v4M4 11h16" />
+    <path d="M8 15h2M14 15h2M8 18h2" />
+  </svg>
+)
+
 // Chevron left/right for the collapse button
 const IconChevron = ({ left }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
@@ -159,6 +168,7 @@ const NAV_ITEMS = [
   { key: 'immobilier',   label: 'Immobilier',       href: '/admin/real-estate', icon: IconBuilding   },
   { key: 'vehicule',     label: 'Véhicules',        href: '/admin/vehicles',    icon: IconCar        },
   { key: 'tourisme',     label: 'Tourisme',         href: '/admin/tourism',     icon: IconCompass    },
+  { key: 'events',       label: 'Evenements',       href: '/admin/events',      icon: IconEvents     },
   { key: 'espacesPro', label: 'Espaces Pro', href: '/admin/industriel-zones', icon: IconFactory },
   { key: 'sante',        label: 'Santé',            href: '/admin/health',      icon: IconHealth     },
   { key: 'miniJobs',     label: 'Mini-jobs · Profils', href: '/admin/mini-jobs', icon: IconBriefcase },

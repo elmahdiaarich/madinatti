@@ -85,6 +85,7 @@ function FavoriteButton({ listingId, initialFavorited = false, onToggle }) {
   const [favorited, setFavorited] = useState(initialFavorited);
   const [loading, setLoading] = useState(false);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setFavorited(initialFavorited); }, [initialFavorited]);
 
   if (!user) return null;

@@ -18,9 +18,18 @@ const HEALTH_TYPES = [
   { value: "radiology-center", label: "Radiologie" },
 ];
 
+const HEALTH_STATUSES = [
+  { value: "PENDING", label: "En attente" },
+  { value: "APPROVED", label: "Publiee" },
+  { value: "REJECTED", label: "Rejetee" },
+  { value: "SUSPENDED", label: "Suspendue" },
+  { value: "ARCHIVED", label: "Archivee" },
+];
+
 const emptyForm = () => ({
   name: "",
   subcategory: "hospital-clinic",
+  status: "APPROVED",
   city: "Kenitra",
   neighborhood: "",
   address: "",
@@ -57,6 +66,7 @@ function hydrateForm(place) {
     ...emptyForm(),
     name: place.name || "",
     subcategory: place.subcategory || "hospital-clinic",
+    status: place.status || "APPROVED",
     city: place.city || "Kenitra",
     neighborhood: place.neighborhood || "",
     address: place.address || "",
@@ -177,6 +187,7 @@ export default function AdminHealthPage() {
       longitude: form.longitude === "" ? null : Number(form.longitude),
       images: form.images,
       regularHours: buildRegularHours(form),
+      status: form.status,
     };
 
     setSaving(true);
@@ -295,6 +306,7 @@ export default function AdminHealthPage() {
             <tr>
               <th className="px-5 py-3">Nom</th>
               <th className="px-5 py-3">Type</th>
+              <th className="px-5 py-3">Statut</th>
               <th className="px-5 py-3">Quartier / Ville</th>
               <th className="px-5 py-3">Contact</th>
               <th className="px-5 py-3 text-right">Actions</th>
@@ -302,13 +314,14 @@ export default function AdminHealthPage() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan="5" className="px-5 py-8 text-center text-gray-400">Chargement...</td></tr>
+              <tr><td colSpan="6" className="px-5 py-8 text-center text-gray-400">Chargement...</td></tr>
             ) : places.length === 0 ? (
-              <tr><td colSpan="5" className="px-5 py-8 text-center text-gray-400">Aucune fiche Santé.</td></tr>
+              <tr><td colSpan="6" className="px-5 py-8 text-center text-gray-400">Aucune fiche Sante.</td></tr>
             ) : places.map((place) => (
               <tr key={place.id} className="hover:bg-gray-50">
                 <td className="px-5 py-3 font-semibold text-gray-900">{place.name}</td>
                 <td className="px-5 py-3">{HEALTH_SUBCATEGORIES.find((c) => c.slug === place.subcategory)?.label || place.subcategory}</td>
+                <td className="px-5 py-3">{HEALTH_STATUSES.find((status) => status.value === place.status)?.label || place.status || "-"}</td>
                 <td className="px-5 py-3">{place.neighborhood || "-"} / {place.city || "-"}</td>
                 <td className="px-5 py-3">{place.phones?.[0] || "-"}</td>
                 <td className="px-5 py-3">
@@ -342,6 +355,11 @@ export default function AdminHealthPage() {
               <Field label="Santé" required error={errors.subcategory}>
                 <select value={form.subcategory} onChange={(e) => setForm({ ...form, subcategory: e.target.value })} className="h-11 rounded-xl border border-gray-200 px-3 text-sm">
                   {HEALTH_TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Statut" required>
+                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="h-11 rounded-xl border border-gray-200 px-3 text-sm">
+                  {HEALTH_STATUSES.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
                 </select>
               </Field>
               <Field label="Nom" required error={errors.name}>
