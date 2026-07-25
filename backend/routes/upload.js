@@ -53,5 +53,27 @@ router.post('/images', authMiddleware, upload.array('images', 10), async (req, r
     return res.status(500).json({ success: false, message: 'Upload failed' });
   }
 });
-
+// DELETE /api/upload/images  body: { url }
+// Nettoyage best-effort d'une image temp jamais utilisée (ex: formulaire
+// abandonné avant soumission). Volontairement restreint à madinatti/temp
+// pour ne jamais permettre la suppression d'une image déjà publiée.
+router.delete('/images', authMiddleware, async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url || !url.includes('madinatti/temp')) {
+      return res.status(400).json({ success: false, message: 'URL invalide ou hors dossier temp' });
+    }
+    const urlParts = url.split('/upload/');
+    if (urlParts.length !== 2) {
+      return res.status(400).json({ success: false, message: 'URL invalide' });
+    }
+    const withoutVer = urlParts[1].replace(/^v\d+\//, '');
+    const publicId = withoutVer.replace(/\.[^/.]+$/, '');
+    await cloudinary.uploader.destroy(publicId);
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[upload/delete]', err);
+    return res.status(500).json({ success: false, message: 'Delete failed' });
+  }
+});
 module.exports = router;

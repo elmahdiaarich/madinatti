@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -115,10 +115,31 @@ export default function CreateNewsArticlePage() {
   });
   const [region, setRegion] = useState('');
   const [image, setImage] = useState([]);
+  const sectionRefs = {
+    title: useRef(null), description: useRef(null), image: useRef(null),
+  };
+  const ERROR_ORDER = ['title', 'description', 'image'];
   const [newCategoryName, setNewCategoryName] = useState('');
   const [creatingCategory, setCreatingCategory] = useState(false);
+  const submittedRef = useRef(false);
+  const imageRef = useRef(image);
+  imageRef.current = image;
 
-  useState(() => {
+  // Nettoyage best-effort : si l'utilisateur quitte sans soumettre, on détruit
+  // l'image temp déjà uploadée sur Cloudinary pour éviter une fuite de stockage.
+  useEffect(() => {
+    return () => {
+      if (!submittedRef.current && imageRef.current[0]?.url?.includes('madinatti/temp')) {
+        fetch(`${API_URL}/upload/images`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ url: imageRef.current[0].url }),
+        }).catch(() => {}); // best-effort, on ne bloque jamais la navigation pour ça
+      }
+    };
+  }, [token]);
+
+  useEffect(() => {
     fetch(`${API_URL}/press/categories`)
       .then((r) => r.json())
       .then((d) => { if (d.success) setCategories(d.data); })
@@ -130,8 +151,30 @@ export default function CreateNewsArticlePage() {
     setErrors((e) => ({ ...e, [k]: '' }));
   };
 
+  const hasUnsavedData = () =>
+    !submittedRef.current && (form.title.trim() || form.description.trim() || image.length > 0);
+
+  // Avertit avant fermeture d'onglet/rafraîchissement si du contenu a été saisi
+  useEffect(() => {
+    const handler = (e) => {
+      if (hasUnsavedData()) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [form.title, form.description, image]);
+
+  const MAX_CATEGORY_NAME_LENGTH = 40;
+
   const handleCreateCategory = async () => {
-    if (!newCategoryName.trim()) return;
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+    if (trimmed.length > MAX_CATEGORY_NAME_LENGTH) {
+      toast.error(`Le nom de la catégorie ne peut pas dépasser ${MAX_CATEGORY_NAME_LENGTH} caractères.`);
+      return;
+    }
     setCreatingCategory(true);
     try {
       const res = await pressService.createCategory(newCategoryName.trim());
@@ -163,7 +206,13 @@ export default function CreateNewsArticlePage() {
 
   const handleSubmit = async () => {
     const e = validate();
-    if (Object.keys(e).length > 0) return;
+    if (Object.keys(e).length > 0) {
+      const firstKey = ERROR_ORDER.find((k) => e[k]);
+      if (firstKey && sectionRefs[firstKey]?.current) {
+        sectionRefs[firstKey].current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -176,6 +225,7 @@ export default function CreateNewsArticlePage() {
         imageUrl: image[0]?.url,
       });
 
+      submittedRef.current = true; // empêche le cleanup-on-unmount de détruire l'image désormais utilisée
       toast.success('Article soumis ! Il est en attente de validation.', { title: 'Article créé ✦', duration: 5000 });
       router.push('/my-space/newsroom');
     } catch (err) {
@@ -205,14 +255,14 @@ export default function CreateNewsArticlePage() {
       </p>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
-        <div>
+        <div ref={sectionRefs.title}>
           <label className="block text-sm font-semibold text-gray-700 mb-1.5">Titre *</label>
           <input value={form.title} onChange={(e) => set('title', e.target.value)}
             placeholder="Ex: Inauguration du nouveau marché municipal" className={inputCls} />
           {errors.title && <p className="text-red-500 text-xs mt-1">⚠ {errors.title}</p>}
         </div>
 
-        <div>
+        <div ref={sectionRefs.description}>
           <label className="block text-sm font-semibold text-gray-700 mb-1.5">Description *</label>
           <textarea value={form.description} onChange={(e) => set('description', e.target.value)}
             rows={6} maxLength={8000} placeholder="Contenu de l'article..." className={`${inputCls} resize-none`} />
@@ -271,14 +321,18 @@ export default function CreateNewsArticlePage() {
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Ville</label>
-            <select value={form.city} onChange={(e) => set('city', e.target.value)} disabled={!region} className={inputCls}>
+            <select value={form.city} onChange={(e) => set('city', e.target.value)} disabled={!region}
+              className={`${inputCls} ${!region ? 'opacity-60 cursor-not-allowed' : ''}`}>
               <option value="">{region ? 'Choisir une ville' : "← Choisissez d'abord une région"}</option>
               {(citiesByRegion[region] || []).sort((a, b) => a.localeCompare(b, 'fr')).map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
+            {!region && (
+              <p className="text-xs text-gray-400 mt-1">Sélectionnez d'abord une région pour activer ce champ.</p>
+            )}
           </div>
         </div>
 
-        <div>
+        <div ref={sectionRefs.image}>
           <label className="block text-sm font-semibold text-gray-700 mb-1.5">Photo *</label>
           <PhotoGridUploader images={image} onChange={setImage} token={token} multiple={false} maxFiles={1} />
           {errors.image && <p className="text-red-500 text-xs mt-1">⚠ {errors.image}</p>}

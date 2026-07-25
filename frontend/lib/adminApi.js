@@ -235,15 +235,23 @@ export async function getSidebarCounts(token = null) {
 
 // ── JOURNALIST ACCOUNTS ───────────────────────────────────────────────────────
 
+// Alias maintenu pour rétro-compatibilité (utilisé dans le sidebar count)
 export async function getPendingJournalists(token = null) {
-  const json = await apiFetch('/api/admin/journalists', {}, token)
+  const json = await apiFetch('/api/admin/journalists?status=PENDING', {}, token)
   return json.data ?? []
 }
 
-export async function updateJournalistStatus(id, status, token = null) {
+// Nouvelle fonction générique pour récupérer par statut
+export async function getJournalists(status = 'PENDING', token = null) {
+  const params = new URLSearchParams({ status })
+  const json = await apiFetch(`/api/admin/journalists?${params}`, {}, token)
+  return json.data ?? []
+}
+
+export async function updateJournalistStatus(id, status, adminNote = '', token = null) {
   const json = await apiFetch(
     `/api/admin/journalists/${id}/status`,
-    { method: 'PATCH', body: JSON.stringify({ status }) },
+    { method: 'PATCH', body: JSON.stringify({ status, adminNote }) },
     token
   )
   return json

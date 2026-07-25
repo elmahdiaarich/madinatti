@@ -1821,37 +1821,47 @@ const deleteModule = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// JOURNALIST ACCOUNT VALIDATION (distinct from article moderation above)
+// JOURNALIST ACCOUNT MANAGEMENT
 // ─────────────────────────────────────────────────────────────────────────────
 
 const getPendingJournalists = async (req, res) => {
   try {
+    const { status } = req.query; // PENDING | APPROVED | REJECTED | SUSPENDED (default: PENDING)
     const journalistRole = await prisma.role.findUnique({ where: { name: 'journalist' } });
     if (!journalistRole) return res.json({ success: true, data: [] });
 
+    const validStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED'];
+    const filterStatus = validStatuses.includes(status) ? status : 'PENDING';
+
     const journalists = await prisma.user.findMany({
-      where: { roleId: journalistRole.id, journalistStatus: 'PENDING' },
+      where: { roleId: journalistRole.id, journalistStatus: filterStatus },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true, name: true, email: true, phone: true,
-        city: true, avatar: true, createdAt: true,
+        city: true, avatar: true, createdAt: true, journalistStatus: true,
       },
     });
 
-    // Compte-rendu du taux de refus d'articles pour chaque compte en attente —
-    // pertinent si un compte déjà approuvé a soumis des articles avant que
-    // cette page ne soit consultée à nouveau (rare mais possible).
-    const withRejectionStats = await Promise.all(
+    // Stats articles pour chaque journaliste
+    const withStats = await Promise.all(
       journalists.map(async (j) => {
-        const [rejectedCount, totalCount] = await Promise.all([
-          prisma.newsArticle.count({ where: { userId: j.id, source: 'ORIGINAL', status: 'REJECTED' } }),
+        const [total, approved, rejected, pending] = await Promise.all([
           prisma.newsArticle.count({ where: { userId: j.id, source: 'ORIGINAL' } }),
+          prisma.newsArticle.count({ where: { userId: j.id, source: 'ORIGINAL', status: 'APPROVED' } }),
+          prisma.newsArticle.count({ where: { userId: j.id, source: 'ORIGINAL', status: 'REJECTED' } }),
+          prisma.newsArticle.count({ where: { userId: j.id, source: 'ORIGINAL', status: 'PENDING' } }),
         ]);
-        return { ...j, rejectedArticlesCount: rejectedCount, totalArticlesCount: totalCount };
+        return {
+          ...j,
+          stats: { total, approved, rejected, pending },
+          // rétrocompat
+          rejectedArticlesCount: rejected,
+          totalArticlesCount: total,
+        };
       })
     );
 
-    res.json({ success: true, data: withRejectionStats });
+    res.json({ success: true, data: withStats });
   } catch (error) {
     console.error('admin getPendingJournalists error:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -1861,9 +1871,10 @@ const getPendingJournalists = async (req, res) => {
 const updateJournalistStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body; // 'APPROVED' | 'REJECTED'
+    const { status, adminNote } = req.body; // status: APPROVED | REJECTED | SUSPENDED
 
-    if (!['APPROVED', 'REJECTED'].includes(status)) {
+    const validStatuses = ['APPROVED', 'REJECTED', 'SUSPENDED'];
+    if (!validStatuses.includes(status)) {
       return res.status(400).json({ success: false, message: 'Statut invalide' });
     }
 
@@ -1883,11 +1894,24 @@ const updateJournalistStatus = async (req, res) => {
         'Vous pouvez maintenant publier des articles sur Madinatti.',
         '/my-space/newsroom',
       );
-    } else {
+    } else if (status === 'REJECTED') {
+      const noteText = adminNote?.trim()
+        ? `Motif : ${adminNote.trim()}`
+        : "Votre compte n'a pas été validé en tant que journaliste.";
       await createNotification(
         id, 'JOURNALIST_REJECTED',
         'Votre demande de compte journaliste a été refusée',
-        "Votre compte n'a pas été validé en tant que journaliste.",
+        noteText,
+        '/',
+      );
+    } else if (status === 'SUSPENDED') {
+      const noteText = adminNote?.trim()
+        ? `Motif de suspension : ${adminNote.trim()}`
+        : 'Votre compte journaliste a été suspendu par un administrateur.';
+      await createNotification(
+        id, 'JOURNALIST_REJECTED',
+        'Votre compte journaliste a été suspendu 🚫',
+        noteText,
         '/',
       );
     }
