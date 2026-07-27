@@ -131,7 +131,7 @@ function FilterSection({ icon, label, badge, isOpen, onToggle, children }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function RealEstateFilter({ onFilter }) {
+export default function RealEstateFilter({ onFilter, isMobile = false, onClose }) {
   const [open, setOpen] = useState({
     listingType: true,
     propertyType: true,
@@ -227,15 +227,13 @@ export default function RealEstateFilter({ onFilter }) {
     }
 
     setSelected(newSelected);
-    emitFilters(newSelected, priceRange);
+    if (!isMobile) emitFilters(newSelected, priceRange);
   };
 
   const handlePriceChange = (field, val) => {
     const newPrice = { ...priceRange, [field]: val };
     setPriceRange(newPrice);
-    // Emit on change (debounce not needed for sidebar apply pattern,
-    // but we emit live to stay consistent with the rest of the filter)
-    emitFilters(selected, newPrice);
+    if (!isMobile) emitFilters(selected, newPrice);
   };
 
   const handleReset = () => {
@@ -249,6 +247,11 @@ export default function RealEstateFilter({ onFilter }) {
     setSelected(empty);
     setPriceRange({ min: "", max: "" });
     onFilter({});
+  };
+
+  const handleSearch = () => {
+    emitFilters(selected, priceRange);
+    if (onClose) onClose();
   };
 
   const totalSelected =
@@ -396,7 +399,7 @@ export default function RealEstateFilter({ onFilter }) {
         isOpen={open.region}
         onToggle={() => toggleSection("region")}
       >
-        <div className="px-3 pb-3 space-y-0.5 max-h-52 overflow-y-auto">
+        <div className="px-3 pb-3 space-y-0.5 max-h-64 overflow-y-auto">
           {regionOptions.map((opt) => (
             <FilterOption
               key={opt.value}
@@ -416,7 +419,7 @@ export default function RealEstateFilter({ onFilter }) {
         isOpen={open.city}
         onToggle={() => toggleSection("city")}
       >
-        <div className="px-3 pb-3 space-y-0.5 max-h-52 overflow-y-auto">
+        <div className="px-3 pb-3 space-y-0.5 max-h-64 overflow-y-auto">
           {cityOptions.length === 0 ? (
             <p className="px-1 py-2 text-xs text-gray-400 italic">
               {selectedRegion
@@ -435,6 +438,18 @@ export default function RealEstateFilter({ onFilter }) {
           )}
         </div>
       </FilterSection>
+
+      {/* Mobile-only search button */}
+      {isMobile && (
+        <div className="sticky bottom-0 bg-white border-t border-gray-100 p-3">
+          <button
+            onClick={handleSearch}
+            className="w-full py-3 bg-[#2D5016] text-white rounded-xl font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition"
+          >
+            Rechercher
+          </button>
+        </div>
+      )}
     </div>
   );
 }

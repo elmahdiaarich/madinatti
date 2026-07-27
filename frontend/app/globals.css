@@ -51,6 +51,14 @@ html {
   animation: slide-in 0.25s ease-out;
 }
 
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+.animate-slide-in-left {
+  animation: slide-in-left 0.25s ease-out;
+}
+
 /*for report modal*/
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(16px) scale(0.97); }

@@ -11,7 +11,6 @@ import { useSearchParams } from "next/navigation";
 import BusinessAccountGate from "@/components/shared/BusinessAccountGate";
 import InlineRegisterSection from "@/components/real-estate/InlineRegisterSection";
 
-
 const CATEGORIES = [
   { label: "Tous", listingType: null },
   { label: "Vente", listingType: "SALE" },
@@ -295,6 +294,7 @@ function RealEstatePageContent() {
     return init;
   });
 
+  const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   const [fromHero, setFromHero] = useState(hasHeroFilters);
   const [listings, setListings] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -392,12 +392,11 @@ function RealEstatePageContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* TYPE TABS */}
-      <div className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
+      {/* TYPE TABS — desktop only */}
+      <div className="bg-white border-b border-gray-100 sticky top-0 z-30 shadow-sm">
         <div className="max-w-[1400px] mx-auto px-4 pt-2.5 pb-0 flex flex-col gap-0">
-
-          {/* Row 1: category tabs (Tous / Vente / Location) */}
-          <div className="flex gap-1.5 flex-wrap pb-2">
+          {/* Row 1: category tabs — hidden on mobile */}
+          <div className="hidden md:flex gap-1.5 flex-wrap pb-2">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.label}
@@ -413,9 +412,9 @@ function RealEstatePageContent() {
             ))}
           </div>
 
-          {/* Row 2: property type tabs + action buttons aligned right */}
+          {/* Row 2: property type tabs — hidden on mobile too (lives in drawer instead) + action buttons */}
           <div className="flex items-center justify-between pb-2.5 gap-2 flex-wrap">
-            <div className="flex gap-1 flex-wrap">
+            <div className="hidden md:flex gap-1 flex-wrap">
               {PROPERTY_TABS.map((tab) => (
                 <button
                   key={tab.label}
@@ -431,22 +430,48 @@ function RealEstatePageContent() {
               ))}
             </div>
 
+            {/* Mobile-only: filter trigger */}
+            <button
+              onClick={() => setShowFilterDrawer(true)}
+              className="md:hidden inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 text-gray-700 font-semibold text-sm hover:bg-gray-200 transition-all duration-150"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"
+                />
+              </svg>
+              Filtrer
+            </button>
+
             {/* Action buttons — right side */}
             <div className="flex items-center gap-2 shrink-0">
               {user?.role === "citizen" && (
                 <button
                   onClick={() => setShowAlertModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#A7D129] text-[#2D5016] font-semibold text-sm hover:bg-[#E8F5D0] transition-all duration-150"
+                  className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#A7D129] text-[#2D5016] font-semibold text-sm hover:bg-[#E8F5D0] transition-all duration-150"
                 >
                   🔔 Créer une alerte
                 </button>
               )}
-              {(!user || user?.role === "business" || user?.role === "citizen") && (
+              {(!user ||
+                user?.role === "business" ||
+                user?.role === "citizen") && (
                 <button
                   onClick={handlePublishClick}
                   className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-[#2D5016] text-white font-bold text-sm shadow-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-150 hover:scale-105 active:scale-100 group cursor-pointer"
                 >
-                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current shrink-0">
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="w-3.5 h-3.5 fill-current shrink-0"
+                  >
                     <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
                   </svg>
                   Publier une annonce
@@ -459,12 +484,42 @@ function RealEstatePageContent() {
 
       {/* MAIN */}
       <div className="max-w-[1400px] mx-auto px-4 py-6 flex gap-6">
-        {/* SIDEBAR */}
-        <aside className="w-[260px] shrink-0">
+        {/* SIDEBAR (desktop) / DRAWER (mobile) */}
+        <aside className="hidden md:block w-[260px] shrink-0">
           <div className="sticky top-[88px] overflow-y-auto max-h-[calc(100vh-88px)]">
             <RealEstateFilter onFilter={handleFilter} />
           </div>
         </aside>
+
+        {/* Mobile drawer */}
+        {showFilterDrawer && (
+          <div className="md:hidden fixed inset-0 z-40">
+            {/* backdrop */}
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setShowFilterDrawer(false)}
+            />
+            {/* panel sliding from the left */}
+            <div className="absolute top-0 left-0 h-full w-[85%] max-w-[340px] bg-gray-50 shadow-2xl overflow-y-auto animate-slide-in-left">
+              <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 sticky top-0 z-10">
+                <span className="font-bold text-gray-800 text-sm">Filtres</span>
+                <button
+                  onClick={() => setShowFilterDrawer(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="p-3 pb-0">
+        <RealEstateFilter
+          isMobile
+          onFilter={handleFilter}
+          onClose={() => setShowFilterDrawer(false)}
+        />
+      </div>
+            </div>
+          </div>
+        )}
 
         {/* GRID */}
         <main className="flex-1 min-w-0">
@@ -498,7 +553,8 @@ function RealEstatePageContent() {
           </div>
 
           {loading ? (
-<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">              {[...Array(6)].map((_, i) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[...Array(6)].map((_, i) => (
                 <div
                   key={i}
                   className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse"
@@ -523,8 +579,7 @@ function RealEstatePageContent() {
               </p>
             </div>
           ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {listings.map((l) => (
                 <RealEstateCard
                   key={l.id}
@@ -575,12 +630,14 @@ function RealEstatePageContent() {
         <AlertModal token={token} onClose={() => setShowAlertModal(false)} />
       )}
 
-   {/* BUSINESS GATE MODAL */}
+      {/* BUSINESS GATE MODAL */}
       {showBusinessGate && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
           style={{ animation: "fadeIn 0.15s ease-out" }}
-          onClick={(e) => { if (e.target === e.currentTarget) setShowBusinessGate(false); }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowBusinessGate(false);
+          }}
         >
           <div style={{ animation: "slideUp 0.2s ease-out" }}>
             <BusinessAccountGate onClose={() => setShowBusinessGate(false)} />
@@ -602,7 +659,11 @@ import { Suspense } from "react";
 
 export default function RealEstatePage() {
   return (
-    <Suspense fallback={<LoadingSpinner message="Chargement des annonces immobilières..." />}>
+    <Suspense
+      fallback={
+        <LoadingSpinner message="Chargement des annonces immobilières..." />
+      }
+    >
       <RealEstatePageContent />
     </Suspense>
   );
