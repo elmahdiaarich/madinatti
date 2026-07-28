@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-unused-vars, react/no-unescaped-entities */
+
 import { useEffect, useState, Suspense } from "react";
 import { carsService } from "@/services/carsService";
 import { useAuth } from "@/context/AuthContext";

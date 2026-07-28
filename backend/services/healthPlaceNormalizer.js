@@ -100,6 +100,7 @@ function normalizeLocalPlace(place, distanceMeters = null) {
     regularHours: place.regularHours,
     currentHours: place.currentHours,
     openNow: place.openNow,
+    status: place.status,
     isVerified: place.isVerified,
     lastGoogleRefreshAt: place.lastGoogleRefreshAt,
     createdAt: place.createdAt,

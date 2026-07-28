@@ -4,3 +4,4 @@ node_modules/
 .env.local
 project_documentation.md
 logs/
+.codex-mobile/

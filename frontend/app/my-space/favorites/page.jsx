@@ -4,8 +4,10 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { jobsService } from '@/services/jobsService';
 import { realEstateService } from '@/services/realEstateService';
+import { eventsService } from '@/services/eventsService';
 import JobCard from '@/components/jobs/JobCard';
 import RealEstateCard from '@/components/real-estate/RealEstateCard';
+import EventCard from '@/components/events/EventCard';
 import Link from 'next/link';
 
 // ── Tab ───────────────────────────────────────────────────────────────────────
@@ -146,6 +148,27 @@ function FavoriteRECard({ listing, onUnfavorite, token }) {
   );
 }
 
+function FavoriteEventCard({ event, onUnfavorite }) {
+  const [removing, setRemoving] = useState(false);
+
+  const handleRemove = async () => {
+    if (removing) return;
+    setRemoving(true);
+    try {
+      await eventsService.removeFavorite(event.id);
+      setTimeout(() => onUnfavorite(event.id), 300);
+    } catch {
+      setRemoving(false);
+    }
+  };
+
+  return (
+    <div className={`transition-all duration-300 ${removing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
+      <EventCard event={event} onFavorite={handleRemove} />
+    </div>
+  );
+}
+
 // ── Sort select ───────────────────────────────────────────────────────────────
 function SortSelect({ value, onChange }) {
   return (
@@ -169,8 +192,10 @@ export default function FavoritesPage() {
 
   const [jobs, setJobs]         = useState([]);
   const [listings, setListings] = useState([]);
+  const [events, setEvents] = useState([]);
   const [loadingJobs, setLoadingJobs]         = useState(true);
   const [loadingListings, setLoadingListings] = useState(true);
+  const [loadingEvents, setLoadingEvents] = useState(true);
   const [error, setError]       = useState(null);
 
   // Search & sort state per tab
@@ -184,17 +209,20 @@ export default function FavoritesPage() {
 
     const loadAll = async () => {
       try {
-        const [jobsRes, reRes] = await Promise.all([
+        const [jobsRes, reRes, eventsRes] = await Promise.all([
           jobsService.getMyFavorites(token).catch(() => ({ data: [] })),
           realEstateService.getFavorites(token).catch(() => ({ data: [] })),
+          eventsService.favorites().catch(() => ({ data: [] })),
         ]);
         setJobs(jobsRes.data ?? []);
         setListings(reRes.data ?? []);
+        setEvents(eventsRes.data ?? []);
       } catch (e) {
         setError(e.message);
       } finally {
         setLoadingJobs(false);
         setLoadingListings(false);
+        setLoadingEvents(false);
       }
     };
     loadAll();
@@ -242,8 +270,8 @@ export default function FavoritesPage() {
     return result;
   }, [listings, reSearch, reSort]);
 
-  const totalCount = jobs.length + listings.length;
-  const isLoading  = loadingJobs || loadingListings;
+  const totalCount = jobs.length + listings.length + events.length;
+  const isLoading  = loadingJobs || loadingListings || loadingEvents;
 
   return (
     <div className="max-w-3xl flex flex-col gap-6 p-6 lg:p-8">
@@ -266,6 +294,9 @@ export default function FavoritesPage() {
         <Tab active={activeTab === 'real-estate'} onClick={() => setActiveTab('real-estate')} count={listings.length}>
           🏠 Immobilier
         </Tab>
+        <Tab active={activeTab === 'events'} onClick={() => setActiveTab('events')} count={events.length}>
+          Evenements
+        </Tab>
       </div>
 
       {/* Error */}
@@ -273,6 +304,33 @@ export default function FavoritesPage() {
         <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
           Impossible de charger vos favoris. Veuillez réessayer.
         </div>
+      )}
+
+      {activeTab === 'events' && (
+        <>
+          {loadingEvents ? (
+            <div className="grid grid-cols-1 gap-4">
+              {[1, 2, 3].map((i) => <SkeletonRE key={i} />)}
+            </div>
+          ) : events.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+              <h2 className="text-base font-bold text-gray-900 mb-1">Aucun evenement sauvegarde</h2>
+              <Link href="/evenements" className="mt-6 px-6 py-2.5 bg-[#2D5016] text-white text-sm font-bold rounded-full">
+                Parcourir les evenements
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {events.map((event) => (
+                <FavoriteEventCard
+                  key={event.id}
+                  event={event}
+                  onUnfavorite={(id) => setEvents((prev) => prev.filter((item) => item.id !== id))}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* ── JOBS TAB ── */}

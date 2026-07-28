@@ -16,10 +16,17 @@ function openLabel(place) {
   return "Horaires non disponibles";
 }
 
+function coverImage(place) {
+  const images = Array.isArray(place.images) ? place.images : [];
+  const cover = images.find((image) => image?.isCover) || images[0];
+  return typeof cover === "string" ? cover : cover?.url;
+}
+
 export default function HealthPlaceCard({ place, selected, onSelect }) {
   const cfg = HEALTH_SUBCATEGORY_MAP[place.subcategory];
   const Icon = cfg?.icon;
   const phone = place.phones?.[0];
+  const cover = coverImage(place);
   const distance = formatDistance(place.distanceMeters);
   const directionsUrl =
     place.googleMapsUri ||
@@ -33,6 +40,12 @@ export default function HealthPlaceCard({ place, selected, onSelect }) {
         selected ? "border-[#2D5016] ring-2 ring-[#A7D129]/30" : "border-black/10 hover:border-[#A7D129]"
       }`}
     >
+      {cover && (
+        <button type="button" onClick={() => onSelect?.(place)} className="mb-3 block h-36 w-full overflow-hidden bg-[#E8F5D0]">
+          <img src={cover} alt="" className="h-full w-full object-cover transition hover:scale-[1.02]" />
+        </button>
+      )}
+
       <button type="button" onClick={() => onSelect?.(place)} className="w-full text-left">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#E8F5D0] text-[#2D5016]">

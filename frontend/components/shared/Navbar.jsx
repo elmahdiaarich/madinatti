@@ -22,6 +22,7 @@ import {
   Newspaper,
   Compass,
   Factory,
+  CalendarDays,
 } from "lucide-react";
 import GoogleAuth from "../../components/auth/GoogleAuth";
 import Logo from "./logos/Logo";
@@ -37,6 +38,7 @@ const SUB_NAV_LINKS = [
   { label: "Immobilier", href: "/real-estate", icon: Home },
   { label: "Véhicules", href: "/cars", icon: Car },
   { label: "Actualités", href: "/press", icon: Newspaper },
+  { label: "Evenements", href: "/evenements", icon: CalendarDays },
   { label: "Tourisme", href: "/tourisme", icon: Compass },
   { label: "Industrie", href: "/industrie", icon: Factory },
   { label: "Santé", href: "/sante", icon: HeartPulse },
@@ -673,7 +675,7 @@ export default function Navbar() {
       }`}
     >
       {/* 1. Thin Top Category Trigger Bar */}
-      <div className="flex items-center justify-between px-6 py-1.5 border-b border-gray-100 bg-gray-50/80 backdrop-blur-xs">
+      <div className="hidden items-center justify-between border-b border-gray-100 bg-gray-50/80 px-6 py-1.5 backdrop-blur-xs md:flex">
         <button
           type="button"
           onClick={() => setCategoriesOpen(true)}
@@ -690,11 +692,11 @@ export default function Navbar() {
 
       {/* 2. Main Bar — Logo + Sous-nav (Emploi, Immobilier, Véhicules...) + Profil, tous alignés sur la même ligne */}
       <div
-        className="flex items-center justify-between gap-4 px-6 py-3"
+        className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-6 sm:py-3"
         onMouseLeave={handleModuleMouseLeave}
       >
         {/* LOGO */}
-        <a href="/" className="flex items-center gap-2 shrink-0">
+        <a href="/" className="flex min-w-0 shrink-0 items-center gap-2 [&_img]:h-12 [&_img]:w-auto sm:[&_img]:h-auto">
           <Logo />
         </a>
 
@@ -810,6 +812,7 @@ export default function Navbar() {
             <button
               className="md:hidden text-gray-700 font-medium text-lg px-2"
               onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label="Ouvrir le menu"
             >
               ☰
             </button>

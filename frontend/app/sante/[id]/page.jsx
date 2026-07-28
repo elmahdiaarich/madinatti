@@ -12,6 +12,13 @@ function hoursRows(place) {
   return place.currentHours?.weekdayDescriptions || place.regularHours?.weekdayDescriptions || [];
 }
 
+function placeImages(place) {
+  const images = Array.isArray(place?.images) ? place.images : [];
+  return images
+    .map((image) => (typeof image === "string" ? { url: image, isCover: false } : image))
+    .filter((image) => image?.url);
+}
+
 export default function HealthDetailPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -69,6 +76,8 @@ export default function HealthDetailPage() {
       ? `https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}`
       : null);
   const rows = hoursRows(place);
+  const images = placeImages(place);
+  const cover = images.find((image) => image.isCover)?.url || images[0]?.url;
 
   return (
     <main className="min-h-screen bg-[#F7F9F5] px-4 py-6">
@@ -92,6 +101,11 @@ export default function HealthDetailPage() {
             </div>
 
             <h1 className="mt-3 text-3xl font-bold text-gray-950">{place.name}</h1>
+            {cover && (
+              <div className="mt-5 overflow-hidden rounded-xl bg-[#E8F5D0]">
+                <img src={cover} alt="" className="h-72 w-full object-cover" />
+              </div>
+            )}
             {place.address && (
               <p className="mt-2 flex gap-2 text-sm text-gray-600">
                 <MapPin size={16} className="mt-0.5 shrink-0" /> {place.address}
@@ -152,6 +166,19 @@ export default function HealthDetailPage() {
                 <p className="mt-2 border border-black/10 p-4 text-sm text-gray-500">Horaires non disponibles.</p>
               )}
             </div>
+
+            {images.length > 1 && (
+              <div className="mt-6">
+                <h2 className="text-base font-bold text-gray-950">Photos</h2>
+                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {images
+                    .filter((image) => image.url !== cover)
+                    .map((image) => (
+                      <img key={image.url} src={image.url} alt="" className="aspect-video w-full rounded-lg object-cover" />
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="min-h-[360px]">

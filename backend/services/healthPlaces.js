@@ -25,6 +25,50 @@ async function uniqueSlug(name) {
   return slug;
 }
 
+function currentUserId(user) {
+  return user?.userId || user?.id || null;
+}
+
+function optionalString(value) {
+  if (value === undefined) return undefined;
+  const trimmed = String(value || '').trim();
+  return trimmed || null;
+}
+
+function optionalDecimal(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizePhones(data) {
+  if (Array.isArray(data.phones)) {
+    return data.phones.map((phone) => String(phone).trim()).filter(Boolean);
+  }
+  if (data.phone !== undefined) {
+    const phone = String(data.phone || '').trim();
+    return phone ? [phone] : [];
+  }
+  return undefined;
+}
+
+function normalizeImages(images) {
+  if (!Array.isArray(images)) return [];
+  const normalized = images
+    .map((image) => {
+      const url = typeof image === 'string' ? image : image?.url;
+      if (!url || typeof url !== 'string') return null;
+      return { url: url.trim(), isCover: Boolean(image?.isCover) };
+    })
+    .filter((image) => image?.url)
+    .slice(0, 10);
+
+  if (normalized.length && !normalized.some((image) => image.isCover)) {
+    normalized[0].isCover = true;
+  }
+  return normalized.map((image, index) => ({ ...image, isCover: index === normalized.findIndex((item) => item.isCover) }));
+}
+
 function addDistance(place, lat, lng) {
   if (lat == null || lng == null || place.latitude == null || place.longitude == null) return place;
   return {
@@ -196,41 +240,47 @@ async function getPlaceById(id) {
 
 async function createPlace(data, user) {
   const category = await prisma.category.findUnique({ where: { slug: data.subcategory } }).catch(() => null);
-  return prisma.healthPlace.create({
+  const isAdmin = user?.role === 'admin';
+  const userId = currentUserId(user);
+  const status = isAdmin && data.status ? data.status : isAdmin ? 'APPROVED' : 'PENDING';
+  const verified = isAdmin && status === 'APPROVED';
+  const created = await prisma.healthPlace.create({
     data: {
       name: data.name.trim(),
       slug: await uniqueSlug(data.name),
       subcategory: data.subcategory,
-      categoryId: category?.id,
-      source: 'MADINATI',
-      description: data.description || null,
-      address: data.address || null,
-      neighborhood: data.neighborhood || null,
-      city: data.city || null,
-      region: data.region || null,
-      postalCode: data.postalCode || null,
-      latitude: data.latitude ?? null,
-      longitude: data.longitude ?? null,
-      phones: data.phones || (data.phone ? [data.phone] : []),
-      contactEmail: data.contactEmail || null,
-      website: data.website || null,
-      images: data.images || [],
+      categoryId: category?.id || null,
+      source: data.source === 'IMPORT' ? 'IMPORT' : 'MADINATI',
+      description: optionalString(data.description),
+      address: optionalString(data.address),
+      neighborhood: optionalString(data.neighborhood),
+      city: optionalString(data.city),
+      region: optionalString(data.region),
+      postalCode: optionalString(data.postalCode),
+      latitude: optionalDecimal(data.latitude),
+      longitude: optionalDecimal(data.longitude),
+      phones: normalizePhones(data) || [],
+      contactEmail: optionalString(data.contactEmail),
+      website: optionalString(data.website),
+      images: normalizeImages(data.images),
       regularHours: data.regularHours || null,
       openNow: data.openNow ?? null,
-      ownerId: user?.id || null,
-      status: user?.role === 'admin' ? 'APPROVED' : 'PENDING',
-      isVerified: user?.role === 'admin',
-      reviewedAt: user?.role === 'admin' ? new Date() : null,
-      reviewedBy: user?.role === 'admin' ? user.id : null,
+      ownerId: userId,
+      status,
+      isVerified: verified,
+      reviewedAt: verified ? new Date() : null,
+      reviewedBy: verified ? userId : null,
     },
   });
+  return normalizeLocalPlace(created);
 }
 
 async function updatePlace(id, data, user) {
   const existing = await prisma.healthPlace.findUnique({ where: { id } });
   if (!existing) return null;
   const isAdmin = user?.role === 'admin';
-  if (!isAdmin && existing.ownerId !== user?.id) {
+  const userId = currentUserId(user);
+  if (!isAdmin && existing.ownerId !== userId) {
     const err = new Error('FORBIDDEN');
     err.status = 403;
     throw err;
@@ -238,29 +288,48 @@ async function updatePlace(id, data, user) {
   const update = {
     name: data.name?.trim(),
     subcategory: data.subcategory,
-    description: data.description,
-    address: data.address,
-    neighborhood: data.neighborhood,
-    city: data.city,
-    region: data.region,
-    postalCode: data.postalCode,
-    latitude: data.latitude,
-    longitude: data.longitude,
-    phones: data.phones || (data.phone ? [data.phone] : undefined),
-    contactEmail: data.contactEmail,
-    website: data.website,
-    images: data.images,
+    description: optionalString(data.description),
+    address: optionalString(data.address),
+    neighborhood: optionalString(data.neighborhood),
+    city: optionalString(data.city),
+    region: optionalString(data.region),
+    postalCode: optionalString(data.postalCode),
+    latitude: data.latitude === undefined ? undefined : optionalDecimal(data.latitude),
+    longitude: data.longitude === undefined ? undefined : optionalDecimal(data.longitude),
+    phones: normalizePhones(data),
+    contactEmail: optionalString(data.contactEmail),
+    website: optionalString(data.website),
+    images: data.images === undefined ? undefined : normalizeImages(data.images),
     regularHours: data.regularHours,
     openNow: data.openNow,
     status: isAdmin ? data.status : 'PENDING',
   };
   Object.keys(update).forEach((k) => update[k] === undefined && delete update[k]);
   if (update.name && update.name !== existing.name) update.slug = await uniqueSlug(update.name);
-  return prisma.healthPlace.update({ where: { id }, data: update });
+  if (update.subcategory && update.subcategory !== existing.subcategory) {
+    const category = await prisma.category.findUnique({ where: { slug: update.subcategory } }).catch(() => null);
+    update.categoryId = category?.id || null;
+  }
+  if (isAdmin && update.status !== undefined) {
+    update.isVerified = update.status === 'APPROVED';
+    update.reviewedAt = new Date();
+    update.reviewedBy = userId;
+  }
+  if (!isAdmin) {
+    update.isVerified = false;
+    update.reviewedAt = null;
+    update.reviewedBy = null;
+  }
+
+  const updated = await prisma.healthPlace.update({ where: { id }, data: update });
+  return normalizeLocalPlace(updated);
 }
 
 async function deletePlace(id) {
-  return prisma.healthPlace.delete({ where: { id } });
+  const existing = await prisma.healthPlace.findUnique({ where: { id } });
+  if (!existing) return null;
+  await prisma.healthPlace.delete({ where: { id } });
+  return normalizeLocalPlace(existing);
 }
 
 function normalizeHeader(value) {
@@ -375,6 +444,7 @@ function readRowsFromBuffer(buffer) {
 async function importPlaces(fileBuffer, admin) {
   const rows = readRowsFromBuffer(fileBuffer);
   const results = { created: 0, updated: 0, failed: 0, errors: [] };
+  const adminId = currentUserId(admin);
 
   for (let i = 0; i < rows.length; i += 1) {
     const row = rows[i];
@@ -398,7 +468,7 @@ async function importPlaces(fileBuffer, admin) {
         isVerified: true,
         country: 'MA',
         reviewedAt: new Date(),
-        reviewedBy: admin.id,
+        reviewedBy: adminId,
         phones: [payload.phone],
         googleMapsUri: payload.latitude && payload.longitude
           ? `https://www.google.com/maps/dir/?api=1&destination=${payload.latitude},${payload.longitude}`
@@ -423,6 +493,7 @@ async function importPlaces(fileBuffer, admin) {
 }
 
 async function moderatePlace(id, data, admin) {
+  const adminId = currentUserId(admin);
   return prisma.healthPlace.update({
     where: { id },
     data: {
@@ -430,7 +501,7 @@ async function moderatePlace(id, data, admin) {
       isVerified: data.isVerified ?? data.status === 'APPROVED',
       adminNotes: data.adminNotes,
       reviewedAt: new Date(),
-      reviewedBy: admin.id,
+      reviewedBy: adminId,
     },
   });
 }
