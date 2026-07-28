@@ -6,7 +6,6 @@ import JobBody from "@/components/admin/jobs/JobBody"
 import VehicleBody from "@/components/admin/vehicles/VehicleBody"
 import WorkerProfileBody from "@/components/admin/mini-jobs/WorkerProfileBody"
 import TaskRequestBody from "@/components/admin/mini-jobs/TaskRequestBody"
-import NewsBody from "@/components/admin/news/NewsBody"
 import RejectModal from './RejectModal'
 import SuspendModal from './SuspendModal'
 import ArchiveModal from './ArchiveModal'
@@ -18,7 +17,6 @@ const MODULE_BODIES = {
   automobile: VehicleBody,
   miniJobs: WorkerProfileBody,
   taskRequests: TaskRequestBody,
-  news: NewsBody,
 }
 
 const IconX = () => (

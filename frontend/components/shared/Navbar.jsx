@@ -25,7 +25,6 @@ import {
 } from "lucide-react";
 import GoogleAuth from "../../components/auth/GoogleAuth";
 import Logo from "./logos/Logo";
-import JournalistStatusWatcher from "./JournalistStatusWatcher";
 
 // ── FEATURE FLAG (code-only, no UI control) ───────────────────────────────────
 // Passe à true pour réactiver le dropdown de sous-catégories au survol du sous-nav.
@@ -673,8 +672,6 @@ export default function Navbar() {
         scrolled ? "shadow-md" : ""
       }`}
     >
-      <JournalistStatusWatcher />
-
       {/* 1. Thin Top Category Trigger Bar */}
       <div className="flex items-center justify-between px-6 py-1.5 border-b border-gray-100 bg-gray-50/80 backdrop-blur-xs">
         <button

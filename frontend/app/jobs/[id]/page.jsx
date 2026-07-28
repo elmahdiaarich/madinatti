@@ -400,6 +400,7 @@ export default function JobDetailPage() {
   const isVisitor = !user;
   const userRole = user?.role;
   const canApply = isVisitor || userRole === 'citizen'; // business/admin can't apply
+  const isOwner = user && job.user?.id === user.id;
 
   const handlePostuler = () => {
     if (isVisitor) {
@@ -576,7 +577,7 @@ export default function JobDetailPage() {
                 <CriteriaRow label="Niveau d'expérience" value={EXPERIENCE_LABELS[job.experienceLevel]} />
                 <CriteriaRow label="Niveau d'études"     value={EDUCATION_LABELS[job.educationLevel]} />
                 <CriteriaRow label="Salaire"             value={salary} />
-                <CriteriaRow label="Candidatures"        value={appCount > 0 ? `${appCount} reçue(s)` : null} />
+                <CriteriaRow label="Candidatures"        value={isOwner && appCount > 0 ? `${appCount} reçue(s)` : null} />
               </div>
             </div>
 
@@ -706,13 +707,13 @@ export default function JobDetailPage() {
           <div className="bg-[#E8F5D0] rounded-2xl border border-[#A7D129]/30 p-5">
             <p className="text-[10px] uppercase tracking-widest text-[#7BA428] font-bold mb-3">Infos rapides</p>
             <div className="flex flex-col gap-2.5 text-sm">
-              {job.viewsCount > 0 && (
+              {isOwner && job.viewsCount > 0 && (
                 <div className="flex justify-between">
                   <span className="text-gray-500">Vues</span>
                   <span className="font-bold text-[#2D5016]">{job.viewsCount.toLocaleString('fr-MA')}</span>
                 </div>
               )}
-              {appCount > 0 && (
+              {isOwner && appCount > 0 && (
                 <div className="flex justify-between">
                   <span className="text-gray-500">Candidatures</span>
                   <span className="font-bold text-[#2D5016]">{appCount}</span>

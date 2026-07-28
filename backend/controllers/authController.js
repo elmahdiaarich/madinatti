@@ -81,7 +81,6 @@ const register = async (req, res) => {
         companyName: role === "business" ? companyName : null,
         companyWebsite: role === "business" ? companyWebsite : null,
         companyLogo: role === "business" ? companyLogoUrl : null,
-        journalistStatus: role === "journalist" ? "PENDING" : null,
       },
     });
 
@@ -100,7 +99,6 @@ const register = async (req, res) => {
         name: user.name,
         email: user.email,
         role: userRole.name,
-        journalistStatus: user.journalistStatus,
       },
     });
   } catch (error) {
@@ -150,7 +148,6 @@ const login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role.name,
-        journalistStatus: user.journalistStatus,
       },
     });
   } catch (error) {
@@ -387,7 +384,6 @@ const getMe = async (req, res) => {
         companyName: true,
         companyLogo: true,
         companyWebsite: true,
-        journalistStatus: true,
         createdAt: true,
         role: {
           select: { name: true }, // ← on récupère le nom du rôle

@@ -160,50 +160,51 @@ async function purgeOldArticles(daysToKeep = 30) {
   return count;
 }
 
-module.exports = {
-  getArticles,
-  getArticleById,
-  getDistinctCities,
-  getCategories,
-  toggleFavorite,
-  getUserFavorites,
-  purgeOldArticles,
-};// ── JOURNALIST SUBMISSIONS ────────────────────────────────────────────────────
+// ── JOURNALIST SUBMISSIONS ────────────────────────────────────────────────────
 
-const MAX_PENDING_ARTICLES = 5;
 const MAX_DESCRIPTION_LENGTH = 8000;
 const MAX_TITLE_LENGTH = 200;
 
-function assertLengths({ title, description }) {
-  if (title && title.length > MAX_TITLE_LENGTH) {
-    const err = new Error(`Le titre ne peut pas dépasser ${MAX_TITLE_LENGTH} caractères.`);
-    err.code = 'TITLE_TOO_LONG';
-    throw err;
+const MIN_TITLE_LENGTH = 5;
+const MIN_DESCRIPTION_LENGTH = 30;
+
+function assertLengths({ title, description, isUpdate = false }) {
+  // Sur update, les champs peuvent être undefined si non modifiés — on ne
+  // valide que ce qui est réellement fourni, comme le fait déjà updateArticle.
+  if (title !== undefined) {
+    if (title.length > MAX_TITLE_LENGTH) {
+      const err = new Error(`Le titre ne peut pas dépasser ${MAX_TITLE_LENGTH} caractères.`);
+      err.code = 'TITLE_TOO_LONG';
+      throw err;
+    }
+    if (!isUpdate && title.trim().length < MIN_TITLE_LENGTH) {
+      const err = new Error(`Le titre doit faire au moins ${MIN_TITLE_LENGTH} caractères.`);
+      err.code = 'TITLE_TOO_SHORT';
+      throw err;
+    }
   }
-  if (description && description.length > MAX_DESCRIPTION_LENGTH) {
-    const err = new Error(`La description ne peut pas dépasser ${MAX_DESCRIPTION_LENGTH} caractères.`);
-    err.code = 'DESCRIPTION_TOO_LONG';
-    throw err;
+  if (description !== undefined) {
+    if (description.length > MAX_DESCRIPTION_LENGTH) {
+      const err = new Error(`La description ne peut pas dépasser ${MAX_DESCRIPTION_LENGTH} caractères.`);
+      err.code = 'DESCRIPTION_TOO_LONG';
+      throw err;
+    }
+    if (!isUpdate && description.trim().length < MIN_DESCRIPTION_LENGTH) {
+      const err = new Error(`La description doit faire au moins ${MIN_DESCRIPTION_LENGTH} caractères.`);
+      err.code = 'DESCRIPTION_TOO_SHORT';
+      throw err;
+    }
   }
 }
 
+// Les journalistes sont du staff de confiance créé par l'admin — publication
+// directe sans file d'attente de modération, à la fois à la création et à l'édition.
 async function createArticle(userId, { title, description, imageUrl, city, categoryId, language }) {
-  assertLengths({ title, description });
+  assertLengths({ title, description, isUpdate: false });
 
   if (!imageUrl) {
     const err = new Error('Une photo est requise pour publier un article.');
     err.code = 'IMAGE_REQUIRED';
-    throw err;
-  }
-
-  const pendingCount = await prisma.newsArticle.count({
-    where: { userId, source: 'ORIGINAL', status: 'PENDING' },
-  });
-  if (pendingCount >= MAX_PENDING_ARTICLES) {
-    const err = new Error(
-      `Vous avez déjà ${MAX_PENDING_ARTICLES} articles en attente de validation. Attendez qu'un admin les traite avant d'en soumettre de nouveaux.`
-    );
-    err.code = 'PENDING_LIMIT_REACHED';
     throw err;
   }
 
@@ -216,7 +217,7 @@ async function createArticle(userId, { title, description, imageUrl, city, categ
       categoryId: categoryId || null,
       language,
       source: 'ORIGINAL',
-      status: 'PENDING',
+      status: 'APPROVED',
       userId,
       publishedAt: new Date(),
     },
@@ -224,7 +225,7 @@ async function createArticle(userId, { title, description, imageUrl, city, categ
 }
 
 async function updateArticle(id, userId, { title, description, imageUrl, city, categoryId, language }) {
-  assertLengths({ title, description });
+  assertLengths({ title, description, isUpdate: true });
 
   const existing = await prisma.newsArticle.findUnique({ where: { id } });
   if (!existing) {
@@ -238,8 +239,6 @@ async function updateArticle(id, userId, { title, description, imageUrl, city, c
     throw err;
   }
 
-  const wasApproved = existing.status === 'APPROVED';
-
   return prisma.newsArticle.update({
     where: { id },
     data: {
@@ -249,17 +248,7 @@ async function updateArticle(id, userId, { title, description, imageUrl, city, c
       ...(city !== undefined && { city }),
       ...(categoryId !== undefined && { categoryId }),
       ...(language !== undefined && { language }),
-      // Toute édition d'un article déjà approuvé repasse en modération,
-      // avec un snapshot de la version publiée pour permettre un diff admin.
-      ...(wasApproved && {
-        status: 'PENDING',
-        reviewedAt: null,
-        reviewedBy: null,
-        adminNotes: null,
-        previousTitle: existing.title,
-        previousDescription: existing.description,
-        previousImageUrl: existing.imageUrl,
-      }),
+      editCount: { increment: 1 },
     },
   });
 }

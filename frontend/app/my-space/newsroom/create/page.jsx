@@ -235,18 +235,6 @@ export default function CreateNewsArticlePage() {
     }
   };
 
-  if (user?.journalistStatus !== 'APPROVED') {
-    return (
-      <div className="max-w-xl mx-auto p-8 text-center flex flex-col items-center gap-3">
-        <div className="text-4xl">⏳</div>
-        <h1 className="text-lg font-bold text-gray-900">Compte non encore validé</h1>
-        <p className="text-sm text-gray-500">
-          Vous devez attendre la validation de votre compte journaliste par un administrateur avant de pouvoir publier.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-2xl mx-auto p-6 lg:p-8">
       <h1 className="text-xl font-bold text-gray-900 mb-1">Nouvel article</h1>
@@ -257,15 +245,37 @@ export default function CreateNewsArticlePage() {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
         <div ref={sectionRefs.title}>
           <label className="block text-sm font-semibold text-gray-700 mb-1.5">Titre *</label>
-          <input value={form.title} onChange={(e) => set('title', e.target.value)}
-            placeholder="Ex: Inauguration du nouveau marché municipal" className={inputCls} />
-          {errors.title && <p className="text-red-500 text-xs mt-1">⚠ {errors.title}</p>}
+          <input
+            value={form.title}
+            onChange={(e) => set('title', e.target.value)}
+            placeholder="Ex\u00a0: Inauguration du nouveau marché municipal"
+            maxLength={200}
+            disabled={submitting}
+            className={`${inputCls} ${submitting ? 'opacity-60 cursor-not-allowed' : ''}`}
+          />
+          <div className="flex items-center justify-between mt-1">
+            {errors.title
+              ? <p className="text-red-500 text-xs">⚠ {errors.title}</p>
+              : <span />}
+            <p className={`text-xs ml-auto ${
+              form.title.length > 180 ? 'text-amber-600 font-medium' : 'text-gray-400'
+            }`}>
+              {form.title.length} / 200
+            </p>
+          </div>
         </div>
 
         <div ref={sectionRefs.description}>
           <label className="block text-sm font-semibold text-gray-700 mb-1.5">Description *</label>
-          <textarea value={form.description} onChange={(e) => set('description', e.target.value)}
-            rows={6} maxLength={8000} placeholder="Contenu de l'article..." className={`${inputCls} resize-none`} />
+          <textarea
+            value={form.description}
+            onChange={(e) => set('description', e.target.value)}
+            rows={6}
+            maxLength={8000}
+            disabled={submitting}
+            placeholder="Rédigez votre article ici\u2026\nContexte, faits principaux, citations, impact local."
+            className={`${inputCls} resize-none ${submitting ? 'opacity-60 cursor-not-allowed' : ''}`}
+          />
           <div className="flex items-center justify-between mt-1">
             {errors.description ? (
               <p className="text-red-500 text-xs">⚠ {errors.description}</p>
@@ -334,13 +344,25 @@ export default function CreateNewsArticlePage() {
 
         <div ref={sectionRefs.image}>
           <label className="block text-sm font-semibold text-gray-700 mb-1.5">Photo *</label>
-          <PhotoGridUploader images={image} onChange={setImage} token={token} multiple={false} maxFiles={1} />
+          <div className={submitting ? 'opacity-60 pointer-events-none' : ''}>
+            <PhotoGridUploader images={image} onChange={setImage} token={token} multiple={false} maxFiles={1} />
+          </div>
           {errors.image && <p className="text-red-500 text-xs mt-1">⚠ {errors.image}</p>}
         </div>
 
-        <button onClick={handleSubmit} disabled={submitting}
-          className="w-full py-3 rounded-xl bg-[#2D5016] text-white font-extrabold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition disabled:opacity-60">
-          {submitting ? 'Publication...' : '✦ Soumettre l\'article'}
+        <button
+          onClick={handleSubmit}
+          disabled={submitting}
+          className="w-full py-3 rounded-xl bg-[#2D5016] text-white font-extrabold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {submitting ? (
+            <>
+              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Publication en cours…
+            </>
+          ) : (
+            '\u2726 Soumettre l\'article'
+          )}
         </button>
       </div>
     </div>

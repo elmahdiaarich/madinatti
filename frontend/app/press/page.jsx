@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { Newspaper, MapPin, ChevronDown, X, Bell, Check, Search } from 'lucide-react';
+import { Newspaper, MapPin, ChevronDown, X, Search } from 'lucide-react';
 import { cities as moroccoCitiesRaw } from 'morocco-cities';
 import { useAuth } from '@/context/AuthContext';
 import { pressService } from '@/services/pressService';
@@ -40,8 +40,6 @@ const LABELS = {
     filterByCity: 'Ville :',
     searchCityPlaceholder: 'Chercher une ville...',
     noCityFound: 'Aucune ville trouvée',
-    subscribeCity: (city) => `S'abonner aux actus de ${city}`,
-    subscribedCity: (city) => `Abonné aux actus de ${city}`,
     results: (n) => `${n} article${n > 1 ? 's' : ''}`,
   },
   AR: {
@@ -56,8 +54,6 @@ const LABELS = {
     filterByCity: 'المدينة :',
     searchCityPlaceholder: 'البحث عن مدينة...',
     noCityFound: 'لم يتم العثور على مدينة',
-    subscribeCity: (city) => `اشترك في أخبار ${city}`,
-    subscribedCity: (city) => `مشترك في أخبار ${city}`,
     results: (n) => `${n} مقال`,
   },
 };
@@ -71,7 +67,7 @@ export default function PressPage() {
   const [selectedCity, setSelectedCity] = useState('');
   const [citySearchQuery, setCitySearchQuery] = useState('');
   const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
-  const [subscribedCities, setSubscribedCities] = useState([]);
+
   const [articles, setArticles] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
   const [page, setPage] = useState(1);
@@ -98,25 +94,6 @@ export default function PressPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Charger les villes abonnées
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const subs = JSON.parse(localStorage.getItem('subscribed_press_cities') || '[]');
-      setSubscribedCities(subs);
-    }
-  }, []);
-
-  const toggleCitySubscription = (cityName) => {
-    if (!cityName || typeof window === 'undefined') return;
-    let updated;
-    if (subscribedCities.includes(cityName)) {
-      updated = subscribedCities.filter((c) => c !== cityName);
-    } else {
-      updated = [...subscribedCities, cityName];
-    }
-    setSubscribedCities(updated);
-    localStorage.setItem('subscribed_press_cities', JSON.stringify(updated));
-  };
 
   const fetchArticles = useCallback(async (isLoadMore = false) => {
     if (!isLoadMore) setLoading(true);
@@ -224,7 +201,7 @@ export default function PressPage() {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
 
-  const isSelectedCitySubscribed = selectedCity && subscribedCities.includes(selectedCity);
+
 
   return (
     <div
@@ -419,28 +396,7 @@ export default function PressPage() {
         </div>
       </header>
 
-      {/* BANNIÈRE ABONNEMENT SI UNE VILLE EST SÉLECTIONNÉE */}
-      {selectedCity && (
-        <div className="bg-primary-mint/60 border-b border-primary-sage">
-          <div className="mx-auto max-w-[1160px] px-5 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs" style={{ fontFamily: 'var(--font-meta)' }}>
-            <div className="flex items-center gap-2 font-semibold text-primary-dark">
-              <MapPin size={14} className="text-accent" />
-              <span>Actualités locales : <strong className="text-accent">{selectedCity}</strong></span>
-            </div>
-            <button
-              onClick={() => toggleCitySubscription(selectedCity)}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1 font-bold transition-all ${
-                isSelectedCitySubscribed
-                  ? 'border-accent bg-accent text-white shadow-sm'
-                  : 'border-primary-dark bg-white text-primary-dark hover:bg-primary-dark hover:text-white'
-              }`}
-            >
-              {isSelectedCitySubscribed ? <Check size={13} /> : <Bell size={13} />}
-              <span>{isSelectedCitySubscribed ? t.subscribedCity(selectedCity) : t.subscribeCity(selectedCity)}</span>
-            </button>
-          </div>
-        </div>
-      )}
+
 
       {/* CONTENT */}
       <div className="mx-auto max-w-[1160px] px-5 py-8">

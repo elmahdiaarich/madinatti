@@ -100,8 +100,7 @@ const createArticle = async (req, res) => {
     res.status(201).json({ success: true, data: article });
   } catch (error) {
     console.error('[press/createArticle]', error);
-    const status = ['IMAGE_REQUIRED', 'PENDING_LIMIT_REACHED', 'TITLE_TOO_LONG', 'DESCRIPTION_TOO_LONG'].includes(error.code) ? 400 : 500;
-    res.status(status).json({ success: false, message: error.message || 'Erreur serveur' });
+    const status = ['IMAGE_REQUIRED', 'TITLE_TOO_LONG', 'DESCRIPTION_TOO_LONG', 'TITLE_TOO_SHORT', 'DESCRIPTION_TOO_SHORT'].includes(error.code) ? 400 : 500;    res.status(status).json({ success: false, message: error.message || 'Erreur serveur' });
   }
 };
 
@@ -116,10 +115,7 @@ const updateArticle = async (req, res) => {
     res.status(200).json({ success: true, data: article });
   } catch (error) {
     console.error('[press/updateArticle]', error);
-    const status = error.code === 'NOT_FOUND' ? 404
-      : error.code === 'FORBIDDEN' ? 403
-      : ['TITLE_TOO_LONG', 'DESCRIPTION_TOO_LONG'].includes(error.code) ? 400
-      : 500;
+    const status = ['IMAGE_REQUIRED', 'TITLE_TOO_LONG', 'DESCRIPTION_TOO_LONG'].includes(error.code) ? 400 : 500;
     res.status(status).json({ success: false, message: error.message || 'Erreur serveur' });
   }
 };

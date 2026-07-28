@@ -20,10 +20,11 @@ const {
   deleteCategory,
   deleteModule,
   // Journalist accounts
-  getPendingJournalists,
-  updateJournalistStatus
+  getJournalists,
+  createJournalistAccount,
+  togglePublishRight
 } = require('../controllers/adminController')
-
+const { createListingLimiter } = require('../middlewares/rateLimiter')
 const {
   getReports    : getReportsList,
   updateReport  : patchReport,
@@ -101,12 +102,15 @@ router.patch('/users/:id/toggle', toggleUser)
 // GET /api/admin/businesses
 router.get('/businesses', getBusinesses)
 
-// ── Journalist account validation (distinct from article moderation via /listings) ──
-// GET /api/admin/journalists  — comptes en attente de validation
-router.get('/journalists', getPendingJournalists)
+// ── Journalist accounts — créés directement par l'admin, staff de confiance ──
+// GET /api/admin/journalists  — liste des comptes journalistes existants
+router.get('/journalists', getJournalists)
 
-// PATCH /api/admin/journalists/:id/status   body: { status: 'APPROVED' | 'REJECTED' }
-router.patch('/journalists/:id/status', updateJournalistStatus)
+// POST /api/admin/journalists   body: { name, email, password, phone?, city? }
+router.post('/journalists', createListingLimiter, createJournalistAccount)
+
+// PATCH /api/admin/journalists/:id/publish-toggle
+router.patch('/journalists/:id/publish-toggle', togglePublishRight)
 
 // ── Categories ────────────────────────────────────────────────────────────────
 // GET    /api/admin/categories?parentSlug=emploi|immobilier

@@ -18,6 +18,7 @@
  */
 
 const prisma = require("../config/db");
+const bcrypt = require("bcryptjs");
 const cloudinary = require("cloudinary").v2;
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -69,12 +70,6 @@ const MODULE_REGISTRY = {
     cloudinaryFolder:  null,           // no images on TaskRequest
     targetType:        'TASK_REQUEST',
     frontendPath:      (id) => `/mini-jobs/tasks/${id}`,
-  },
-  news: {
-    model:             'newsArticle',
-    cloudinaryFolder:  'madinatti/news',
-    targetType:        'NEWS',
-    frontendPath:      (id) => `/press/${id}`,
   },
   // ── Add future modules here ────────────────────────────────────────────────
   // services: {
@@ -354,32 +349,6 @@ const NORMALIZERS = {
     createdAt:        t.createdAt,
     updatedAt:        t.updatedAt,
   }),
-
-  news: (n) => ({
-    id:               n.id,
-    module:           'news',
-    title:            n.title,
-    description:      n.description,
-    submittedBy:      n.user?.name || '',
-    submittedByEmail: n.user?.email || '',
-    submittedById:    n.user?.id || '',
-    submittedByLogo:  n.user?.avatar || null,
-    city:             n.city || null,
-    language:         n.language,
-    imageUrl:         n.imageUrl,
-    status:           n.status,
-    adminNote:        n.adminNotes || null,
-    category:         n.category || null,
-    categoryId:       n.categoryId,
-    publishedAt:      n.publishedAt,
-    reviewedBy:       n.reviewedBy,
-    reviewedAt:       n.reviewedAt,
-    createdAt:        n.createdAt,
-    updatedAt:        n.updatedAt,
-    previousTitle:       n.previousTitle || null,
-    previousDescription: n.previousDescription || null,
-    previousImageUrl:    n.previousImageUrl || null,
-  }),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -466,16 +435,6 @@ const SELECTS = {
     category: { select: { id: true, name: true, slug: true } },
   },
 
-  news: {
-    id: true, title: true, description: true, imageUrl: true,
-    city: true, language: true, source: true,
-    status: true, adminNotes: true,
-    previousTitle: true, previousDescription: true, previousImageUrl: true,
-    categoryId: true, reviewedAt: true, reviewedBy: true,
-    publishedAt: true, createdAt: true, updatedAt: true,
-    user:     { select: USER_SELECT },
-    category: { select: { id: true, name: true, slug: true } },
-  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -547,18 +506,6 @@ const WHERE_BUILDERS = {
     }),
   }),
 
-  news: ({ status, userId, search }) => ({
-    source: 'ORIGINAL', // RSS n'a jamais besoin de modération, exclu de cette vue
-    ...(status && { status }),
-    ...(userId && { userId }),
-    ...(search && {
-      OR: [
-        { title:       { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-        { city:        { contains: search, mode: 'insensitive' } },
-      ],
-    }),
-  }),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1125,81 +1072,6 @@ async function handleMiniJobsStatus(req, res, { id, status, adminNotes, adminId,
  * this handler is only reached from a Report resolution flow, typically
  * to set status to ARCHIVED (hide a reported task) or CANCELLED.
  */
-async function handleNewsStatus(req, res, { id, status, adminNotes, adminId, now }) {
-  const { createNotification } = require('./notificationController');
-  const config = MODULE_REGISTRY.news;
-
-  if (!VALID_STATUSES.includes(status)) {
-    return res.status(400).json({ success: false, message: 'Statut invalide' });
-  }
-
-  const record = await prisma.newsArticle.findUnique({ where: { id } });
-  if (!record) return res.status(404).json({ success: false, message: 'Article introuvable' });
-
-  const wasPending = record.status === 'PENDING';
-  let imageUrl = record.imageUrl;
-
-  if (status === 'APPROVED' && wasPending && imageUrl) {
-    imageUrl = (await moveImage({ url: imageUrl }, config.cloudinaryFolder)).url;
-  }
-  if (status === 'REJECTED' && wasPending && imageUrl?.includes('madinatti/temp')) {
-    await destroyImage({ url: imageUrl });
-  }
-
-  // Une fois la nouvelle version approuvée, l'ancienne photo (previousImageUrl,
-  // gardée jusqu'ici pour le diff admin) devient orpheline — on la détruit
-  // maintenant que le diff n'a plus lieu d'être affiché.
-  if (status === 'APPROVED' && wasPending && record.previousImageUrl && record.previousImageUrl !== imageUrl) {
-    await destroyImage({ url: record.previousImageUrl });
-  }
-
-  const updated = await prisma.newsArticle.update({
-    where: { id },
-    data: {
-      status,
-      imageUrl,
-      adminNotes: adminNotes || null,
-      reviewedAt: now,
-      reviewedBy: adminId,
-      // Le diff n'a plus lieu d'être une fois la nouvelle version validée
-      ...(status === 'APPROVED' && wasPending && {
-        previousTitle: null,
-        previousDescription: null,
-        previousImageUrl: null,
-      }),
-    },
-    include: { category: { select: { slug: true } } },
-  });
-
-  if (status === 'APPROVED' && wasPending && updated.userId) {
-    await createNotification(
-      updated.userId, 'NEWS_APPROVED',
-      'Votre article a été publié ✅',
-      `Votre article "${updated.title}" est maintenant visible publiquement.`,
-      config.frontendPath(updated.id),
-    );
-  } else if (status === 'REJECTED' && wasPending && updated.userId) {
-    await createNotification(
-      updated.userId, 'NEWS_REJECTED',
-      'Votre article a été refusé ❌',
-      `Votre article "${updated.title}" a été refusé. Consultez vos messages pour plus de détails.`,
-      '/my-space/messages',
-    );
-    await prisma.businessMessage.create({
-      data: {
-        userId:       updated.userId,
-        type:         'REJECTION',
-        targetType:   'NEWS',
-        targetId:     id,
-        targetTitle:  updated.title,
-        adminMessage: adminNotes || '',
-      },
-    });
-  }
-
-  return res.json({ success: true, message: 'Article mis à jour', data: updated });
-}
-
 const TASK_REQUEST_VALID_STATUSES = ['OPEN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'ARCHIVED'];
  
 async function handleTaskRequestStatus(req, res, { id, status, adminNotes, adminId, now }) {
@@ -1236,7 +1108,6 @@ const STATUS_HANDLERS = {
   automobile:   (req, res, ctx) => handleGenericStatus(req, res, ctx, 'automobile'),
   miniJobs:     handleMiniJobsStatus,
   taskRequests: handleTaskRequestStatus,
-  news:         handleNewsStatus,
   // services:  (req, res, ctx) => handleGenericStatus(req, res, ctx, 'services'),
 };
 
@@ -1821,104 +1692,106 @@ const deleteModule = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// JOURNALIST ACCOUNT MANAGEMENT
+// JOURNALIST ACCOUNT MANAGEMENT — créé directement par l'admin (staff de confiance,
+// pas d'auto-inscription publique, pas de validation de compte requise)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const getPendingJournalists = async (req, res) => {
+const getJournalists = async (req, res) => {
   try {
-    const { status } = req.query; // PENDING | APPROVED | REJECTED | SUSPENDED (default: PENDING)
     const journalistRole = await prisma.role.findUnique({ where: { name: 'journalist' } });
     if (!journalistRole) return res.json({ success: true, data: [] });
 
-    const validStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED'];
-    const filterStatus = validStatuses.includes(status) ? status : 'PENDING';
-
     const journalists = await prisma.user.findMany({
-      where: { roleId: journalistRole.id, journalistStatus: filterStatus },
+      where: { roleId: journalistRole.id },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true, name: true, email: true, phone: true,
-        city: true, avatar: true, createdAt: true, journalistStatus: true,
+        city: true, avatar: true, isActive: true, canPublish: true, createdAt: true,
       },
     });
 
-    // Stats articles pour chaque journaliste
-    const withStats = await Promise.all(
+    const withArticleCounts = await Promise.all(
       journalists.map(async (j) => {
-        const [total, approved, rejected, pending] = await Promise.all([
-          prisma.newsArticle.count({ where: { userId: j.id, source: 'ORIGINAL' } }),
-          prisma.newsArticle.count({ where: { userId: j.id, source: 'ORIGINAL', status: 'APPROVED' } }),
-          prisma.newsArticle.count({ where: { userId: j.id, source: 'ORIGINAL', status: 'REJECTED' } }),
-          prisma.newsArticle.count({ where: { userId: j.id, source: 'ORIGINAL', status: 'PENDING' } }),
-        ]);
-        return {
-          ...j,
-          stats: { total, approved, rejected, pending },
-          // rétrocompat
-          rejectedArticlesCount: rejected,
-          totalArticlesCount: total,
-        };
+        const totalArticles = await prisma.newsArticle.count({ where: { userId: j.id, source: 'ORIGINAL' } });
+        return { ...j, totalArticlesCount: totalArticles };
       })
     );
 
-    res.json({ success: true, data: withStats });
+    res.json({ success: true, data: withArticleCounts });
   } catch (error) {
-    console.error('admin getPendingJournalists error:', error);
+    console.error('admin getJournalists error:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
-const updateJournalistStatus = async (req, res) => {
+const createJournalistAccount = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { status, adminNote } = req.body; // status: APPROVED | REJECTED | SUSPENDED
+    const { name, email, password, phone, city } = req.body;
 
-    const validStatuses = ['APPROVED', 'REJECTED', 'SUSPENDED'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ success: false, message: 'Statut invalide' });
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Nom, email et mot de passe sont requis' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Le mot de passe doit faire au moins 6 caractères' });
     }
 
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'Cet email est déjà utilisé' });
+    }
+
+    const journalistRole = await prisma.role.findUnique({ where: { name: 'journalist' } });
+    if (!journalistRole) {
+      return res.status(500).json({ success: false, message: 'Rôle journaliste introuvable en base' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        phone: phone || null,
+        city: city || null,
+        roleId: journalistRole.id,
+        profileCompleted: true,
+        isActive: true,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Compte journaliste créé',
+      data: { id: user.id, name: user.name, email: user.email },
+    });
+  } catch (error) {
+    console.error('admin createJournalistAccount error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+// PATCH /api/admin/journalists/:id/publish-toggle
+// Suspend ou restaure le droit de publication SANS désactiver le compte
+// (le journaliste peut toujours se connecter et voir ses anciens articles).
+const togglePublishRight = async (req, res) => {
+  try {
+    const { id } = req.params;
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
 
     const updated = await prisma.user.update({
       where: { id },
-      data: { journalistStatus: status },
+      data: { canPublish: !user.canPublish },
     });
 
-    const { createNotification } = require('./notificationController');
-    if (status === 'APPROVED') {
-      await createNotification(
-        id, 'JOURNALIST_APPROVED',
-        'Votre compte journaliste a été validé ✅',
-        'Vous pouvez maintenant publier des articles sur Madinatti.',
-        '/my-space/newsroom',
-      );
-    } else if (status === 'REJECTED') {
-      const noteText = adminNote?.trim()
-        ? `Motif : ${adminNote.trim()}`
-        : "Votre compte n'a pas été validé en tant que journaliste.";
-      await createNotification(
-        id, 'JOURNALIST_REJECTED',
-        'Votre demande de compte journaliste a été refusée',
-        noteText,
-        '/',
-      );
-    } else if (status === 'SUSPENDED') {
-      const noteText = adminNote?.trim()
-        ? `Motif de suspension : ${adminNote.trim()}`
-        : 'Votre compte journaliste a été suspendu par un administrateur.';
-      await createNotification(
-        id, 'JOURNALIST_REJECTED',
-        'Votre compte journaliste a été suspendu 🚫',
-        noteText,
-        '/',
-      );
-    }
-
-    res.json({ success: true, message: 'Statut journaliste mis à jour', data: updated });
+    res.json({
+      success: true,
+      canPublish: updated.canPublish,
+      message: updated.canPublish ? 'Droit de publication restauré' : 'Droit de publication suspendu',
+    });
   } catch (error) {
-    console.error('admin updateJournalistStatus error:', error);
+    console.error('admin togglePublishRight error:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
@@ -1943,6 +1816,7 @@ module.exports = {
   deleteCategory,
   deleteModule,
   // Journalist accounts
-  getPendingJournalists,
-  updateJournalistStatus,
+  getJournalists,
+  createJournalistAccount,
+  togglePublishRight,
 };
