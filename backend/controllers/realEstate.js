@@ -3,6 +3,7 @@ const service = require('../services/realEstate');
 
 const { trackListingView } = require('../services/viewTrackingService');
 const VALID_LISTING_TYPES = ['SALE', 'RENT'];
+const VALID_PROPERTY_TYPES = ['APARTMENT', 'VILLA', 'HOUSE', 'STUDIO', 'LAND', 'OFFICE', 'SHOP'];
 
 
 // ─── Validators ──────────────────────────────────────────────────────────────

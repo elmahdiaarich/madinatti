@@ -385,6 +385,8 @@ function RealEstatePageContent() {
     }
     if (user.role === "business") {
       router.push("/dashboard/listings/real-estate/create");
+    } else if (user.role === "citizen") {
+      router.push("/my-space/real-estate/create");
     } else {
       setShowBusinessGate(true);
     }
@@ -511,12 +513,12 @@ function RealEstatePageContent() {
                 </button>
               </div>
               <div className="p-3 pb-0">
-        <RealEstateFilter
-          isMobile
-          onFilter={handleFilter}
-          onClose={() => setShowFilterDrawer(false)}
-        />
-      </div>
+                <RealEstateFilter
+                  isMobile
+                  onFilter={handleFilter}
+                  onClose={() => setShowFilterDrawer(false)}
+                />
+              </div>
             </div>
           </div>
         )}

@@ -999,6 +999,15 @@ export default function Navbar() {
                             active={pathname === "/dashboard" || pathname?.startsWith("/my-space")}
                             onClick={() => setUserMenuOpen(false)}
                           />
+                          {role === "citizen" && (
+                            <DropdownItem
+                              href="/my-space/real-estate"
+                              icon={<Home size={16} />}
+                              label="Mes annonces immo"
+                              active={pathname?.startsWith("/my-space/real-estate")}
+                              onClick={() => setUserMenuOpen(false)}
+                            />
+                          )}
                           <DropdownItem
                             href="/my-space/messages"
                             icon={<MessageSquare size={16} />}
@@ -1131,6 +1140,15 @@ export default function Navbar() {
                     <User size={16} className="text-gray-400" />
                     Mon espace
                   </a>
+                  {role === "citizen" && (
+                    <a
+                      href="/my-space/real-estate"
+                      className="flex items-center gap-3 text-sm text-gray-700 px-2 py-2 rounded-lg hover:bg-gray-50"
+                    >
+                      <Home size={16} className="text-gray-400" />
+                      Mes annonces immo
+                    </a>
+                  )}
                   <a
                     href="/my-space/messages"
                     className="flex items-center gap-3 text-sm text-gray-700 px-2 py-2 rounded-lg hover:bg-gray-50"

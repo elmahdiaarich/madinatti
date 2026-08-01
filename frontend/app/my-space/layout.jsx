@@ -183,6 +183,7 @@ const IconSidebarToggle = () => (
 const COMMON_NAV = [
   { key: "overview", label: "Vue d'ensemble", href: "/my-space", icon: IconHome },
   { key: "profile", label: "Mon profil", href: "/my-space/profile", icon: IconUser },
+  { key: "real-estate", label: "Mes annonces immo", href: "/my-space/real-estate", icon: IconBuilding },
   { key: "worker-profiles", label: "Mes profils prestataire", href: "/my-space/worker-profiles", icon: IconBriefcase },
   { key: "bookings", label: "Mes réservations", href: "/my-space/bookings", icon: IconCalendar },
   { key: "task-requests", label: "Mes demandes", href: "/my-space/task-requests", icon: IconClipboard },
