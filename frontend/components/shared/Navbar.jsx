@@ -97,7 +97,6 @@ const NAV_SERVICES = [
     href: "/tourisme",
     categories: [
       "Hôtels",
-      "Privé (Appartement + Maison)",
       "Wellness / SPA",
       "Hammam",
       "Magazine des touristes",

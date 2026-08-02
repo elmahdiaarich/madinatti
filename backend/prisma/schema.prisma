@@ -345,6 +345,7 @@ model RealEstateListing {
   listingType    ListingType
   propertyType   PropertyType
   price          Decimal
+  priceNegotiable Boolean  @default(false)
   surface        Decimal?
   rooms          Int?
   bathrooms      Int?

@@ -28,13 +28,13 @@ export const TOURISM_CATEGORIES = {
     detail: ["description"],
     filters: ["rating"],
   },
-  prive: { // Matches database 'prive'
-    label: "Privé (Appartement + maison)",
-    icon: Key,
-    card: ["name", "neighborhood"],
-    detail: ["description"],
-    filters: ["location"],
-  },
+  // prive: { // Matches database 'prive'
+  //   label: "Privé (Appartement + maison)",
+  //   icon: Key,
+  //   card: ["name", "neighborhood"],
+  //   detail: ["description"],
+  //   filters: ["location"],
+  // },
   "wellness-spa": { // Matches database 'wellness-spa'
     label: "Wellness / SPA",
     icon: Sparkles,

@@ -108,7 +108,7 @@ const SLUG_TO_PROPERTY_TYPE = {
 // ─── 1. CREATE LISTING ───────────────────────────────────────────────────────
 async function createListing(data, userId) {
   const slug = generateSlug(data.title);
-
+ 
   // Derive propertyType from category slug
   const category = await prisma.category.findUnique({
     where: { id: data.categoryId },
@@ -116,7 +116,7 @@ async function createListing(data, userId) {
   });
   const propertyType = SLUG_TO_PROPERTY_TYPE[category?.slug];
   if (!propertyType) throw new Error(`Unknown category slug: ${category?.slug}`);
-
+ 
   return prisma.realEstateListing.create({
     data: {
       userId,
@@ -127,6 +127,7 @@ async function createListing(data, userId) {
       listingType: data.listingType,
       propertyType, // ← derived, not from client
       price: parseFloat(data.price),
+      priceNegotiable: Boolean(data.priceNegotiable),
       surface: data.surface ? parseFloat(data.surface) : null,
       rooms: data.rooms ? parseInt(data.rooms, 10) : null,
       bathrooms: data.bathrooms ? parseInt(data.bathrooms, 10) : null,
@@ -149,15 +150,16 @@ async function createListing(data, userId) {
       listingType: true,
       propertyType: true,
       price: true,
+      priceNegotiable: true,
       city: true,
       categoryId: true,
       createdAt: true,
     },
   });
 }
-
+ 
 // ─── 2. GET LISTINGS (public, APPROVED only) ─────────────────────────────────
-
+ 
 async function getListings(query) {
   const {
     page = 1,
@@ -192,11 +194,11 @@ async function getListings(query) {
   }
  
   const listingTypeFragment = listingType
-    ? Prisma.sql`AND l."listingType" = ${listingType}`
+    ? Prisma.sql`AND l."listingType" = ${listingType}::"ListingType"`
     : Prisma.empty;
  
   const propertyTypeFragment = propertyType
-    ? Prisma.sql`AND l."propertyType" = ${propertyType}`
+    ? Prisma.sql`AND l."propertyType" = ${propertyType}::"PropertyType"`
     : Prisma.empty;
  
   const categoryFragment = categoryId
@@ -237,6 +239,7 @@ async function getListings(query) {
     prisma.$queryRaw`
       SELECT
         l.id, l.slug, l.title, l."listingType", l."propertyType", l.price,
+        l."priceNegotiable",
         l.city, l.surface, l.rooms, l.bathrooms, l.images, l."isActive",
         l."isFeatured", l."isSponsored", l."boostExpiresAt", l."createdAt",
         json_build_object('id', u.id, 'name', u.name, 'avatar', u.avatar) AS user,
@@ -274,7 +277,7 @@ async function getListings(query) {
     },
   };
 }
-
+ 
 // ─── 3. GET LISTING DETAIL (public) ─────────────────────────────────────────
 async function getListingById(id) {
   return prisma.realEstateListing.findUnique({
@@ -498,7 +501,7 @@ async function updateMyListing(id, userId, data) {
   if (!listing) return { error: "Listing not found.", status: 404 };
   if (listing.userId !== userId) return { error: "Forbidden.", status: 403 };
   if (!listing.isActive) return { error: "Listing is deleted.", status: 400 };
-
+ 
   const updated = await prisma.realEstateListing.update({
     where: { id },
     data: {
@@ -511,6 +514,9 @@ async function updateMyListing(id, userId, data) {
       ...(data.listingType && { listingType: data.listingType }),
       ...(data.propertyType && { propertyType: data.propertyType }),
       ...(data.price && { price: parseFloat(data.price) }),
+      ...(data.priceNegotiable !== undefined && {
+        priceNegotiable: Boolean(data.priceNegotiable),
+      }),
       ...(data.surface !== undefined && {
         surface: data.surface ? parseFloat(data.surface) : null,
       }),
@@ -526,7 +532,7 @@ async function updateMyListing(id, userId, data) {
       }),
       ...(data.city !== undefined && { city: data.city?.trim() || null }),
       ...(data.location && { location: data.location.trim() }),
-      ...(data.region !== undefined && { region: data.region?.trim() || null }), 
+      ...(data.region !== undefined && { region: data.region?.trim() || null }),
       ...(data.latitude !== undefined && {
         latitude: data.latitude ? parseFloat(data.latitude) : null,
       }),
@@ -547,7 +553,7 @@ async function updateMyListing(id, userId, data) {
     },
     select: BUSINESS_LISTING_SELECT,
   });
-
+ 
   return { listing: updated };
 }
 

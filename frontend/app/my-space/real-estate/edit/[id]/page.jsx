@@ -19,13 +19,31 @@ const LISTING_TYPES = [
 
 const PROPERTY_TYPE_TO_SLUG = {
   APARTMENT: "appartement",
-  VILLA:     "villa",
-  HOUSE:     "maison",
-  STUDIO:    "studio",
-  LAND:      "terrain",
-  OFFICE:    "bureau",
-  SHOP:      "commerce",
+  VILLA: "villa",
+  HOUSE: "maison",
+  STUDIO: "studio",
+  LAND: "terrain",
+  OFFICE: "bureau",
+  SHOP: "commerce",
 };
+
+// Ready-to-click equipment options — user can still type a custom one below.
+const PREDEFINED_FEATURES = [
+  "Parking",
+  "Piscine",
+  "Terrasse",
+  "Climatisation",
+  "Ascenseur",
+  "Balcon",
+  "Jardin",
+  "Meublé",
+  "Chauffage",
+  "Sécurité 24/7",
+  "Cave",
+  "Duplex",
+  "Vue mer",
+  "Cuisine équipée",
+];
 
 const ALL_CITIES = moroccoCities.cities;
 
@@ -38,6 +56,53 @@ function citiesByRegion(region) {
     .filter((c) => c.region_name === region)
     .map((c) => c.name)
     .sort();
+}
+
+function normalize(str) {
+  return (str || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+function findClosestRegion(guessedRegion) {
+  if (!guessedRegion) return null;
+  const target = normalize(guessedRegion);
+  return REGIONS.find((r) => normalize(r).includes(target) || target.includes(normalize(r))) || null;
+}
+
+function findClosestCity(guessedCity, region) {
+  if (!guessedCity) return null;
+  const pool = region ? citiesByRegion(region) : ALL_CITIES.map((c) => c.name);
+  const target = normalize(guessedCity);
+  return pool.find((c) => normalize(c) === target) || pool.find((c) => normalize(c).includes(target)) || null;
+}
+
+// Moroccan mobile/landline formats: 05/06/07 + 8 digits, or +212 + 9 digits.
+function isValidMoroccanPhone(value) {
+  const cleaned = (value || "").replace(/[\s-]/g, "");
+  return /^(0[5-7]\d{8}|\+212[5-7]\d{8})$/.test(cleaned);
+}
+
+// Long Google Maps URLs already contain coordinates — parsed client-side.
+// Short links (goo.gl, maps.app.goo.gl) go through the backend resolver.
+const COORD_PATTERNS = [
+  /@(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/,
+  /!3d(-?\d{1,2}\.\d+)!4d(-?\d{1,3}\.\d+)/,
+  /[?&](?:q|query)=(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/,
+];
+
+function extractCoordsFromUrl(url) {
+  for (const pattern of COORD_PATTERNS) {
+    const m = url.match(pattern);
+    if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+  }
+  return null;
+}
+
+function isShortMapsLink(url) {
+  return /goo\.gl|maps\.app\.goo\.gl/.test(url);
 }
 
 function Field({ label, error, hint, children }) {
@@ -204,21 +269,16 @@ function MapPicker({ latitude, longitude, onChange, flyTo }) {
       {!ready && (
         <p className="text-xs text-gray-400">Chargement de la carte...</p>
       )}
-      {latitude && longitude ? (
-        <p className="text-xs text-green-600 font-semibold">
-          📍 Position sélectionnée : {parseFloat(latitude).toFixed(5)},{" "}
-          {parseFloat(longitude).toFixed(5)}
-        </p>
-      ) : (
+      {!latitude || !longitude ? (
         <p className="text-xs text-gray-400">
           Cliquez sur la carte pour épingler la position exacte (optionnel).
         </p>
-      )}
+      ) : null}
     </div>
   );
 }
 
-function ImageUploader({ images, onChange, token, error }) {
+function ImageUploader({ images, onChange, token, error, onUploadingChange }) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const inputRef = useRef(null);
@@ -235,6 +295,7 @@ function ImageUploader({ images, onChange, token, error }) {
 
     setUploading(true);
     setUploadError(null);
+    onUploadingChange?.(true);
 
     const formData = new FormData();
     files.forEach((f) => formData.append("images", f));
@@ -257,6 +318,7 @@ function ImageUploader({ images, onChange, token, error }) {
       setUploadError("Échec de l'upload. Vérifiez votre connexion.");
     } finally {
       setUploading(false);
+      onUploadingChange?.(false);
       if (inputRef.current) inputRef.current.value = "";
     }
   };
@@ -340,7 +402,19 @@ function FeaturesManager({ features, onChange }) {
   const [key, setKey] = useState("");
   const [val, setVal] = useState("");
 
-  const add = () => {
+  const isActive = (name) => Object.prototype.hasOwnProperty.call(features, name);
+
+  const togglePredefined = (name) => {
+    if (isActive(name)) {
+      const next = { ...features };
+      delete next[name];
+      onChange(next);
+    } else {
+      onChange({ ...features, [name]: true });
+    }
+  };
+
+  const addCustom = () => {
     if (!key.trim()) return;
     onChange({ ...features, [key.trim()]: val.trim() || true });
     setKey(""); setVal("");
@@ -352,28 +426,51 @@ function FeaturesManager({ features, onChange }) {
     onChange(next);
   };
 
+  const customEntries = Object.entries(features).filter(
+    ([k]) => !PREDEFINED_FEATURES.includes(k)
+  );
+
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap gap-2">
+        {PREDEFINED_FEATURES.map((name) => (
+          <button
+            type="button"
+            key={name}
+            onClick={() => togglePredefined(name)}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+              isActive(name)
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-gray-600 border-gray-200 hover:border-primary hover:text-primary"
+            }`}
+          >
+            {isActive(name) ? "✓ " : "+ "}
+            {name}
+          </button>
+        ))}
+      </div>
+
       <div className="flex gap-2">
         <input value={key} onChange={(e) => setKey(e.target.value)}
-          placeholder="Équipement (ex: Parking)"
+          placeholder="Autre équipement non listé ci-dessus"
           className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
         <input value={val} onChange={(e) => setVal(e.target.value)}
           placeholder="Valeur (optionnel)"
           className="w-32 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-        <button type="button" onClick={add}
+        <button type="button" onClick={addCustom}
           className="px-3 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition">
           +
         </button>
       </div>
-      {Object.keys(features).length > 0 && (
+
+      {customEntries.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {Object.entries(features).map(([k, v]) => (
+          {customEntries.map(([k, v]) => (
             <span key={k}
               className="flex items-center gap-1 px-3 py-1 bg-primary-mint border border-primary rounded-full text-xs font-semibold text-primary-dark">
               {k}{v !== true ? `: ${v}` : ""}
               <button type="button" onClick={() => remove(k)}
-                className="ml-1 text-red-400 hover:text-red-600 font-bold font-mono">×</button>
+                className="ml-1 text-red-400 hover:text-red-600 font-bold">×</button>
             </span>
           ))}
         </div>
@@ -395,14 +492,21 @@ function EditListingForm() {
   const { token } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  
+
   const [form, setForm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [imagesUploading, setImagesUploading] = useState(false);
   const [subcategories, setSubcategories] = useState([]);
   const [geocoding, setGeocoding] = useState(false);
   const [flyTo, setFlyTo] = useState(null);
+
+  // Google Maps URL paste
+  const [mapsUrlInput, setMapsUrlInput] = useState("");
+  const [resolvingMapsUrl, setResolvingMapsUrl] = useState(false);
+  const [mapsUrlError, setMapsUrlError] = useState("");
+  const [mapsSuggestion, setMapsSuggestion] = useState(null);
 
   const sectionRefs = {
     title: useRef(null),
@@ -411,6 +515,7 @@ function EditListingForm() {
     region: useRef(null),
     city: useRef(null),
     location: useRef(null),
+    contactPhone: useRef(null),
     images: useRef(null),
   };
 
@@ -419,9 +524,8 @@ function EditListingForm() {
     if (errors[field]) setErrors((p) => ({ ...p, [field]: null }));
   };
 
-  const ERROR_ORDER = ["title", "description", "price", "region", "city", "location", "images"];
+  const ERROR_ORDER = ["title", "description", "price", "region", "city", "location", "contactPhone", "images"];
 
-  // ── Fetch subcategories ───────────────────────────────────────────────────
   useEffect(() => {
     axios.get(`${API}/api/categories`).then((r) => {
       const data = r.data.data || [];
@@ -429,7 +533,6 @@ function EditListingForm() {
     });
   }, []);
 
-  // ── Load listing ─────────────────────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
       try {
@@ -442,6 +545,7 @@ function EditListingForm() {
           listingType: d.listingType || "SALE",
           propertyType: d.propertyType || "APARTMENT",
           price: d.price?.toString() || "",
+          priceNegotiable: Boolean(d.priceNegotiable),
           surface: d.surface?.toString() || "",
           rooms: d.rooms?.toString() || "",
           bathrooms: d.bathrooms?.toString() || "",
@@ -471,7 +575,6 @@ function EditListingForm() {
     load();
   }, [id, token]);
 
-  // ── Auto-set categoryId based on propertyType ─────────────────────────────
   useEffect(() => {
     if (!subcategories.length || !form) return;
     const slug = PROPERTY_TYPE_TO_SLUG[form.propertyType];
@@ -488,7 +591,6 @@ function EditListingForm() {
 
   const availableCities = form?.region ? citiesByRegion(form.region) : [];
 
-  // ── Shared geocode function ───────────────────────────────────────────────
   const geocodeAddress = useCallback(async (city, address) => {
     if (!city) return;
     setGeocoding(true);
@@ -538,6 +640,72 @@ function EditListingForm() {
     return () => clearTimeout(t);
   }, [form?.location, form?.city, geocodeAddress]);
 
+  // ── Google Maps URL → lat/lng (+ best-effort region/city/quartier) ──
+  const handleExtractFromMapsUrl = async () => {
+    const url = mapsUrlInput.trim();
+    setMapsUrlError("");
+    setMapsSuggestion(null);
+    if (!url) return;
+
+    if (!isShortMapsLink(url)) {
+      const coords = extractCoordsFromUrl(url);
+      if (!coords) {
+        setMapsUrlError("Lien non reconnu. Collez le lien complet depuis Google Maps.");
+        return;
+      }
+      applyExtractedCoords(coords.lat, coords.lng);
+      return;
+    }
+
+    setResolvingMapsUrl(true);
+    try {
+      const res = await axios.get(`${API}/api/geo/resolve-maps-url`, {
+        params: { url },
+      });
+      if (res.data?.success) {
+        applyExtractedCoords(res.data.latitude, res.data.longitude, res.data.suggested);
+      } else {
+        setMapsUrlError(res.data?.message || "Impossible d'extraire la position de ce lien.");
+      }
+    } catch (err) {
+      setMapsUrlError(
+        err?.response?.data?.message || "Erreur lors de la résolution du lien."
+      );
+    } finally {
+      setResolvingMapsUrl(false);
+    }
+  };
+
+  const applyExtractedCoords = (lat, lng, suggested) => {
+    const latStr = lat.toFixed(6);
+    const lngStr = lng.toFixed(6);
+    setForm((p) => ({ ...p, latitude: latStr, longitude: lngStr }));
+    setFlyTo({ lat, lng, zoom: 15 });
+
+    if (suggested) {
+      const matchedRegion = findClosestRegion(suggested.region);
+      const matchedCity = findClosestCity(suggested.city, matchedRegion);
+      setMapsSuggestion({
+        region: matchedRegion,
+        city: matchedCity,
+        quartier: suggested.quartier || null,
+        regionUnmatched: !!suggested.region && !matchedRegion,
+        cityUnmatched: !!suggested.city && !matchedCity,
+      });
+    }
+  };
+
+  const applyMapsSuggestion = () => {
+    if (!mapsSuggestion) return;
+    setForm((p) => ({
+      ...p,
+      region: mapsSuggestion.region || p.region,
+      city: mapsSuggestion.city || p.city,
+      location: mapsSuggestion.quartier || p.location,
+    }));
+    setMapsSuggestion(null);
+  };
+
   const validate = () => {
     const e = {};
     if (!form.title.trim() || form.title.trim().length < 5) e.title = "Min 5 caractères";
@@ -546,11 +714,20 @@ function EditListingForm() {
     if (!form.region) e.region = "Veuillez sélectionner une région";
     if (!form.city) e.city = "Veuillez sélectionner une ville";
     if (!form.location.trim()) e.location = "Requis";
+    if (!form.contactPhone.trim()) {
+      e.contactPhone = "Requis";
+    } else if (!isValidMoroccanPhone(form.contactPhone)) {
+      e.contactPhone = "Numéro invalide (ex: 0612345678, 0512345678 ou +212612345678)";
+    }
     if (form.images.length === 0) e.images = "Ajoutez au moins une photo";
     return e;
   };
 
   const handleSubmit = async () => {
+    if (imagesUploading) {
+      toast.error("Veuillez attendre la fin de l'upload des photos.");
+      return;
+    }
     const e = validate();
     if (Object.keys(e).length) {
       setErrors(e);
@@ -566,6 +743,7 @@ function EditListingForm() {
       const payload = {
         ...form,
         price: parseFloat(form.price),
+        priceNegotiable: form.priceNegotiable,
         surface: form.surface ? parseFloat(form.surface) : undefined,
         rooms: form.rooms ? parseInt(form.rooms) : undefined,
         bathrooms: form.bathrooms ? parseInt(form.bathrooms) : undefined,
@@ -588,7 +766,6 @@ function EditListingForm() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <div className="bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
           <h1 className="font-extrabold text-primary-dark text-lg">Modifier l'annonce</h1>
@@ -599,7 +776,7 @@ function EditListingForm() {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-8 flex flex-col gap-6">
-        {/* General Info */}
+        {/* ── INFORMATIONS GÉNÉRALES ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
           <SectionTitle>Informations générales</SectionTitle>
 
@@ -648,18 +825,30 @@ function EditListingForm() {
           </div>
         </div>
 
-        {/* Pricing / Surface */}
+        {/* ── PRIX & SURFACE ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
           <SectionTitle>Prix & Surface</SectionTitle>
 
           <div ref={sectionRefs.price} className="grid grid-cols-2 gap-4">
             <Field label="Prix (MAD) *" error={errors.price}>
-              <Input
-                type="number" min="1"
-                value={form.price}
-                onChange={(e) => set("price", e.target.value)}
-                error={errors.price}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Input
+                  type="number"
+                  min="1"
+                  value={form.price}
+                  onChange={(e) => set("price", e.target.value)}
+                  error={errors.price}
+                />
+                <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={form.priceNegotiable}
+                    onChange={(e) => set("priceNegotiable", e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  Prix à négocier
+                </label>
+              </div>
             </Field>
             <Field label="Surface (m²)">
               <Input
@@ -683,9 +872,69 @@ function EditListingForm() {
           </div>
         </div>
 
-        {/* Location */}
+        {/* ── LOCALISATION ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
           <SectionTitle>Localisation</SectionTitle>
+
+          <Field
+            label="Coller un lien Google Maps (optionnel)"
+            hint="Fonctionne avec les liens copiés depuis la barre d'adresse ou le bouton Partager de Google Maps."
+          >
+            <div className="flex gap-2">
+              <Input
+                value={mapsUrlInput}
+                onChange={(e) => setMapsUrlInput(e.target.value)}
+                placeholder="https://maps.app.goo.gl/... ou https://www.google.com/maps/..."
+              />
+              <button
+                type="button"
+                onClick={handleExtractFromMapsUrl}
+                disabled={resolvingMapsUrl || !mapsUrlInput.trim()}
+                className="shrink-0 px-4 py-2 bg-gray-800 text-white rounded-xl text-sm font-bold hover:bg-gray-900 transition disabled:opacity-50"
+              >
+                {resolvingMapsUrl ? "..." : "Extraire"}
+              </button>
+            </div>
+            {mapsUrlError && (
+              <p className="text-xs text-red-500 flex items-center gap-1 mt-1"><span>⚠</span>{mapsUrlError}</p>
+            )}
+          </Field>
+
+          {mapsSuggestion && (
+            <div className="bg-primary-mint/40 border border-primary rounded-xl p-3 flex flex-col gap-2">
+              <p className="text-xs font-semibold text-primary-dark">
+                📍 Position détectée depuis le lien. Suggestions basées sur les coordonnées
+                (à vérifier — pas toujours exact) :
+              </p>
+              <div className="text-xs text-gray-700 flex flex-col gap-0.5">
+                <span>
+                  Région : <strong>{mapsSuggestion.region || "non détectée — sélectionnez manuellement"}</strong>
+                </span>
+                <span>
+                  Ville : <strong>{mapsSuggestion.city || "non détectée — sélectionnez manuellement"}</strong>
+                </span>
+                {mapsSuggestion.quartier && (
+                  <span>Quartier : <strong>{mapsSuggestion.quartier}</strong></span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={applyMapsSuggestion}
+                  className="px-3 py-1.5 bg-primary text-white rounded-full text-xs font-bold hover:bg-primary-sage transition"
+                >
+                  Appliquer ces suggestions
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMapsSuggestion(null)}
+                  className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-full text-xs font-bold hover:bg-gray-50 transition"
+                >
+                  Ignorer
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div ref={sectionRefs.region}>
@@ -752,33 +1001,46 @@ function EditListingForm() {
           </Field>
         </div>
 
-        {/* Contact */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
+        {/* ── CONTACT ── */}
+        <div ref={sectionRefs.contactPhone} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
           <SectionTitle>Contact</SectionTitle>
-          <Field label="Téléphone de contact">
-            <Input value={form.contactPhone} onChange={(e) => set("contactPhone", e.target.value)} />
+          <Field
+            label="Téléphone de contact *"
+            error={errors.contactPhone}
+            hint="Formats acceptés : 06XXXXXXXX, 07XXXXXXXX, 05XXXXXXXX, ou +212XXXXXXXXX"
+          >
+            <Input value={form.contactPhone} onChange={(e) => set("contactPhone", e.target.value)} error={errors.contactPhone} />
           </Field>
         </div>
 
-        {/* Photos */}
+        {/* ── PHOTOS ── */}
         <div ref={sectionRefs.images} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
           <SectionTitle>Photos *</SectionTitle>
-          <ImageUploader images={form.images} onChange={(v) => set("images", v)} token={token} error={errors.images} />
+          <ImageUploader
+            images={form.images}
+            onChange={(v) => set("images", v)}
+            token={token}
+            error={errors.images}
+            onUploadingChange={setImagesUploading}
+          />
         </div>
 
-        {/* Features */}
+        {/* ── ÉQUIPEMENTS ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
           <SectionTitle>Équipements & extras</SectionTitle>
+          <p className="text-xs text-gray-400">
+            Cliquez sur les équipements présents, ou ajoutez-en un qui ne serait pas listé.
+          </p>
           <FeaturesManager features={form.features} onChange={(v) => set("features", v)} />
         </div>
 
-        {/* Submit */}
+        {/* ── SUBMIT ── */}
         <div className="flex gap-3">
           <button type="button" onClick={() => router.back()} className="flex-1 py-3.5 border-2 border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition text-sm">
             Annuler
           </button>
-          <button type="button" onClick={handleSubmit} disabled={submitting} className="flex-1 py-3.5 bg-primary text-white font-extrabold rounded-xl hover:bg-primary-sage transition text-sm disabled:opacity-60">
-            {submitting ? "Enregistrement..." : "Enregistrer les modifications"}
+          <button type="button" onClick={handleSubmit} disabled={submitting || imagesUploading} className="flex-1 py-3.5 bg-primary text-white font-extrabold rounded-xl hover:bg-primary-sage transition text-sm disabled:opacity-60">
+            {submitting ? "Enregistrement..." : imagesUploading ? "Upload des photos..." : "Enregistrer les modifications"}
           </button>
         </div>
       </div>
