@@ -2,7 +2,7 @@
 import { useState, useEffect , Suspense} from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Wrench, ClipboardList, Search, Plus, UserPlus } from 'lucide-react';
+import { Wrench, ClipboardList, Search, Plus, UserPlus, SlidersHorizontal } from 'lucide-react';
 import { workerProfilesService } from '../../services/WorkerProfilesService';
 import { taskRequestsService } from '../../services/TaskRequestsService';
 import WorkerProfileCard from '@/components/mini-jobs/WorkerProfileCard';
@@ -30,6 +30,9 @@ const PROFILE_SORT_OPTIONS = [
   { value: 'rating_desc', label: 'Mieux notés' },
   { value: 'recent', label: 'Plus récents' },
 ];
+
+// Clés techniques à exclure du comptage des filtres actifs (pagination, pas des filtres)
+const NON_FILTER_KEYS = ['page', 'limit', 'sort'];
 
 function Pagination({ pagination, onPageChange }) {
   return (
@@ -73,6 +76,49 @@ function EmptyState({ icon: Icon, text }) {
   );
 }
 
+// ─── MOBILE FILTER SHEET (même pattern que jobs/page.jsx) ─────────────────────
+function MobileFilterSheet({ title, resultsCount, onClose, children }) {
+  return (
+    <div className="fixed inset-0 z-50 lg:hidden">
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+
+      {/* Feuille glissante */}
+      <div className="absolute left-0 right-0 bottom-0 bg-gray-50 rounded-t-2xl shadow-2xl max-h-[85vh] flex flex-col animate-slide-up">
+        {/* Poignée + header */}
+        <div className="shrink-0 bg-white rounded-t-2xl px-4 pt-3 pb-2 border-b border-gray-100">
+          <div className="w-9 h-1 bg-gray-200 rounded-full mx-auto mb-3" />
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-primary-dark text-sm">{title}</span>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 text-lg leading-none px-1"
+              aria-label="Fermer"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Contenu filtres (réutilise WorkerProfileFilter / TaskRequestFilter tel quel) */}
+        <div className="flex-1 overflow-y-auto px-3 py-3">
+          {children}
+        </div>
+
+        {/* CTA de validation */}
+        <div className="shrink-0 bg-white border-t border-gray-100 px-4 py-3">
+          <button
+            onClick={onClose}
+            className="w-full py-3 bg-primary-dark text-white rounded-full font-bold text-sm hover:bg-primary hover:text-primary-dark transition"
+          >
+            Voir {resultsCount != null ? resultsCount : ''} résultats
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MiniJobs() {
   const { user, token } = useAuth();
   const router = useRouter();
@@ -104,6 +150,8 @@ function MiniJobs() {
   const [taskPagination, setTaskPagination] = useState(null);
   const [loadingTasks, setLoadingTasks] = useState(true);
 
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
   useEffect(() => {
     if (tab !== 'profiles') return;
     setLoadingProfiles(true);
@@ -133,6 +181,13 @@ function MiniJobs() {
  const isVisitor = !user;
   const userRole = user?.role;
   const canActOnMiniJobs = !user || userRole === 'citizen'; // hide for business/admin
+
+  // Compte approximatif des filtres actifs pour le badge du bouton mobile,
+  // selon l'onglet courant (hypothèse à valider si le comptage semble faux)
+  const activeFiltersCount = (tab === 'profiles' ? profileFilters : taskFilters)
+    && Object.keys(tab === 'profiles' ? profileFilters : taskFilters)
+      .filter((k) => !NON_FILTER_KEYS.includes(k) && (tab === 'profiles' ? profileFilters : taskFilters)[k])
+      .length;
 
   const scrollToRegister = () => {
     const el = document.getElementById('inscription');
@@ -181,27 +236,29 @@ function MiniJobs() {
           </p>
 
           <div className="flex justify-center">
-            <div className="inline-flex items-center bg-gray-100 rounded-full p-1 gap-1">
+            <div className="grid grid-cols-2 sm:inline-flex sm:items-center w-full sm:w-auto bg-gray-100 rounded-full p-1 gap-1">
               <button onClick={() => setTab('profiles')}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all
+                className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-all leading-tight
                   ${tab === 'profiles' ? 'bg-white text-primary-dark shadow-sm' : 'text-gray-500 hover:text-primary-dark'}`}>
-                <Wrench size={15} />
-                Trouver un prestataire
+                <Wrench size={15} className="shrink-0" />
+                <span className="sm:hidden">Prestataire</span>
+                <span className="hidden sm:inline">Trouver un prestataire</span>
               </button>
               <button onClick={() => setTab('tasks')}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all
+                className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-all leading-tight
                   ${tab === 'tasks' ? 'bg-white text-primary-dark shadow-sm' : 'text-gray-500 hover:text-primary-dark'}`}>
-                <ClipboardList size={15} />
-                Demandes de tâches
+                <ClipboardList size={15} className="shrink-0" />
+                <span className="sm:hidden">Tâches</span>
+                <span className="hidden sm:inline">Demandes de tâches</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Stack sidebar above results on mobile; side-by-side from lg up */}
+      {/* Sidebar desktop uniquement ; sur mobile/tablette, bouton "Filtrer" + bottom sheet */}
       <div className="max-w-[1200px] mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6">
-        <aside className="w-full lg:w-[280px] shrink-0">
+        <aside className="hidden lg:block lg:w-[280px] shrink-0">
           <div className="lg:sticky lg:top-[20px]">
             {tab === 'profiles' ? (
               <WorkerProfileFilter onFilter={(f) => setProfileFilters({ ...f, page: 1, limit: 8 })} />
@@ -217,7 +274,20 @@ function MiniJobs() {
               <p className="text-sm text-gray-500">
                 {profilePagination ? <><span className="font-semibold text-gray-800">{profilePagination.total}</span> prestataires</> : '...'}
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Bouton filtres — mobile/tablette uniquement */}
+                <button
+                  onClick={() => setMobileFiltersOpen(true)}
+                  className="lg:hidden inline-flex items-center gap-1.5 border border-primary-dark text-primary-dark font-semibold text-xs px-3.5 py-2 rounded-full shrink-0 hover:bg-primary-mint transition-colors"
+                >
+                  <SlidersHorizontal size={13} />
+                  Filtrer
+                  {activeFiltersCount > 0 && (
+                    <span className="bg-primary text-primary-dark text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </button>
                 <SortSelect value={profileFilters.sort || ''} onChange={handleSortChange} />
                 {canActOnMiniJobs && (
                   <button onClick={handleCreateProfile}
@@ -231,17 +301,32 @@ function MiniJobs() {
           )}
 
          {tab === 'tasks' && (
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
               <p className="text-sm text-gray-500">
                 {taskPagination ? <><span className="font-semibold text-gray-800">{taskPagination.total}</span> demandes</> : '...'}
               </p>
-              {canActOnMiniJobs && (
-                <button onClick={handlePublishTask}
-                  className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary-dark text-white font-bold text-sm shadow-sm hover:bg-primary hover:text-primary-dark transition-all">
-                  <Plus size={15} />
-                  Publier une demande
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Bouton filtres — mobile/tablette uniquement */}
+                <button
+                  onClick={() => setMobileFiltersOpen(true)}
+                  className="lg:hidden inline-flex items-center gap-1.5 border border-primary-dark text-primary-dark font-semibold text-xs px-3.5 py-2 rounded-full shrink-0 hover:bg-primary-mint transition-colors"
+                >
+                  <SlidersHorizontal size={13} />
+                  Filtrer
+                  {activeFiltersCount > 0 && (
+                    <span className="bg-primary text-primary-dark text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                      {activeFiltersCount}
+                    </span>
+                  )}
                 </button>
-              )}
+                {canActOnMiniJobs && (
+                  <button onClick={handlePublishTask}
+                    className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary-dark text-white font-bold text-sm shadow-sm hover:bg-primary hover:text-primary-dark transition-all">
+                    <Plus size={15} />
+                    Publier une demande
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -285,6 +370,21 @@ function MiniJobs() {
           )}
   </main>
       </div>
+
+      {/* MOBILE FILTER SHEET */}
+      {mobileFiltersOpen && (
+        <MobileFilterSheet
+          title={tab === 'profiles' ? 'Filtrer les prestataires' : 'Filtrer les demandes'}
+          resultsCount={tab === 'profiles' ? profilePagination?.total : taskPagination?.total}
+          onClose={() => setMobileFiltersOpen(false)}
+        >
+          {tab === 'profiles' ? (
+            <WorkerProfileFilter onFilter={(f) => setProfileFilters({ ...f, page: 1, limit: 8 })} />
+          ) : (
+            <TaskRequestFilter onFilter={(f) => setTaskFilters({ ...f, page: 1, limit: 9 })} />
+          )}
+        </MobileFilterSheet>
+      )}
 
       {isVisitor && (
         <div id="inscription" className="max-w-[1200px] mx-auto px-4 py-12">
