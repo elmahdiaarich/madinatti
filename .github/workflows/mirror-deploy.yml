@@ -20,6 +20,7 @@ jobs:
           git config user.name "GitHub Actions Bot"
           rm -rf .github
           git add -A
-          git commit --amend --no-edit --allow-empty
+          GIT_AUTHOR_NAME="GitHub Actions Bot" GIT_AUTHOR_EMAIL="actions@github.com" \
+            git commit --amend --no-edit --allow-empty
           git remote add deploy https://x-access-token:${{ secrets.DEPLOY_REPO_TOKEN }}@github.com/elmantib/yourtown-deploy.git
           git push deploy main --force
