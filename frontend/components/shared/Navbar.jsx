@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronDown,
   Plus,
+  MoreHorizontal,
   Shield,
   User,
   Heart,
@@ -43,6 +44,11 @@ const SUB_NAV_LINKS = [
   { label: "Industrie", href: "/industrie", icon: Factory },
   { label: "Santé", href: "/sante", icon: HeartPulse },
 ];
+
+// Toujours visibles dès 768px — aucun retour à la ligne possible
+const PRIMARY_SUB_NAV_LINKS = SUB_NAV_LINKS.slice(0, 5);
+// Repliés dans "Plus" en tablette (768–1023px), affichés en ligne dès le desktop (lg+)
+const SECONDARY_SUB_NAV_LINKS = SUB_NAV_LINKS.slice(5);
  /* const SUB_NAV_LINKS = [
   { label: "Emploi", href: "/jobs" },
   { label: "Immobilier", href: "/real-estate" },
@@ -497,8 +503,10 @@ export default function Navbar() {
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [expandedModule, setExpandedModule] = useState(null);
   const [hoveredModule, setHoveredModule] = useState(null);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
   const notifRef = useRef(null);
+  const moreMenuRef = useRef(null);
   const hoverTimeoutRef = useRef(null);
 
   useEffect(() => {
@@ -520,6 +528,9 @@ export default function Navbar() {
       if (notifRef.current && !notifRef.current.contains(e.target)) {
         setNotifOpen(false);
       }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target)) {
+        setMoreMenuOpen(false);
+      }
     };
     document.addEventListener("mousedown", fn);
     return () => document.removeEventListener("mousedown", fn);
@@ -532,6 +543,7 @@ export default function Navbar() {
     setNotifOpen(false);
     setCategoriesOpen(false);
     setExpandedModule(null);
+    setMoreMenuOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -628,6 +640,83 @@ export default function Navbar() {
     hoverTimeoutRef.current = setTimeout(() => setHoveredModule(null), 150);
   };
 
+  // Rendu d'un lien de sous-nav, réutilisé pour les modules principaux ET secondaires
+  const renderSubNavLink = (link) => {
+    const svc = ENABLE_SUBCATEGORY_HOVER
+      ? NAV_SERVICES.find((s) => s.href === link.href)
+      : null;
+    const isHovered = hoveredModule === link.label;
+    const active =
+      isModuleActive(link.href) || (link.href === "/" ? isActive("/") : false);
+    const LinkIcon = link.icon;
+
+    return (
+      <div
+        key={link.label}
+        className="relative px-0 lg:px-0.5"
+        onMouseEnter={() => svc && handleModuleMouseEnter(link.label)}
+      >
+        <a
+          href={link.href}
+          className={`flex items-center gap-1 text-[10px] lg:text-[11px] xl:text-[12px] font-bold tracking-normal uppercase transition whitespace-nowrap px-1.5 xl:px-2 py-1 lg:py-1.5 rounded-full ${
+            active
+              ? "bg-[#E8F5D0] text-[#2D5016]"
+              : "text-gray-400 hover:text-[#2D5016] hover:bg-gray-50"
+          }`}
+        >
+          {LinkIcon && (
+            <LinkIcon size={12} className="shrink-0 hidden xl:inline" />
+          )}
+          {link.label}
+          {svc && (
+            <ChevronDown
+              size={10}
+              className={`hidden lg:inline transition-transform duration-150 ${
+                isHovered ? "rotate-180" : ""
+              }`}
+            />
+          )}
+        </a>
+
+        <AnimatePresence>
+          {svc && isHovered && (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.12 }}
+              className="absolute left-0 top-full pt-2 w-56 z-50"
+            >
+              <div className="bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden py-1.5 normal-case">
+                <a
+                  href={svc.href}
+                  className="block px-4 py-2 text-xs font-bold text-[#2D5016] hover:bg-[#E8F5D0] transition-colors"
+                >
+                  Voir tout — {svc.label} →
+                </a>
+                {svc.categories.map((cat) => {
+                  const isObj = typeof cat === "object" && cat !== null;
+                  const label = isObj ? cat.label : cat;
+                  const href = isObj ? cat.href : svc.href;
+                  return (
+                    <a
+                      key={label}
+                      href={href}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-[#E8F5D0] hover:text-[#2D5016] transition-colors"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#7BA428] shrink-0" />
+                      {label}
+                    </a>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
+
   const isActive = (path) => pathname === path;
   const isModuleActive = (href) =>
     pathname === href || pathname?.startsWith(href + "/");
@@ -701,81 +790,75 @@ export default function Navbar() {
         </a>
 
         {/* Sous-nav modules — au même niveau que logo & profil */}
-        <div className="hidden md:flex flex-1 items-center justify-center flex-wrap gap-x-0.5 gap-y-1">
-          {SUB_NAV_LINKS.map((link) => {
-          const svc = ENABLE_SUBCATEGORY_HOVER
-              ? NAV_SERVICES.find((s) => s.href === link.href)
-              : null;
-           const isHovered = hoveredModule === link.label;
-            const active =
-              isModuleActive(link.href) ||
-              (link.href === "/" ? isActive("/") : false);
-            const LinkIcon = link.icon;
+        <div className="hidden md:flex flex-1 items-center justify-center flex-nowrap gap-x-0 lg:gap-x-0.5">
+          {/* Modules principaux : toujours visibles dès 768px, ne wrappent jamais */}
+          {PRIMARY_SUB_NAV_LINKS.map(renderSubNavLink)}
 
-            return (
-              <div
-                key={link.label}
-                className="relative px-0.5"
-                onMouseEnter={() => svc && handleModuleMouseEnter(link.label)}
-              >
-                <a
-                  href={link.href}
-                  className={`flex items-center gap-1 text-[12px] font-bold tracking-normal uppercase transition whitespace-nowrap px-2 py-1.5 rounded-full ${
-                    active
-                      ? "bg-[#E8F5D0] text-[#2D5016]"
-                      : "text-gray-400 hover:text-[#2D5016] hover:bg-gray-50"
-                  }`}
+          {/* Modules secondaires : réintégrés en ligne à partir du desktop (lg = 1024px) */}
+          <div className="hidden lg:contents">
+            {SECONDARY_SUB_NAV_LINKS.map(renderSubNavLink)}
+          </div>
+
+          {/* Bouton "Plus" : uniquement en tablette 768–1023px, regroupe Tourisme/Industrie/Santé */}
+          <div className="relative lg:hidden" ref={moreMenuRef}>
+            <button
+              type="button"
+              onClick={() => setMoreMenuOpen((p) => !p)}
+              className={`flex items-center gap-1 text-[10px] font-bold tracking-normal uppercase transition whitespace-nowrap px-1.5 py-1 rounded-full ${
+                moreMenuOpen
+                  ? "bg-[#E8F5D0] text-[#2D5016]"
+                  : "text-gray-400 hover:text-[#2D5016] hover:bg-gray-50"
+              }`}
+            >
+              <MoreHorizontal size={12} className="shrink-0" />
+              Plus
+              <ChevronDown
+                size={10}
+                className={`transition-transform duration-150 ${
+                  moreMenuOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            <AnimatePresence>
+              {moreMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.12 }}
+                  className="absolute right-0 top-full pt-2 w-52 z-50"
                 >
-                  {LinkIcon && <LinkIcon size={12} className="shrink-0" />}
-                  {link.label}
-                  {svc && (
-                    <ChevronDown
-                      size={10}
-                      className={`transition-transform duration-150 ${
-                        isHovered ? "rotate-180" : ""
-                      }`}
-                    />
-                  )}
-                </a>
-
-                <AnimatePresence>
-                  {svc && isHovered && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      transition={{ duration: 0.12 }}
-                      className="absolute left-0 top-full pt-2 w-56 z-50"
-                    >
-                      <div className="bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden py-1.5 normal-case">
+                  <div className="bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden py-1.5">
+                    {SECONDARY_SUB_NAV_LINKS.map((link) => {
+                      const LinkIcon = link.icon;
+                      const active = isModuleActive(link.href);
+                      return (
                         <a
-                          href={svc.href}
-                          className="block px-4 py-2 text-xs font-bold text-[#2D5016] hover:bg-[#E8F5D0] transition-colors"
+                          key={link.label}
+                          href={link.href}
+                          onClick={() => setMoreMenuOpen(false)}
+                          className={`flex items-center gap-2.5 px-4 py-2.5 text-sm normal-case transition-colors ${
+                            active
+                              ? "bg-[#E8F5D0] text-[#2D5016] font-semibold"
+                              : "text-gray-700 hover:bg-gray-50"
+                          }`}
                         >
-                          Voir tout — {svc.label} →
+                          {LinkIcon && (
+                            <LinkIcon
+                              size={15}
+                              className={active ? "text-[#2D5016]" : "text-gray-400"}
+                            />
+                          )}
+                          {link.label}
                         </a>
-                        {svc.categories.map((cat) => {
-                          const isObj = typeof cat === "object" && cat !== null;
-                          const label = isObj ? cat.label : cat;
-                          const href = isObj ? cat.href : svc.href;
-                          return (
-                            <a
-                              key={label}
-                              href={href}
-                              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-[#E8F5D0] hover:text-[#2D5016] transition-colors"
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#7BA428] shrink-0" />
-                              {label}
-                            </a>
-                          );
-                        })}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            );
-          })}
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* Action controls / User dropdown */}
