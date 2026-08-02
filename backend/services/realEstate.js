@@ -1,4 +1,4 @@
-const { PrismaClient } = require("@prisma/client");
+const { PrismaClient, Prisma } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { cloudinary } = require("../config/cloudinary");
 const { cities: moroccoCities } = require('morocco-cities');
@@ -108,7 +108,7 @@ const SLUG_TO_PROPERTY_TYPE = {
 // ─── 1. CREATE LISTING ───────────────────────────────────────────────────────
 async function createListing(data, userId) {
   const slug = generateSlug(data.title);
-
+ 
   // Derive propertyType from category slug
   const category = await prisma.category.findUnique({
     where: { id: data.categoryId },
@@ -116,7 +116,7 @@ async function createListing(data, userId) {
   });
   const propertyType = SLUG_TO_PROPERTY_TYPE[category?.slug];
   if (!propertyType) throw new Error(`Unknown category slug: ${category?.slug}`);
-
+ 
   return prisma.realEstateListing.create({
     data: {
       userId,
@@ -127,6 +127,7 @@ async function createListing(data, userId) {
       listingType: data.listingType,
       propertyType, // ← derived, not from client
       price: parseFloat(data.price),
+      priceNegotiable: Boolean(data.priceNegotiable),
       surface: data.surface ? parseFloat(data.surface) : null,
       rooms: data.rooms ? parseInt(data.rooms, 10) : null,
       bathrooms: data.bathrooms ? parseInt(data.bathrooms, 10) : null,
@@ -149,20 +150,22 @@ async function createListing(data, userId) {
       listingType: true,
       propertyType: true,
       price: true,
+      priceNegotiable: true,
       city: true,
       categoryId: true,
       createdAt: true,
     },
   });
 }
-
+ 
 // ─── 2. GET LISTINGS (public, APPROVED only) ─────────────────────────────────
+ 
 async function getListings(query) {
   const {
     page = 1,
     limit = 12,
     city,
-    region,          // ← new
+    region,
     listingType,
     propertyType,
     categoryId,
@@ -171,83 +174,110 @@ async function getListings(query) {
     rooms,
     search,
   } = query;
-
-  const skip = (parseInt(page) - 1) * parseInt(limit);
-  const take = parseInt(limit);
-
-  // ── Location filter ───────────────────────────────────────────────
-  let locationFilter = {};
+ 
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 12));
+  const skip = (pageNum - 1) * limitNum;
+ 
+  // ── Build each optional filter fragment once ──────────────────────
+  // Prisma.empty = "insert nothing" when the filter wasn't provided.
+  // Every column is prefixed with l. (the RealEstateListing alias) to
+  // avoid ambiguous-column errors against joined tables (User, Category).
+  let locationFragment = Prisma.empty;
   if (city) {
-    locationFilter = { city: { contains: city, mode: 'insensitive' } };
+    locationFragment = Prisma.sql`AND l.city ILIKE ${'%' + city + '%'}`;
   } else if (region) {
     const citiesInRegion = citiesByRegion[region] || [];
     if (citiesInRegion.length > 0) {
-      locationFilter = { city: { in: citiesInRegion } };
+      locationFragment = Prisma.sql`AND l.city = ANY(${citiesInRegion})`;
     }
   }
-  // ─────────────────────────────────────────────────────────────────
-
-  const where = {
-    status: 'APPROVED',
-    isActive: true,
-    ...locationFilter,   // ← replaces the old city-only spread
-    ...(listingType && { listingType }),
-    ...(propertyType && { propertyType }),
-    ...(categoryId && { categoryId }),
-    ...(rooms && { rooms: { gte: parseInt(rooms) } }),
-    ...((minPrice || maxPrice) && {
-      price: {
-        ...(minPrice && { gte: parseFloat(minPrice) }),
-        ...(maxPrice && { lte: parseFloat(maxPrice) }),
-      },
-    }),
-    ...(search && {
-      OR: [
-        { title:       { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-      ],
-    }),
-  };
-
-  const [listings, total] = await prisma.$transaction([
-    prisma.realEstateListing.findMany({
-      where,
-      skip,
-      take,
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        listingType: true,
-        propertyType: true,
-        price: true,
-        city: true,
-        surface: true,
-        rooms: true,
-        bathrooms: true,
-        images: true,
-        isActive: true,
-        isFeatured: true,
-        createdAt: true,
-        user:     { select: { id: true, name: true, avatar: true } },
-        category: { select: { id: true, name: true } },
-      },
-    }),
-    prisma.realEstateListing.count({ where }),
+ 
+  const listingTypeFragment = listingType
+    ? Prisma.sql`AND l."listingType" = ${listingType}::"ListingType"`
+    : Prisma.empty;
+ 
+  const propertyTypeFragment = propertyType
+    ? Prisma.sql`AND l."propertyType" = ${propertyType}::"PropertyType"`
+    : Prisma.empty;
+ 
+  const categoryFragment = categoryId
+    ? Prisma.sql`AND l."categoryId" = ${categoryId}`
+    : Prisma.empty;
+ 
+  const roomsFragment = rooms
+    ? Prisma.sql`AND l.rooms >= ${parseInt(rooms, 10)}`
+    : Prisma.empty;
+ 
+  let priceFragment = Prisma.empty;
+  if (minPrice && maxPrice) {
+    priceFragment = Prisma.sql`AND l.price BETWEEN ${parseFloat(minPrice)} AND ${parseFloat(maxPrice)}`;
+  } else if (minPrice) {
+    priceFragment = Prisma.sql`AND l.price >= ${parseFloat(minPrice)}`;
+  } else if (maxPrice) {
+    priceFragment = Prisma.sql`AND l.price <= ${parseFloat(maxPrice)}`;
+  }
+ 
+  const searchFragment = search
+    ? Prisma.sql`AND (l.title ILIKE ${'%' + search + '%'} OR l.description ILIKE ${'%' + search + '%'})`
+    : Prisma.empty;
+ 
+  // ── One shared WHERE clause, reused in both queries ───────────────
+  const whereClause = Prisma.sql`
+    WHERE l.status = 'APPROVED'
+      AND l."isActive" = true
+      ${locationFragment}
+      ${listingTypeFragment}
+      ${propertyTypeFragment}
+      ${categoryFragment}
+      ${roomsFragment}
+      ${priceFragment}
+      ${searchFragment}
+  `;
+ 
+  const [listings, countResult] = await Promise.all([
+    prisma.$queryRaw`
+      SELECT
+        l.id, l.slug, l.title, l."listingType", l."propertyType", l.price,
+        l."priceNegotiable",
+        l.city, l.surface, l.rooms, l.bathrooms, l.images, l."isActive",
+        l."isFeatured", l."isSponsored", l."boostExpiresAt", l."createdAt",
+        json_build_object('id', u.id, 'name', u.name, 'avatar', u.avatar) AS user,
+        json_build_object('id', c.id, 'name', c.name) AS category
+      FROM "RealEstateListing" l
+      JOIN "User" u ON u.id = l."userId"
+      JOIN "Category" c ON c.id = l."categoryId"
+      ${whereClause}
+      ORDER BY
+        CASE
+          WHEN l."isSponsored" = true AND l."boostExpiresAt" > NOW() THEN 0
+          WHEN l."isSponsored" = true THEN 1
+          WHEN l."isFeatured" = true THEN 2
+          ELSE 3
+        END,
+        l."createdAt" DESC
+      LIMIT ${limitNum} OFFSET ${skip}
+    `,
+    prisma.$queryRaw`
+      SELECT COUNT(*)::int AS count
+      FROM "RealEstateListing" l
+      ${whereClause}
+    `,
   ]);
-
+ 
+  const total = countResult[0]?.count ?? 0;
+ 
   return {
     listings,
     pagination: {
+      page: pageNum,
+      limit: limitNum,
       total,
-      page:       parseInt(page),
-      limit:      take,
-      totalPages: Math.ceil(total / take),
+      totalPages: Math.ceil(total / limitNum) || 1,
     },
   };
 }
-
+ 
 // ─── 3. GET LISTING DETAIL (public) ─────────────────────────────────────────
 async function getListingById(id) {
   return prisma.realEstateListing.findUnique({
@@ -471,7 +501,7 @@ async function updateMyListing(id, userId, data) {
   if (!listing) return { error: "Listing not found.", status: 404 };
   if (listing.userId !== userId) return { error: "Forbidden.", status: 403 };
   if (!listing.isActive) return { error: "Listing is deleted.", status: 400 };
-
+ 
   const updated = await prisma.realEstateListing.update({
     where: { id },
     data: {
@@ -484,6 +514,9 @@ async function updateMyListing(id, userId, data) {
       ...(data.listingType && { listingType: data.listingType }),
       ...(data.propertyType && { propertyType: data.propertyType }),
       ...(data.price && { price: parseFloat(data.price) }),
+      ...(data.priceNegotiable !== undefined && {
+        priceNegotiable: Boolean(data.priceNegotiable),
+      }),
       ...(data.surface !== undefined && {
         surface: data.surface ? parseFloat(data.surface) : null,
       }),
@@ -499,7 +532,7 @@ async function updateMyListing(id, userId, data) {
       }),
       ...(data.city !== undefined && { city: data.city?.trim() || null }),
       ...(data.location && { location: data.location.trim() }),
-      ...(data.region !== undefined && { region: data.region?.trim() || null }), 
+      ...(data.region !== undefined && { region: data.region?.trim() || null }),
       ...(data.latitude !== undefined && {
         latitude: data.latitude ? parseFloat(data.latitude) : null,
       }),
@@ -520,7 +553,7 @@ async function updateMyListing(id, userId, data) {
     },
     select: BUSINESS_LISTING_SELECT,
   });
-
+ 
   return { listing: updated };
 }
 

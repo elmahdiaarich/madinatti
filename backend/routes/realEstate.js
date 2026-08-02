@@ -14,14 +14,14 @@ router.post('/inquiries', inquiryLimiter, authMiddleware, ctrl.createInquiry);
 router.get('/favorites/me', authMiddleware, ctrl.getUserFavorites);
 router.post('/favorites/:id/toggle', authMiddleware, ctrl.toggleFavorite);
 
-// ── BUSINESS ─────────────────────────────────────────────────────────────────
-router.post('/', createListingLimiter, authMiddleware, roleMiddleware('business'), ctrl.createListing);
-router.get('/business/my-listings', authMiddleware, roleMiddleware('business'), ctrl.getMyListings);
-router.get('/business/my-listings/:id', authMiddleware, roleMiddleware('business'), ctrl.getMyListingById);
-router.patch('/business/my-listings/:id', authMiddleware, roleMiddleware('business'), ctrl.updateMyListing);
-router.delete('/business/my-listings/:id', authMiddleware, roleMiddleware('business'), ctrl.deleteMyListing);
-router.get('/business/my-listings/:id/inquiries', authMiddleware, roleMiddleware('business'), ctrl.getMyListingInquiries);
-router.patch('/business/inquiries/:inquiryId', authMiddleware, roleMiddleware('business'), ctrl.updateInquiryStatus);
+// ── BUSINESS & CITIZEN ────────────────────────────────────────────────────────
+router.post('/', createListingLimiter, authMiddleware, roleMiddleware('business', 'citizen'), ctrl.createListing);
+router.get('/business/my-listings', authMiddleware, roleMiddleware('business', 'citizen'), ctrl.getMyListings);
+router.get('/business/my-listings/:id', authMiddleware, roleMiddleware('business', 'citizen'), ctrl.getMyListingById);
+router.patch('/business/my-listings/:id', authMiddleware, roleMiddleware('business', 'citizen'), ctrl.updateMyListing);
+router.delete('/business/my-listings/:id', authMiddleware, roleMiddleware('business', 'citizen'), ctrl.deleteMyListing);
+router.get('/business/my-listings/:id/inquiries', authMiddleware, roleMiddleware('business', 'citizen'), ctrl.getMyListingInquiries);
+router.patch('/business/inquiries/:inquiryId', authMiddleware, roleMiddleware('business', 'citizen'), ctrl.updateInquiryStatus);
 
 // ── ADMIN ─────────────────────────────────────────────────────────────────────
 router.get('/admin/stats', authMiddleware, roleMiddleware('admin'), ctrl.adminGetStats);

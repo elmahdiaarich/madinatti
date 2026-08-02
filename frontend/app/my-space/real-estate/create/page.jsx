@@ -502,7 +502,7 @@ function FeaturesManager({ features, onChange }) {
 
 export default function CreateListingPage() {
   return (
-    <ProtectedRoute roles={["business"]}>
+    <ProtectedRoute roles={["citizen"]}>
       <CreateListingForm />
     </ProtectedRoute>
   );
@@ -728,7 +728,7 @@ function CreateListingForm() {
         longitude: form.longitude ? parseFloat(form.longitude) : undefined,
       };
       await realEstateService.createListing(payload, token);
-      router.push("/dashboard/listings/real-estate?created=1");
+      router.push("/my-space/real-estate?created=1");
     } catch (err) {
       toast.error(err?.response?.data?.message || err.message || "Erreur serveur");
     } finally {

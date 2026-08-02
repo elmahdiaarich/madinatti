@@ -414,7 +414,7 @@ export default function DashboardLayout({ children }) {
   ];
 
   return (
-    <ProtectedRoute roles={["business"]}>
+    <ProtectedRoute roles={["business" , "citizen"]}>
       <div className="flex min-h-[calc(100vh-57px)] bg-gray-50">
         <aside
           onClick={!sidebarOpen ? toggleSidebar : undefined}
