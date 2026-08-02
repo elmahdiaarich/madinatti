@@ -261,6 +261,7 @@ export default function PressDetailPage() {
   }
 
   const hasImage = article.imageUrl && !imgErr;
+  const isVideo = article.contentType === 'VIDEO' && article.videoUrl;
   const SaveIcon = isFavorited ? BookmarkCheck : Bookmark;
 
   return (
@@ -319,11 +320,18 @@ export default function PressDetailPage() {
           <span>{article.source === 'ORIGINAL' ? (article.authorName ? t.byAuthor(article.authorName) : t.bySource) : 'Hespress'}</span>
         </div>
 
-        {/* Player de synthèse vocale (Text-to-Speech) */}
+        {/* Player de synthèse vocale (Text-to-Speech) — inchangé, utile même pour une vidéo */}
         <AudioPlayer title={article.title} description={article.description} language={language} />
 
         <div className="relative mt-6 h-64 w-full overflow-hidden border border-primary-sage bg-primary-mint sm:h-96">
-          {hasImage ? (
+          {isVideo ? (
+            <video
+              src={article.videoUrl}
+              controls
+              playsInline
+              className="h-full w-full object-contain bg-black"
+            />
+          ) : hasImage ? (
             <img
               src={article.imageUrl}
               alt={article.title}
@@ -364,4 +372,4 @@ export default function PressDetailPage() {
       </article>
     </div>
   );
-}
+}

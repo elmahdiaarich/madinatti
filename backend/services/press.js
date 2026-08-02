@@ -1,7 +1,14 @@
 'use strict';
 
 const { PrismaClient } = require('@prisma/client');
+const cloudinary = require('cloudinary').v2;
 const prisma = new PrismaClient();
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 // ── PUBLIC ────────────────────────────────────────────────────────────────────
 
@@ -10,6 +17,7 @@ async function getArticles(filters) {
     language,
     city,
     categoryId,
+    contentType,
     search,
     page = 1,
     limit = 20,
@@ -23,6 +31,7 @@ async function getArticles(filters) {
   if (language) where.language = language; // 'AR' | 'FR'
   if (city) where.city = { contains: city.trim(), mode: 'insensitive' };
   if (categoryId) where.categoryId = categoryId;
+  if (contentType) where.contentType = contentType; // 'ARTICLE' | 'VIDEO'
 
   if (search) {
     where.OR = [
@@ -164,11 +173,20 @@ async function purgeOldArticles(daysToKeep = 30) {
 
 const MAX_DESCRIPTION_LENGTH = 8000;
 const MAX_TITLE_LENGTH = 200;
+const VALID_CONTENT_TYPES = ['ARTICLE', 'VIDEO'];
 
 const MIN_TITLE_LENGTH = 5;
 const MIN_DESCRIPTION_LENGTH = 30;
 
-function assertLengths({ title, description, isUpdate = false }) {
+function assertValidContentType(contentType) {
+  if (contentType !== undefined && !VALID_CONTENT_TYPES.includes(contentType)) {
+    const err = new Error('Type de contenu invalide.');
+    err.code = 'INVALID_CONTENT_TYPE';
+    throw err;
+  }
+}
+
+function assertLengths({ title, description, isUpdate = false, contentType }) {
   // Sur update, les champs peuvent être undefined si non modifiés — on ne
   // valide que ce qui est réellement fourni, comme le fait déjà updateArticle.
   if (title !== undefined) {
@@ -189,7 +207,10 @@ function assertLengths({ title, description, isUpdate = false }) {
       err.code = 'DESCRIPTION_TOO_LONG';
       throw err;
     }
-    if (!isUpdate && description.trim().length < MIN_DESCRIPTION_LENGTH) {
+    // Description facultative pour une vidéo (elle porte le contenu elle-même,
+    // contrairement à un article texte) — pas de minimum imposé dans ce cas.
+    const descriptionRequired = !isUpdate && contentType !== 'VIDEO';
+    if (descriptionRequired && description.trim().length < MIN_DESCRIPTION_LENGTH) {
       const err = new Error(`La description doit faire au moins ${MIN_DESCRIPTION_LENGTH} caractères.`);
       err.code = 'DESCRIPTION_TOO_SHORT';
       throw err;
@@ -199,10 +220,17 @@ function assertLengths({ title, description, isUpdate = false }) {
 
 // Les journalistes sont du staff de confiance créé par l'admin — publication
 // directe sans file d'attente de modération, à la fois à la création et à l'édition.
-async function createArticle(userId, { title, description, imageUrl, city, categoryId, language }) {
-  assertLengths({ title, description, isUpdate: false });
+async function createArticle(userId, { title, description, imageUrl, videoUrl, city, categoryId, language, contentType = 'ARTICLE' }) {
+  assertValidContentType(contentType);
+  assertLengths({ title, description, isUpdate: false, contentType });
 
-  if (!imageUrl) {
+  if (contentType === 'VIDEO') {
+    if (!videoUrl) {
+      const err = new Error('Une vidéo est requise pour publier ce contenu.');
+      err.code = 'VIDEO_REQUIRED';
+      throw err;
+    }
+  } else if (!imageUrl) {
     const err = new Error('Une photo est requise pour publier un article.');
     err.code = 'IMAGE_REQUIRED';
     throw err;
@@ -212,7 +240,9 @@ async function createArticle(userId, { title, description, imageUrl, city, categ
     data: {
       title,
       description,
-      imageUrl,
+      contentType,
+      imageUrl: contentType === 'VIDEO' ? null : imageUrl,
+      videoUrl: contentType === 'VIDEO' ? videoUrl : null,
       city: city || null,
       categoryId: categoryId || null,
       language,
@@ -224,8 +254,9 @@ async function createArticle(userId, { title, description, imageUrl, city, categ
   });
 }
 
-async function updateArticle(id, userId, { title, description, imageUrl, city, categoryId, language }) {
+async function updateArticle(id, userId, { title, description, imageUrl, videoUrl, city, categoryId, language, contentType }) {
   assertLengths({ title, description, isUpdate: true });
+  assertValidContentType(contentType);
 
   const existing = await prisma.newsArticle.findUnique({ where: { id } });
   if (!existing) {
@@ -239,18 +270,89 @@ async function updateArticle(id, userId, { title, description, imageUrl, city, c
     throw err;
   }
 
+  // contentType ne change jamais en édition (pas prévu par le formulaire edit) —
+  // on retombe sur celui déjà en base si non fourni, jamais sur un défaut ARTICLE.
+  const effectiveContentType = contentType !== undefined ? contentType : existing.contentType;
+
+  if (effectiveContentType === 'VIDEO') {
+    const effectiveVideoUrl = videoUrl !== undefined ? videoUrl : existing.videoUrl;
+    if (!effectiveVideoUrl) {
+      const err = new Error('Une vidéo est requise pour publier ce contenu.');
+      err.code = 'VIDEO_REQUIRED';
+      throw err;
+    }
+  } else {
+    const effectiveImageUrl = imageUrl !== undefined ? imageUrl : existing.imageUrl;
+    if (!effectiveImageUrl) {
+      const err = new Error('Une photo est requise pour publier un article.');
+      err.code = 'IMAGE_REQUIRED';
+      throw err;
+    }
+  }
+
   return prisma.newsArticle.update({
     where: { id },
     data: {
       ...(title !== undefined && { title }),
       ...(description !== undefined && { description }),
       ...(imageUrl !== undefined && { imageUrl }),
+      ...(videoUrl !== undefined && { videoUrl }),
       ...(city !== undefined && { city }),
       ...(categoryId !== undefined && { categoryId }),
       ...(language !== undefined && { language }),
       editCount: { increment: 1 },
     },
   });
+}
+
+// Extrait le public_id Cloudinary depuis une URL sécurisée, pour pouvoir
+// supprimer le fichier réel (image ou vidéo) en plus de la ligne en base.
+// Best-effort : si l'URL ne matche pas le format attendu, on abandonne sans
+// bloquer la suppression de l'article (mieux vaut un fichier orphelin qu'un
+// article que le journaliste n'arrive pas à supprimer).
+function extractCloudinaryPublicId(url) {
+  if (!url) return null;
+  try {
+    const urlParts = url.split('/upload/');
+    if (urlParts.length !== 2) return null;
+    const withoutVer = urlParts[1].replace(/^v\d+\//, '');
+    return withoutVer.replace(/\.[^/.]+$/, '');
+  } catch {
+    return null;
+  }
+}
+
+// Suppression définitive — réservée au journaliste auteur de l'article.
+// Supprime aussi le média associé sur Cloudinary (best-effort, ne bloque pas
+// la suppression de l'article si Cloudinary échoue).
+async function deleteArticle(id, userId) {
+  const existing = await prisma.newsArticle.findUnique({ where: { id } });
+  if (!existing) {
+    const err = new Error('Article introuvable');
+    err.code = 'NOT_FOUND';
+    throw err;
+  }
+  if (existing.source !== 'ORIGINAL' || existing.userId !== userId) {
+    const err = new Error('Non autorisé à supprimer cet article');
+    err.code = 'FORBIDDEN';
+    throw err;
+  }
+
+  await prisma.newsArticle.delete({ where: { id } });
+
+  if (existing.contentType === 'VIDEO' && existing.videoUrl) {
+    const publicId = extractCloudinaryPublicId(existing.videoUrl);
+    if (publicId) {
+      cloudinary.uploader.destroy(publicId, { resource_type: 'video' }).catch(() => {});
+    }
+  } else if (existing.imageUrl) {
+    const publicId = extractCloudinaryPublicId(existing.imageUrl);
+    if (publicId) {
+      cloudinary.uploader.destroy(publicId).catch(() => {});
+    }
+  }
+
+  return { id };
 }
 
 async function getMyArticles(userId) {
@@ -299,6 +401,7 @@ module.exports = {
   purgeOldArticles,
   createArticle,
   updateArticle,
+  deleteArticle,
   getMyArticles,
   createCategory,
 };

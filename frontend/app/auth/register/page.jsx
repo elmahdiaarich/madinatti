@@ -8,6 +8,7 @@ import GuestRoute from "@/components/shared/GuestRoute";
 import AuthLayout from "../../../components/auth/AuthLayout";
 import PasswordInput from "../../../components/auth/PasswordInput";
 import GoogleAuth from "../../../components/auth/GoogleAuth";
+import Turnstile from "../../../components/shared/Turnstile";
 
 // Grouper les villes par région
 const citiesByRegion = cities.reduce((acc, city) => {
@@ -15,27 +16,6 @@ const citiesByRegion = cities.reduce((acc, city) => {
   acc[city.region_name].push(city.name);
   return acc;
 }, {});
-
-const BUSINESS_SECTORS = [
-  "Immobilier",
-  "BTP / Construction",
-  "Recrutement / RH",
-  "Commerce / Retail",
-  "Informatique / Tech",
-  "Finance / Assurance",
-  "Industrie",
-  "Tourisme / Hôtellerie",
-  "Santé",
-  "Éducation / Formation",
-  "Transport / Logistique",
-  "Autre",
-];
-
-// Formatte l'ICE en groupes de 3 chiffres pendant la saisie
-function formatIce(raw) {
-  const digits = raw.replace(/\D/g, "").slice(0, 15);
-  return digits.replace(/(\d{3})(?=\d)/g, "$1 ");
-}
 
 function RegisterForm() {
   const { register } = useAuth();
@@ -53,15 +33,11 @@ function RegisterForm() {
     role: "citizen",
     companyName: "",
     companyWebsite: "",
-    ice: "",
-    businessSector: "",
   });
 
   const [companyLogoFile, setCompanyLogoFile] = useState(null);
   const [companyLogoPreview, setCompanyLogoPreview] = useState(null);
-  const [rcDocumentFile, setRcDocumentFile] = useState(null);
-  const [rcDocumentName, setRcDocumentName] = useState("");
-  const [isDragging, setIsDragging] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState("");
@@ -86,20 +62,12 @@ function RegisterForm() {
         role,
         companyName: "",
         companyWebsite: "",
-        ice: "",
-        businessSector: "",
       }));
       setCompanyLogoFile(null);
       setCompanyLogoPreview(null);
-      setRcDocumentFile(null);
-      setRcDocumentName("");
     } else {
       setFormData((prev) => ({ ...prev, role }));
     }
-  };
-
-  const handleIceChange = (e) => {
-    setFormData((prev) => ({ ...prev, ice: formatIce(e.target.value) }));
   };
 
   const handleLogoChange = (e) => {
@@ -108,25 +76,6 @@ function RegisterForm() {
       setCompanyLogoFile(file);
       setCompanyLogoPreview(URL.createObjectURL(file));
     }
-  };
-
-  const handleRcFile = (file) => {
-    if (!file) return;
-    setRcDocumentFile(file);
-    setRcDocumentName(file.name);
-  };
-
-  const handleRcChange = (e) => handleRcFile(e.target.files[0]);
-
-  const handleRcDrop = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    handleRcFile(e.dataTransfer.files[0]);
-  };
-
-  const removeRcDocument = () => {
-    setRcDocumentFile(null);
-    setRcDocumentName("");
   };
 
   const validateStep1 = () => {
@@ -140,16 +89,19 @@ function RegisterForm() {
 
   const validateStep2 = () => {
     if (isBusiness && !formData.companyName) return "Nom de la société requis";
+    if (!turnstileToken) return "Merci de valider la vérification anti-robot";
     return null;
   };
 
   const goToNextStep = () => {
     const err = validateStep1();
     if (err) return setError(err);
-    setError("");
     if (isBusiness) {
+      setError("");
       setStep(2);
     } else {
+      if (!turnstileToken) return setError("Merci de valider la vérification anti-robot");
+      setError("");
       handleSubmit();
     }
   };
@@ -168,13 +120,11 @@ function RegisterForm() {
       data.append("phone", formData.phone);
       data.append("city", formData.city);
       data.append("role", formData.role);
+      data.append("turnstileToken", turnstileToken);
       if (isBusiness) {
         data.append("companyName", formData.companyName);
         data.append("companyWebsite", formData.companyWebsite);
-        data.append("ice", formData.ice.replace(/\s/g, ""));
-        data.append("businessSector", formData.businessSector);
         if (companyLogoFile) data.append("companyLogo", companyLogoFile);
-        if (rcDocumentFile) data.append("rcDocument", rcDocumentFile);
       }
       const res = await register(data);
       if (res.token) router.push("/");
@@ -306,6 +256,15 @@ function RegisterForm() {
               </select>
             )}
 
+            {/* Pour le flow citoyen (pas de step 2), le captcha se valide ici */}
+            {!isBusiness && (
+              <Turnstile
+                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+                onVerify={(token) => setTurnstileToken(token)}
+                onExpire={() => setTurnstileToken("")}
+              />
+            )}
+
             <button
               type="button"
               onClick={goToNextStep}
@@ -349,56 +308,18 @@ function RegisterForm() {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">
-                  Site web
-                </label>
-                <input
-                  name="companyWebsite"
-                  placeholder="https://monentreprise.ma"
-                  value={formData.companyWebsite}
-                  onChange={handleChange}
-                  className="input-green w-full"
-                  type="text"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">
-                  Secteur d'activité
-                </label>
-                <select
-                  name="businessSector"
-                  value={formData.businessSector}
-                  onChange={handleChange}
-                  className="input-green w-full"
-                >
-                  <option value="">Sélectionner...</option>
-                  {BUSINESS_SECTORS.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
             <div>
               <label className="text-xs font-semibold text-gray-600 mb-1 block">
-                ICE — Identifiant Commun de l'Entreprise
+                Site web
               </label>
               <input
-                name="ice"
-                placeholder="002 345 678 000 045"
-                value={formData.ice}
-                onChange={handleIceChange}
-                inputMode="numeric"
-                className="input-green w-full tracking-wider font-mono"
+                name="companyWebsite"
+                placeholder="https://monentreprise.ma"
+                value={formData.companyWebsite}
+                onChange={handleChange}
+                className="input-green w-full"
+                type="text"
               />
-              <p className="text-[11px] text-gray-400 mt-1">
-                15 chiffres — utilisé pour la vérification de votre compte
-              </p>
             </div>
 
             {/* LOGO UPLOAD */}
@@ -430,59 +351,6 @@ function RegisterForm() {
               </div>
             </div>
 
-            {/* RC DOCUMENT — real dropzone */}
-            <div>
-              <label className="text-xs font-semibold text-gray-600 mb-2 block">
-                RC / Patente <span className="text-gray-400 font-normal">(optionnel)</span>
-              </label>
-
-              {!rcDocumentName ? (
-                <label
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setIsDragging(true);
-                  }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={handleRcDrop}
-                  className={`flex flex-col items-center justify-center gap-2 w-full py-6 rounded-xl border-2 border-dashed cursor-pointer transition ${
-                    isDragging
-                      ? "border-[var(--color-primary)] bg-[var(--color-primary-mint)]"
-                      : "border-[var(--color-primary-dark)]/25 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-mint)]/40"
-                  }`}
-                >
-                  <span className="text-2xl">📄</span>
-                  <p className="text-sm font-medium text-[var(--color-primary-dark)]">
-                    Glissez votre document ici
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    ou cliquez pour choisir un fichier — PDF, JPG, PNG
-                  </p>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={handleRcChange}
-                    className="hidden"
-                  />
-                </label>
-              ) : (
-                <div className="flex items-center justify-between gap-3 w-full py-3 px-4 rounded-xl border-2 border-[var(--color-success)]/40 bg-[var(--color-success)]/5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-lg">✅</span>
-                    <span className="text-sm text-[var(--color-primary-dark)] font-medium truncate">
-                      {rcDocumentName}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={removeRcDocument}
-                    className="text-xs text-red-500 hover:underline flex-shrink-0"
-                  >
-                    Retirer
-                  </button>
-                </div>
-              )}
-            </div>
-
             <div className="flex items-start gap-2 bg-[var(--color-primary-mint)]/50 rounded-lg p-3 border border-[var(--color-primary-dark)]/10">
               <span className="text-sm">ℹ️</span>
               <p className="text-[11px] text-gray-500 leading-relaxed">
@@ -491,6 +359,13 @@ function RegisterForm() {
                 visibilité pour vos annonces.
               </p>
             </div>
+
+            {/* Pour le flow business, le captcha se valide ici (step 2) */}
+            <Turnstile
+              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+              onVerify={(token) => setTurnstileToken(token)}
+              onExpire={() => setTurnstileToken("")}
+            />
 
             <div className="flex gap-3">
               <button

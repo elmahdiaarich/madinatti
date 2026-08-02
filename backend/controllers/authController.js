@@ -8,6 +8,26 @@ const { cloudinary } = require("../config/cloudinary");
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+const verifyTurnstileToken = async (token, remoteip) => {
+  if (!token) return false;
+  const params = new URLSearchParams();
+  params.append("secret", process.env.TURNSTILE_SECRET_KEY);
+  params.append("response", token);
+  if (remoteip) params.append("remoteip", remoteip);
+
+  try {
+    const response = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      { method: "POST", body: params }
+    );
+    const data = await response.json();
+    return data.success === true;
+  } catch (err) {
+    console.error("Erreur vérification Turnstile:", err.message);
+    return false;
+  }
+};
+
 // Inscription
 const register = async (req, res) => {
   try {
@@ -20,7 +40,16 @@ const register = async (req, res) => {
       role,
       companyName,
       companyWebsite,
+      turnstileToken,
     } = req.body;
+
+    // Vérification anti-bot (Cloudflare Turnstile)
+    const isHuman = await verifyTurnstileToken(turnstileToken, req.ip);
+    if (!isHuman) {
+      return res.status(400).json({
+        message: "Vérification anti-robot échouée, veuillez réessayer",
+      });
+    }
 
     // Vérifier si l'email existe déjà
     const existingUser = await prisma.user.findUnique({
@@ -109,7 +138,14 @@ const register = async (req, res) => {
 // Connexion
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, turnstileToken } = req.body;
+
+    const isHuman = await verifyTurnstileToken(turnstileToken, req.ip);
+    if (!isHuman) {
+      return res.status(400).json({
+        message: "Vérification anti-robot échouée, veuillez réessayer",
+      });
+    }
 
     const user = await prisma.user.findUnique({
       where: { email },

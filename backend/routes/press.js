@@ -18,6 +18,7 @@ router.post('/favorites/:id/toggle', authMiddleware, pressController.toggleFavor
 router.get('/mine/list', authMiddleware, journalistMiddleware, pressController.getMyArticles);
 router.post('/', createListingLimiter, authMiddleware, journalistMiddleware, pressController.createArticle);
 router.put('/:id', createListingLimiter, authMiddleware, journalistMiddleware, pressController.updateArticle);
+router.delete('/:id', authMiddleware, journalistMiddleware, pressController.deleteArticle);
 router.post('/categories', authMiddleware, journalistMiddleware, pressController.createJournalistCategory);
 // ── PUBLIC (wildcard, must stay LAST) ───────────────────────────────────────
 router.get('/:id', pressController.getArticleById);
