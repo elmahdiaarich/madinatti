@@ -8,9 +8,185 @@ import { pressService } from '@/services/pressService';
 import PressCard, { LeadStory, timeAgo } from '@/components/press/PressCard';
 import { pressFontVars } from '@/lib/pressFonts';
 import { tvChannels, radioStations } from '@/lib/tvRadioDirectory';
-import { Tv, Radio as RadioIcon, ExternalLink } from 'lucide-react';
+import { Tv, Radio as RadioIcon, ExternalLink, Play } from 'lucide-react';
 
 const PAGE_SIZE = 13; // 1 lead + 12 en grille
+
+const RADIO_UI_META = {
+  'hit-radio': {
+    nameAR: 'هيت راديو',
+    catFR: '🎵 Musique & Hits',
+    catAR: '🎵 موسيقى وسباق الأغاني',
+    badgeBg: 'bg-rose-50 text-rose-700 border-rose-200',
+    color: '#E11D48',
+    freqFR: '100.3 FM (Casa) • 98.0 FM (Rabat)',
+    freqAR: '100.3 FM (البيضاء) • 98.0 FM (الرباط)',
+  },
+  'radio-mars': {
+    nameAR: 'راديو مارس',
+    catFR: '⚽ Sport & Directs',
+    catAR: '⚽ رياضة وتغطيات مباشرة',
+    badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    color: '#16A34A',
+    freqFR: '91.2 FM (Casa) • 96.5 FM (Rabat)',
+    freqAR: '91.2 FM (البيضاء) • 96.5 FM (الرباط)',
+  },
+  'medi1-radio': {
+    nameAR: 'ميدي 1 راديو',
+    catFR: '📰 Info & Débats',
+    catAR: '📰 أخبار ودوليات وموسيقى',
+    badgeBg: 'bg-sky-50 text-sky-700 border-sky-200',
+    color: '#0284C7',
+    freqFR: '96.8 FM (Casa) • 102.7 FM (Tanger)',
+    freqAR: '96.8 FM (البيضاء) • 102.7 FM (طنجة)',
+  },
+  'chada-fm': {
+    nameAR: 'شذى إف إم',
+    catFR: '🎵 Variété & Musique',
+    catAR: '🎵 تنوع وترفيه',
+    badgeBg: 'bg-pink-50 text-pink-700 border-pink-200',
+    color: '#DB2777',
+    freqFR: '100.8 FM (Casa) • 97.4 FM (Rabat)',
+    freqAR: '100.8 FM (البيضاء) • 97.4 FM (الرباط)',
+  },
+  'al-idaa-al-watania': {
+    nameAR: 'الإذاعة الوطنية',
+    catFR: '🎙️ Généraliste & Culture',
+    catAR: '🎙️ إذاعة عامة وثقافة',
+    badgeBg: 'bg-blue-50 text-blue-700 border-blue-200',
+    color: '#1D4ED8',
+    freqFR: '93.5 FM (Casa) • 88.7 FM (Rabat)',
+    freqAR: '93.5 FM (البيضاء) • 88.7 FM (الرباط)',
+  },
+  'chaine-inter': {
+    nameAR: 'سلسلة إنتر',
+    catFR: '🎙️ Info & Francophone',
+    catAR: '🎙️ أخبار وفرانكوفونية',
+    badgeBg: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+    color: '#0891B2',
+    freqFR: '92.5 FM (Casa) • 90.7 FM (Rabat)',
+    freqAR: '92.5 FM (البيضاء) • 90.7 FM (الرباط)',
+  },
+  'cap-radio': {
+    nameAR: 'كاب راديو',
+    catFR: '🎙️ Nord & Généraliste',
+    catAR: '🎙️ منطقة الشمال وعامة',
+    badgeBg: 'bg-teal-50 text-teal-700 border-teal-200',
+    color: '#0D9488',
+    freqFR: '104.5 FM (Tanger) • 101.5 FM (Tétouan)',
+    freqAR: '104.5 FM (طنجة) • 101.5 FM (تطوان)',
+  },
+  'atlantic-radio': {
+    nameAR: 'أتلاَنتيك راديو',
+    catFR: '📈 Économie & Culture',
+    catAR: '📈 اقتصاد وثقافة',
+    badgeBg: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    color: '#4F46E5',
+    freqFR: '92.0 FM (Casa) • 106.9 FM (Rabat)',
+    freqAR: '92.0 FM (البيضاء) • 106.9 FM (الرباط)',
+  },
+  'aswat': {
+    nameAR: 'راديو أصوات',
+    catFR: '🗣️ Société & Services',
+    catAR: '🗣️ مجتمع وخدمات',
+    badgeBg: 'bg-orange-50 text-orange-700 border-orange-200',
+    color: '#EA580C',
+    freqFR: '104.3 FM (Casa) • 103.7 FM (Rabat)',
+    freqAR: '104.3 FM (البيضاء) • 103.7 FM (الرباط)',
+  },
+  'mfm-radio': {
+    nameAR: 'أم إف أم راديو',
+    catFR: '🎙️ Généraliste & Proximité',
+    catAR: '🎙️ عامة وقرب',
+    badgeBg: 'bg-amber-50 text-amber-700 border-amber-200',
+    color: '#D97706',
+    freqFR: '90.1 FM (Casa) • 90.0 FM (Rabat)',
+    freqAR: '90.1 FM (البيضاء) • 90.0 FM (الرباط)',
+  },
+};
+
+const TV_UI_META = {
+  'al-aoula': {
+    nameAR: 'الأولى',
+    catFR: '📺 Généraliste & Information',
+    catAR: '📺 قناة عامة وأخبار',
+    badgeBg: 'bg-red-50 text-red-700 border-red-200',
+    color: '#B91C1C',
+    hd: true,
+  },
+  'arryadia': {
+    nameAR: 'الرياضية',
+    catFR: '⚽ Sport & Directs',
+    catAR: '⚽ رياضة وتغطيات مباشرة',
+    badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    color: '#15803D',
+    hd: true,
+  },
+  'athaqafia': {
+    nameAR: 'الثقافية',
+    catFR: '🎨 Culture, Arts & Éducation',
+    catAR: '🎨 ثقافة وفنون وتعليم',
+    badgeBg: 'bg-purple-50 text-purple-700 border-purple-200',
+    color: '#6D28D9',
+    hd: false,
+  },
+  'al-maghribia': {
+    nameAR: 'المغربية',
+    catFR: '🌍 MRE & International',
+    catAR: '🌍 الجالية ودوليات',
+    badgeBg: 'bg-blue-50 text-blue-700 border-blue-200',
+    color: '#1D4ED8',
+    hd: false,
+  },
+  'assadissa': {
+    nameAR: 'السادسة',
+    catFR: '📖 Coran & Études Islamiques',
+    catAR: '📖 القرآن الكريم والدروس',
+    badgeBg: 'bg-teal-50 text-teal-700 border-teal-200',
+    color: '#0F766E',
+    hd: false,
+  },
+  'tamazight-tv': {
+    nameAR: 'تَمازيغت 8',
+    catFR: '🇲🇦 Amazigh & Patrimoine',
+    catAR: '🇲🇦 ثقافة أمازيغية وتراث',
+    badgeBg: 'bg-amber-50 text-amber-700 border-amber-200',
+    color: '#B45309',
+    hd: true,
+  },
+  'laayoune-tv': {
+    nameAR: 'قناة العيون',
+    catFR: '📍 Régionale (Sud)',
+    catAR: '📍 جهوية (الصحراء المغربية)',
+    badgeBg: 'bg-orange-50 text-orange-700 border-orange-200',
+    color: '#C2410C',
+    hd: false,
+  },
+  '2m': {
+    nameAR: '2M دوزيم',
+    catFR: '📺 Généraliste & Divertissement',
+    catAR: '📺 قناة عامة وترفيه',
+    badgeBg: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    color: '#4338CA',
+    hd: true,
+  },
+  'medi1tv': {
+    nameAR: 'ميدي 1 تيفي',
+    catFR: '📰 Info, Débats & Maghreb',
+    catAR: '📰 أخبار ودوليات',
+    badgeBg: 'bg-sky-50 text-sky-700 border-sky-200',
+    color: '#0369A1',
+    hd: true,
+  },
+  'chada-tv': {
+    nameAR: 'شدة تيفي',
+    catFR: '🎭 Musique & Divertissement',
+    catAR: '🎭 موسيقى وفنون',
+    badgeBg: 'bg-pink-50 text-pink-700 border-pink-200',
+    color: '#BE185D',
+    hd: true,
+  },
+};
 
 // Liste de toutes les villes marocaines issues de morocco-cities
 const ALL_MOROCCO_CITIES = Array.from(
@@ -266,11 +442,10 @@ export default function PressPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-t-lg transition-colors ${
-                  activeTab === tab.id
-                    ? 'bg-primary-dark text-white'
-                    : 'text-primary-dark/70 hover:bg-primary-mint'
-                }`}
+                className={`px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-t-lg transition-colors ${activeTab === tab.id
+                  ? 'bg-primary-dark text-white'
+                  : 'text-primary-dark/70 hover:bg-primary-mint'
+                  }`}
               >
                 {language === 'AR' ? tab.labelAR : tab.labelFR}
               </button>
@@ -299,11 +474,10 @@ export default function PressPage() {
                 {/* Bouton "Toutes" */}
                 <button
                   onClick={() => setSelectedCity('')}
-                  className={`rounded-full px-3 py-1 font-semibold transition-all ${
-                    selectedCity === ''
-                      ? 'bg-primary-dark text-white shadow-sm'
-                      : 'bg-primary-mint text-primary-dark/80 hover:bg-primary-sage hover:text-primary-dark'
-                  }`}
+                  className={`rounded-full px-3 py-1 font-semibold transition-all ${selectedCity === ''
+                    ? 'bg-primary-dark text-white shadow-sm'
+                    : 'bg-primary-mint text-primary-dark/80 hover:bg-primary-sage hover:text-primary-dark'
+                    }`}
                 >
                   {t.allCities}
                 </button>
@@ -313,11 +487,10 @@ export default function PressPage() {
                   <button
                     key={city}
                     onClick={() => setSelectedCity(city)}
-                    className={`rounded-full px-3 py-1 font-semibold transition-all ${
-                      selectedCity === city
-                        ? 'bg-accent text-white shadow-sm'
-                        : 'bg-primary-mint text-primary-dark/80 hover:bg-primary-sage hover:text-primary-dark'
-                    }`}
+                    className={`rounded-full px-3 py-1 font-semibold transition-all ${selectedCity === city
+                      ? 'bg-accent text-white shadow-sm'
+                      : 'bg-primary-mint text-primary-dark/80 hover:bg-primary-sage hover:text-primary-dark'
+                      }`}
                   >
                     {city}
                   </button>
@@ -360,11 +533,10 @@ export default function PressPage() {
                                 setSelectedCity(cityName);
                                 setIsCityDropdownOpen(false);
                               }}
-                              className={`w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-start font-semibold transition-colors ${
-                                selectedCity === cityName
-                                  ? 'bg-primary-dark text-white'
-                                  : 'hover:bg-primary-mint text-primary-dark'
-                              }`}
+                              className={`w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-start font-semibold transition-colors ${selectedCity === cityName
+                                ? 'bg-primary-dark text-white'
+                                : 'hover:bg-primary-mint text-primary-dark'
+                                }`}
                             >
                               <span>{cityName}</span>
                               {/* Signale les villes qui ont des articles en DB (●) */}
@@ -397,11 +569,10 @@ export default function PressPage() {
                 <div className="flex flex-wrap gap-2 pt-2 border-t border-primary-sage/40">
                   <button
                     onClick={() => setSelectedCategoryId('')}
-                    className={`rounded-full px-3.5 py-1 text-xs font-semibold transition-colors ${
-                      selectedCategoryId === ''
-                        ? 'bg-primary-dark text-white'
-                        : 'bg-primary-mint/80 text-primary-dark/80 hover:bg-primary-sage hover:text-primary-dark'
-                    }`}
+                    className={`rounded-full px-3.5 py-1 text-xs font-semibold transition-colors ${selectedCategoryId === ''
+                      ? 'bg-primary-dark text-white'
+                      : 'bg-primary-mint/80 text-primary-dark/80 hover:bg-primary-sage hover:text-primary-dark'
+                      }`}
                   >
                     {t.allCategories}
                   </button>
@@ -413,11 +584,10 @@ export default function PressPage() {
                       <button
                         key={cat.id}
                         onClick={() => setSelectedCategoryId(cat.id)}
-                        className={`rounded-full px-3.5 py-1 text-xs font-semibold transition-colors ${
-                          selectedCategoryId === cat.id
-                            ? 'bg-primary-dark text-white'
-                            : 'bg-primary-mint/80 text-primary-dark/80 hover:bg-primary-sage hover:text-primary-dark'
-                        }`}
+                        className={`rounded-full px-3.5 py-1 text-xs font-semibold transition-colors ${selectedCategoryId === cat.id
+                          ? 'bg-primary-dark text-white'
+                          : 'bg-primary-mint/80 text-primary-dark/80 hover:bg-primary-sage hover:text-primary-dark'
+                          }`}
                       >
                         {displayName}
                       </button>
@@ -432,92 +602,233 @@ export default function PressPage() {
 
       {/* CONTENT */}
       <div className="mx-auto max-w-[1160px] px-5 py-8">
-        {activeTab === 'tv' && (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {tvChannels.map((ch) => (
-              <a
+        {activeTab === 'tv' && (() => {
+          const renderTvCard = (ch) => {
+            const meta = TV_UI_META[ch.id] || {};
+            const displayName = language === 'AR' && meta.nameAR ? meta.nameAR : ch.name;
+            const brandColor = meta.color || '#1E293B';
+
+            return (
+              <div
                 key={ch.id}
-                href={ch.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex flex-col items-center gap-2 rounded-xl border border-primary-sage bg-white p-5 text-center transition-colors hover:border-primary-dark"
+                className="group flex flex-col justify-between rounded-2xl border border-primary-sage/60 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-dark hover:shadow-md"
               >
-                <Tv size={28} className="text-primary-sage group-hover:text-primary-dark transition-colors" />
-                <span className="text-sm font-bold text-primary-dark">{ch.name}</span>
-                <span className="text-[11px] text-primary-dark/60">{ch.category}</span>
-                <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-accent">
-                  {language === 'AR' ? 'الموقع الرسمي' : 'Site officiel'} <ExternalLink size={11} />
-                </span>
-              </a>
-            ))}
-          </div>
-        )}
+                <div>
+                  <div className="mb-3 flex items-center justify-end">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                      <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-pulse" />
+                      {meta.hd ? (language === 'AR' ? 'بث HD' : 'Direct HD') : (language === 'AR' ? 'مباشر' : 'Live')}
+                    </span>
+                  </div>
 
-        {activeTab === 'radio' && (
-          <div className="space-y-8">
-            <div>
-              <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-primary-dark/70" style={{ fontFamily: 'var(--font-meta)' }}>
-                {language === 'AR' ? 'إذاعات وطنية' : 'Radios nationales'}
-              </h2>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                {radioStations.national.map((r) => (
+                  <div className="my-3 flex items-center gap-3.5">
+                    <div
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl font-bold text-white shadow-sm"
+                      style={{ backgroundColor: brandColor }}
+                    >
+                      <Tv size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-primary-dark transition-colors group-hover:text-accent">
+                        {displayName}
+                      </h3>
+                      <span className="text-[11px] font-medium text-primary-dark/60">
+                        {language === 'AR' ? 'التلفزة المغربية' : 'Télévision marocaine'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-center gap-2 border-t border-gray-100 pt-3">
                   <a
-                    key={r.id}
+                    href={ch.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary-dark px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-accent"
+                  >
+                    <Play size={13} fill="currentColor" />
+                    {language === 'AR' ? 'مشاهدة البث' : 'Regarder'}
+                  </a>
+                  <a
+                    href={ch.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={language === 'AR' ? 'الموقع الرسمي' : 'Site officiel'}
+                    className="inline-flex items-center justify-center rounded-lg border border-primary-sage/60 p-2 text-xs text-primary-dark transition-colors hover:border-primary-dark hover:bg-gray-50"
+                  >
+                    <ExternalLink size={13} />
+                  </a>
+                </div>
+              </div>
+            );
+          };
+
+          const publicChannels = tvChannels.filter((c) => ['al-aoula', 'arryadia', 'athaqafia', 'al-maghribia', 'assadissa', 'tamazight-tv', 'laayoune-tv'].includes(c.id));
+          const mainChannels = tvChannels.filter((c) => ['2m', 'medi1tv'].includes(c.id));
+          const privateChannels = tvChannels.filter((c) => ['chada-tv'].includes(c.id));
+
+          return (
+            <div className="space-y-8">
+              {/* CHAÎNES NATIONALES GÉNÉRALISTES */}
+              {mainChannels.length > 0 && (
+                <div>
+                  <h2 className="mb-4 text-xs font-bold uppercase tracking-wide text-primary-dark/70" style={{ fontFamily: 'var(--font-meta)' }}>
+                    {language === 'AR' ? 'قنوات وطنية عامة' : 'Chaînes nationales généralistes'}
+                  </h2>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {mainChannels.map((ch) => renderTvCard(ch))}
+                  </div>
+                </div>
+              )}
+
+              {/* GROUPE SNRT */}
+              {publicChannels.length > 0 && (
+                <div>
+                  <h2 className="mb-4 text-xs font-bold uppercase tracking-wide text-primary-dark/70" style={{ fontFamily: 'var(--font-meta)' }}>
+                    {language === 'AR' ? 'باقة القنوات الوطنية (SNRT)' : 'Bouquet national (SNRT)'}
+                  </h2>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {publicChannels.map((ch) => renderTvCard(ch))}
+                  </div>
+                </div>
+              )}
+
+              {/* CHAÎNES PRIVÉES ET THÉMATIQUES */}
+              {privateChannels.length > 0 && (
+                <div>
+                  <h2 className="mb-4 text-xs font-bold uppercase tracking-wide text-primary-dark/70" style={{ fontFamily: 'var(--font-meta)' }}>
+                    {language === 'AR' ? 'قنوات خاصة وترفيهية' : 'Chaînes privées & thématiques'}
+                  </h2>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {privateChannels.map((ch) => renderTvCard(ch))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {activeTab === 'radio' && (() => {
+          const renderRadioCard = (r) => {
+            const meta = RADIO_UI_META[r.id] || {};
+            const displayName = language === 'AR' && meta.nameAR ? meta.nameAR : r.name;
+            const brandColor = meta.color || '#475569';
+
+            return (
+              <div
+                key={r.id}
+                className="group flex flex-col justify-between rounded-2xl border border-primary-sage/60 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-dark hover:shadow-md"
+              >
+                <div>
+                  <div className="mb-3 flex items-center justify-end">
+                    <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="En direct" />
+                  </div>
+
+                  <div className="my-3 flex items-center gap-3.5">
+                    <div
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl font-bold text-white shadow-sm"
+                      style={{ backgroundColor: brandColor }}
+                    >
+                      <RadioIcon size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-primary-dark transition-colors group-hover:text-accent">
+                        {displayName}
+                      </h3>
+                      {(meta.freqFR || meta.freqAR) && (
+                        <div className="mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/80">
+                          ⚡ {language === 'AR' && meta.freqAR ? meta.freqAR : meta.freqFR}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-center gap-2 border-t border-gray-100 pt-3">
+                  <a
                     href={r.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group flex flex-col items-center gap-2 rounded-xl border border-primary-sage bg-white p-5 text-center transition-colors hover:border-primary-dark"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary-dark px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-accent"
                   >
-                    <RadioIcon size={28} className="text-primary-sage group-hover:text-primary-dark transition-colors" />
-                    <span className="text-sm font-bold text-primary-dark">{r.name}</span>
-                    <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-accent">
-                      {language === 'AR' ? 'الموقع الرسمي' : 'Site officiel'} <ExternalLink size={11} />
-                    </span>
+                    <Play size={13} fill="currentColor" />
+                    {language === 'AR' ? 'استمع مباشرة' : 'Écouter'}
                   </a>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-primary-dark/70" style={{ fontFamily: 'var(--font-meta)' }}>
-                {language === 'AR' ? 'إذاعات جهوية' : 'Radios régionales'}
-              </h2>
-              <a
-                href={radioStations.regional.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex items-center gap-3 rounded-xl border border-primary-sage bg-white p-5 transition-colors hover:border-primary-dark"
-              >
-                <RadioIcon size={28} className="shrink-0 text-primary-sage group-hover:text-primary-dark transition-colors" />
-                <span className="flex-1 text-sm text-primary-dark">{radioStations.regional.label}</span>
-                <ExternalLink size={14} className="shrink-0 text-accent" />
-              </a>
-            </div>
-
-            <div>
-              <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-primary-dark/70" style={{ fontFamily: 'var(--font-meta)' }}>
-                {language === 'AR' ? 'إذاعات خاصة' : 'Radios privées'}
-              </h2>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                {radioStations.private.map((r) => (
                   <a
-                    key={r.id}
                     href={r.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group flex flex-col items-center gap-2 rounded-xl border border-primary-sage bg-white p-5 text-center transition-colors hover:border-primary-dark"
+                    title={language === 'AR' ? 'الموقع الرسمي' : 'Site officiel'}
+                    className="inline-flex items-center justify-center rounded-lg border border-primary-sage/60 p-2 text-xs text-primary-dark transition-colors hover:border-primary-dark hover:bg-gray-50"
                   >
-                    <RadioIcon size={28} className="text-primary-sage group-hover:text-primary-dark transition-colors" />
-                    <span className="text-sm font-bold text-primary-dark">{r.name}</span>
-                    <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-accent">
-                      {language === 'AR' ? 'الموقع الرسمي' : 'Site officiel'} <ExternalLink size={11} />
-                    </span>
+                    <ExternalLink size={13} />
                   </a>
-                ))}
+                </div>
+              </div>
+            );
+          };
+
+          return (
+            <div className="space-y-8">
+              {/* RADIOS NATIONALES */}
+              <div>
+                <h2 className="mb-4 text-xs font-bold uppercase tracking-wide text-primary-dark/70" style={{ fontFamily: 'var(--font-meta)' }}>
+                  {language === 'AR' ? 'إذاعات وطنية' : 'Radios nationales'}
+                </h2>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {radioStations.national.map((r) => renderRadioCard(r))}
+                </div>
+              </div>
+
+              {/* RADIOS PRIVÉES */}
+              <div>
+                <h2 className="mb-4 text-xs font-bold uppercase tracking-wide text-primary-dark/70" style={{ fontFamily: 'var(--font-meta)' }}>
+                  {language === 'AR' ? 'إذاعات خاصة' : 'Radios privées'}
+                </h2>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {radioStations.private.map((r) => renderRadioCard(r))}
+                </div>
+              </div>
+
+              {/* RADIOS RÉGIONALES SNRT */}
+              <div>
+                <h2 className="mb-4 text-xs font-bold uppercase tracking-wide text-primary-dark/70" style={{ fontFamily: 'var(--font-meta)' }}>
+                  {language === 'AR' ? 'إذاعات جهوية' : 'Radios régionales'}
+                </h2>
+                <div className="rounded-2xl border border-primary-sage/60 bg-gradient-to-r from-teal-50/40 via-white to-blue-50/40 p-6 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-teal-600 text-white shadow-sm">
+                        <RadioIcon size={24} />
+                      </div>
+                      <div>
+                        <span className="inline-flex items-center gap-1 rounded-full border border-teal-200 bg-teal-50 px-2.5 py-0.5 text-[11px] font-semibold text-teal-800">
+                          📍 {language === 'AR' ? 'شبكة جهوية' : 'Réseau régional'}
+                        </span>
+                        <h3 className="mt-1 text-base font-bold text-primary-dark">
+                          {language === 'AR' ? 'الإذاعات الجهوية SNRT' : 'Radios régionales SNRT'}
+                        </h3>
+                        <p className="mt-1 text-xs text-primary-dark/70">
+                          {radioStations.regional.label}
+                        </p>
+                      </div>
+                    </div>
+                    <a
+                      href={radioStations.regional.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-primary-dark px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-accent"
+                    >
+                      <Play size={13} fill="currentColor" />
+                      {language === 'AR' ? 'الوصول إلى البث الجهوي' : 'Accéder au direct régional'}
+                      <ExternalLink size={13} />
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {(activeTab === 'journal' || activeTab === 'video') && (loading ? (
           <div className="space-y-8">

@@ -10,17 +10,16 @@
 
 export const tvChannels = [
   // ── Groupe SNRT (public) ──
-  { id: 'al-aoula', name: 'Al Aoula', category: 'Généraliste', url: 'https://www.snrt.ma/fr/al-aoula', verified: 'confirmed', verifiedAt: '2026-07-30' },
-  { id: 'arryadia', name: 'Arryadia', category: 'Sport', url: 'https://www.snrt.ma/fr/arryadia', verified: 'confirmed', verifiedAt: '2026-07-30' },
-  { id: 'athaqafia', name: 'Athaqafia', category: 'Culture', url: 'https://www.snrt.ma/fr/athaqafia', verified: 'consistent', verifiedAt: '2026-07-30' },
-  { id: 'al-maghribia', name: 'Al Maghribia', category: 'MRE / International', url: 'https://www.snrt.ma/fr/al-maghribia', verified: 'consistent', verifiedAt: '2026-07-30' },
-  { id: 'assadissa', name: 'Assadissa', category: 'Religieux', url: 'https://www.snrt.ma/fr/assadissa', verified: 'consistent', verifiedAt: '2026-07-30' },
-  { id: 'aflam-tv', name: 'Aflam TV', category: 'Cinéma', url: 'https://www.snrt.ma/fr/aflam-tv', verified: 'consistent', verifiedAt: '2026-07-30' },
-  { id: 'tamazight-tv', name: 'Tamazight TV', category: 'Amazigh', url: 'https://www.snrt.ma/fr/tamazight-tv', verified: 'consistent', verifiedAt: '2026-07-30' },
-  { id: 'laayoune-tv', name: 'Laâyoune TV', category: 'Régionale (Sud)', url: 'https://www.snrt.ma/fr/laayoune-tv', verified: 'consistent', verifiedAt: '2026-07-30' },
+  { id: 'al-aoula', name: 'Al Aoula', category: 'Généraliste', url: 'https://snrtlive.ma/fr/al-aoula', verified: 'confirmed', verifiedAt: '2026-07-30' },
+  { id: 'arryadia', name: 'Arryadia', category: 'Sport', url: 'https://snrtlive.ma/fr/arryadia', verified: 'confirmed', verifiedAt: '2026-07-30' },
+  { id: 'athaqafia', name: 'Athaqafia', category: 'Culture', url: 'https://www.snrtlive.ma/fr/athaqafia', verified: 'consistent', verifiedAt: '2026-07-30' },
+  { id: 'al-maghribia', name: 'Al Maghribia', category: 'MRE / International', url: 'https://snrtlive.ma/fr/almaghribia', verified: 'consistent', verifiedAt: '2026-07-30' },
+  { id: 'assadissa', name: 'Assadissa', category: 'Religieux', url: 'https://www.snrtlive.ma/fr/assadissa', verified: 'consistent', verifiedAt: '2026-07-30' },
+  { id: 'tamazight-tv', name: 'Tamazight TV', category: 'Amazigh', url: 'https://snrtlive.ma/fr/tamazight', verified: 'consistent', verifiedAt: '2026-07-30' },
+  { id: 'laayoune-tv', name: 'Laâyoune TV', category: 'Régionale (Sud)', url: 'https://snrtlive.ma/fr/laayoune', verified: 'consistent', verifiedAt: '2026-07-30' },
   // ── Holding publique élargie ──
-  { id: '2m', name: '2M', category: 'Généraliste', url: 'https://2m.ma/fr/', verified: 'confirmed', verifiedAt: '2026-07-30' },
-  { id: 'medi1tv', name: 'Medi1 TV', category: 'Généraliste', url: 'https://www.medi1tv.com/fr/tv', verified: 'confirmed', verifiedAt: '2026-07-30' },
+  { id: '2m', name: '2M', category: 'Généraliste', url: 'https://2m.ma/fr/replay/_', verified: 'confirmed', verifiedAt: '2026-07-30' },
+  { id: 'medi1tv', name: 'Medi1 TV', category: 'Généraliste', url: 'https://www.medi1tv.com/fr/live-medi1tv-maghreb', verified: 'confirmed', verifiedAt: '2026-07-30' },
   // ── Privée ──
   { id: 'chada-tv', name: 'Chada TV', category: 'Divertissement', url: 'https://chada.ma/fr/chada-tv/', verified: 'confirmed', verifiedAt: '2026-07-30' },
 ];

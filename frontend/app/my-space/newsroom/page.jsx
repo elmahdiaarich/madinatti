@@ -8,48 +8,37 @@ import { useToast } from '@/context/ToastContext';
 import { pressService } from '../../../services/pressService';
 
 const PAGE_SIZE = 8;
-
-// Statuts disponibles pour le filtre. PENDING/REJECTED ne sont plus produits
-// par le flux actuel (publication directe), mais on garde le filtre au cas où
-// d'anciens articles créés avant la bascule vers publication directe existent encore.
-const STATUS_FILTERS = [
-  { value: 'ALL',      label: 'Tous' },
-  { value: 'PENDING',  label: 'En attente' },
-  { value: 'APPROVED', label: 'Publiés' },
-  { value: 'REJECTED', label: 'Refusés' },
-  { value: 'ARCHIVED', label: 'Archivés' },
-];
-
-const STATUS_STYLES = {
-  PENDING:         { label: 'En attente',                    bg: 'bg-amber-50',  text: 'text-amber-600', border: 'border-amber-200' },
-  PENDING_RECHECK: { label: '🔄 Modifié, en revalidation',    bg: 'bg-sky-50',    text: 'text-sky-600',   border: 'border-sky-200'   },
-  APPROVED:        { label: 'Publié',                        bg: 'bg-[#E8F5D0]', text: 'text-[#2D5016]', border: 'border-[#A7D129]/40' },
-  REJECTED:        { label: 'Refusé',                        bg: 'bg-red-50',    text: 'text-red-600',   border: 'border-red-200' },
-  ARCHIVED:        { label: 'Archivé',                       bg: 'bg-gray-100',  text: 'text-gray-500',  border: 'border-gray-200' },
-};
-
 const LANGUAGE_LABELS = { AR: 'Arabe', FR: 'Français' };
-
-/** Résout le style à afficher pour un article.
- *  PENDING + previousTitle renseigné → "Modifié, en revalidation" (legacy). */
-function resolveStyle(article) {
-  if (article.status === 'PENDING' && (article.previousTitle || article.previousDescription)) {
-    return STATUS_STYLES.PENDING_RECHECK;
-  }
-  return STATUS_STYLES[article.status] || STATUS_STYLES.APPROVED;
-}
 
 // ─── Carte article ────────────────────────────────────────────────────────────
 
-function ArticleCard({ article }) {
+function ArticleCard({ article, onDeleted }) {
   const router = useRouter();
-  const style = resolveStyle(article);
-  const isRejected = article.status === 'REJECTED';
+  const { toast } = useToast();
+  const [deleting, setDeleting] = useState(false);
 
   const handleCardClick = (e) => {
     // Ne pas déclencher si on clique sur un lien/bouton enfant
     if (e.target.closest('a, button')) return;
     router.push(`/my-space/newsroom/edit/${article.id}`);
+  };
+
+  const handleDelete = async () => {
+    if (deleting) return;
+    const confirmed = window.confirm(
+      'Supprimer définitivement cet article ? Cette action est irréversible et retire aussi la photo/vidéo associée.'
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    try {
+      await pressService.deleteArticle(article.id);
+      toast.success('Article supprimé.');
+      onDeleted(article.id);
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Erreur lors de la suppression');
+      setDeleting(false);
+    }
   };
 
   return (
@@ -70,9 +59,6 @@ function ArticleCard({ article }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2 flex-wrap">
           <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">{article.title}</h3>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${style.bg} ${style.text} ${style.border}`}>
-            {style.label}
-          </span>
         </div>
 
         <p className="text-xs text-[#7BA428] font-semibold mt-1">{article.category?.name}</p>
@@ -82,35 +68,30 @@ function ArticleCard({ article }) {
           {article.editCount > 0 && <span>· modifié {article.editCount}×</span>}
         </div>
 
-        {/* Note de refus — legacy, ne devrait plus apparaître avec publication directe */}
-        {isRejected && article.adminNotes && (
-          <div className="mt-2 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
-            <p className="text-xs text-red-600">
-              <strong>Motif du refus :</strong> {article.adminNotes}
-            </p>
-          </div>
-        )}
-
         {/* Actions */}
         <div className="flex items-center gap-3 mt-3">
           <Link
             href={`/my-space/newsroom/edit/${article.id}`}
-            className={`text-xs font-bold hover:underline ${
-              isRejected ? 'text-red-600 hover:text-red-800' : 'text-[#2D5016] hover:text-[#A7D129]'
-            }`}
+            className="text-xs font-bold text-[#2D5016] hover:text-[#A7D129] hover:underline"
           >
-            {isRejected ? '✏️ Corriger et resoumettre' : 'Modifier'}
+            Modifier
           </Link>
 
-          {article.status === 'APPROVED' && (
-            <Link
-              href={`/press/${article.id}`}
-              target="_blank"
-              className="text-xs font-bold text-gray-500 hover:text-gray-800 hover:underline"
-            >
-              Voir l'article public ↗
-            </Link>
-          )}
+          <Link
+            href={`/press/${article.id}`}
+            target="_blank"
+            className="text-xs font-bold text-gray-500 hover:text-gray-800 hover:underline"
+          >
+            Voir l'article public ↗
+          </Link>
+
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="text-xs font-bold text-gray-400 hover:text-red-600 hover:underline ms-auto disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {deleting ? 'Suppression…' : 'Supprimer'}
+          </button>
         </div>
       </div>
     </div>
@@ -125,7 +106,6 @@ export default function NewsroomPage() {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [statusFilter, setStatusFilter] = useState('ALL');
   const [page, setPage] = useState(1);
 
   const load = () => {
@@ -145,17 +125,16 @@ export default function NewsroomPage() {
   };
 
   useEffect(() => { load(); }, [token]);
-  useEffect(() => { setPage(1); }, [statusFilter]);
 
-  // ── Filtrage + pagination ────────────────────────────────────────────────────
+  const handleArticleDeleted = (id) => {
+    setArticles((prev) => prev.filter((a) => a.id !== id));
+  };
 
-  const filtered = statusFilter === 'ALL'
-    ? articles
-    : articles.filter((a) => a.status === statusFilter);
+  // ── Pagination ────────────────────────────────────────────────────────────
 
-  const totalPages   = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages   = Math.max(1, Math.ceil(articles.length / PAGE_SIZE));
   const safePage     = Math.min(page, totalPages);
-  const pageArticles = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const pageArticles = articles.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -178,35 +157,6 @@ export default function NewsroomPage() {
           + Nouvel article
         </Link>
       </div>
-
-      {/* ── Filtre par statut ─────────────────────────────────────────────── */}
-      {!loading && !loadError && articles.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {STATUS_FILTERS.map((f) => {
-            const count = f.value === 'ALL'
-              ? articles.length
-              : articles.filter((a) => a.status === f.value).length;
-            return (
-              <button
-                key={f.value}
-                onClick={() => setStatusFilter(f.value)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                  statusFilter === f.value
-                    ? 'bg-[#2D5016] text-white border-[#2D5016] shadow-sm'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-[#2D5016] hover:text-[#2D5016]'
-                }`}
-              >
-                {f.label}
-                {count > 0 && (
-                  <span className={`ml-1.5 text-[10px] font-black ${statusFilter === f.value ? 'opacity-70' : 'opacity-50'}`}>
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
 
       {/* ── Contenu ───────────────────────────────────────────────────────── */}
       {loading ? (
@@ -232,21 +182,12 @@ export default function NewsroomPage() {
           <p className="font-semibold text-gray-700">Aucun article pour l'instant</p>
           <p className="text-xs text-gray-400 mt-1">Créez votre premier article pour commencer.</p>
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
-          <div className="text-3xl mb-2">🔍</div>
-          <p className="font-semibold text-gray-600 text-sm">Aucun article avec ce statut.</p>
-          <button
-            onClick={() => setStatusFilter('ALL')}
-            className="mt-3 text-xs font-bold text-[#2D5016] hover:underline"
-          >
-            Voir tous les articles
-          </button>
-        </div>
       ) : (
         <>
           <div className="flex flex-col gap-4">
-            {pageArticles.map((a) => <ArticleCard key={a.id} article={a} />)}
+            {pageArticles.map((a) => (
+              <ArticleCard key={a.id} article={a} onDeleted={handleArticleDeleted} />
+            ))}
           </div>
 
           {totalPages > 1 && (

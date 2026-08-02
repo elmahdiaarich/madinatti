@@ -89,13 +89,18 @@ const getUserFavorites = async (req, res) => {
 
 const createArticle = async (req, res) => {
   try {
-    const { title, description, city, categoryId, language, imageUrl } = req.body;
-    if (!title || !description || !language) {
-      return res.status(400).json({ success: false, message: 'Titre, description et langue sont requis' });
+    const { title, description, city, categoryId, language, imageUrl, videoUrl, contentType } = req.body;
+    // Validation minimale ici : uniquement ce qui est requis dans TOUS les cas
+    // (titre + langue). La description/le média dépendent du contentType et
+    // sont déjà validés par pressService (VIDEO_REQUIRED / IMAGE_REQUIRED /
+    // DESCRIPTION_TOO_SHORT) — pas la peine de dupliquer ni de bloquer ici
+    // une vidéo qui n'a volontairement pas de description.
+    if (!title || !language) {
+      return res.status(400).json({ success: false, message: 'Titre et langue sont requis' });
     }
 
     const article = await pressService.createArticle(req.user.userId, {
-      title, description, imageUrl, city, categoryId, language,
+      title, description, imageUrl, videoUrl, city, categoryId, language, contentType,
     });
 
     res.status(201).json({ success: true, data: article });
@@ -107,16 +112,27 @@ const createArticle = async (req, res) => {
 
 const updateArticle = async (req, res) => {
   try {
-    const { title, description, city, categoryId, language, imageUrl } = req.body;
+    const { title, description, city, categoryId, language, imageUrl, videoUrl, contentType } = req.body;
 
     const article = await pressService.updateArticle(req.params.id, req.user.userId, {
-      title, description, imageUrl, city, categoryId, language,
+      title, description, imageUrl, videoUrl, city, categoryId, language, contentType,
     });
 
     res.status(200).json({ success: true, data: article });
   } catch (error) {
     console.error('[press/updateArticle]', error);
     const status = ['IMAGE_REQUIRED', 'VIDEO_REQUIRED', 'INVALID_CONTENT_TYPE', 'TITLE_TOO_LONG', 'DESCRIPTION_TOO_LONG'].includes(error.code) ? 400 : 500;
+    res.status(status).json({ success: false, message: error.message || 'Erreur serveur' });
+  }
+};
+
+const deleteArticle = async (req, res) => {
+  try {
+    await pressService.deleteArticle(req.params.id, req.user.userId);
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('[press/deleteArticle]', error);
+    const status = error.code === 'NOT_FOUND' ? 404 : error.code === 'FORBIDDEN' ? 403 : 500;
     res.status(status).json({ success: false, message: error.message || 'Erreur serveur' });
   }
 };
@@ -152,6 +168,7 @@ module.exports = {
   getUserFavorites,
   createArticle,
   updateArticle,
+  deleteArticle,
   getMyArticles,
   createJournalistCategory,
 };

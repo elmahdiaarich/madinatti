@@ -1,7 +1,14 @@
 'use strict';
 
 const { PrismaClient } = require('@prisma/client');
+const cloudinary = require('cloudinary').v2;
 const prisma = new PrismaClient();
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 // ── PUBLIC ────────────────────────────────────────────────────────────────────
 
@@ -298,6 +305,56 @@ async function updateArticle(id, userId, { title, description, imageUrl, videoUr
   });
 }
 
+// Extrait le public_id Cloudinary depuis une URL sécurisée, pour pouvoir
+// supprimer le fichier réel (image ou vidéo) en plus de la ligne en base.
+// Best-effort : si l'URL ne matche pas le format attendu, on abandonne sans
+// bloquer la suppression de l'article (mieux vaut un fichier orphelin qu'un
+// article que le journaliste n'arrive pas à supprimer).
+function extractCloudinaryPublicId(url) {
+  if (!url) return null;
+  try {
+    const urlParts = url.split('/upload/');
+    if (urlParts.length !== 2) return null;
+    const withoutVer = urlParts[1].replace(/^v\d+\//, '');
+    return withoutVer.replace(/\.[^/.]+$/, '');
+  } catch {
+    return null;
+  }
+}
+
+// Suppression définitive — réservée au journaliste auteur de l'article.
+// Supprime aussi le média associé sur Cloudinary (best-effort, ne bloque pas
+// la suppression de l'article si Cloudinary échoue).
+async function deleteArticle(id, userId) {
+  const existing = await prisma.newsArticle.findUnique({ where: { id } });
+  if (!existing) {
+    const err = new Error('Article introuvable');
+    err.code = 'NOT_FOUND';
+    throw err;
+  }
+  if (existing.source !== 'ORIGINAL' || existing.userId !== userId) {
+    const err = new Error('Non autorisé à supprimer cet article');
+    err.code = 'FORBIDDEN';
+    throw err;
+  }
+
+  await prisma.newsArticle.delete({ where: { id } });
+
+  if (existing.contentType === 'VIDEO' && existing.videoUrl) {
+    const publicId = extractCloudinaryPublicId(existing.videoUrl);
+    if (publicId) {
+      cloudinary.uploader.destroy(publicId, { resource_type: 'video' }).catch(() => {});
+    }
+  } else if (existing.imageUrl) {
+    const publicId = extractCloudinaryPublicId(existing.imageUrl);
+    if (publicId) {
+      cloudinary.uploader.destroy(publicId).catch(() => {});
+    }
+  }
+
+  return { id };
+}
+
 async function getMyArticles(userId) {
   return prisma.newsArticle.findMany({
     where: { userId, source: 'ORIGINAL' },
@@ -344,6 +401,7 @@ module.exports = {
   purgeOldArticles,
   createArticle,
   updateArticle,
+  deleteArticle,
   getMyArticles,
   createCategory,
 };

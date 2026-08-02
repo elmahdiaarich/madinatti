@@ -45,6 +45,10 @@ export const pressService = {
     const response = await axios.put(`${API_URL}/${id}`, data, getAuthHeaders());
     return response.data;
   },
+  deleteArticle: async (id) => {
+    const response = await axios.delete(`${API_URL}/${id}`, getAuthHeaders());
+    return response.data;
+  },
   getMyArticles: async () => {
     const response = await axios.get(`${API_URL}/mine/list`, getAuthHeaders());
     return response.data;
