@@ -10,42 +10,17 @@ import VideoUploader from '@/components/press/VideoUploader';
 const API_URL = process.env.NEXT_PUBLIC_API_URL + '/api';
 const LANG_STORAGE_KEY = 'madinatti_journalist_press_lang';
 
-// Traduction AR des noms de catégories presse (clé = nom FR exact en base).
-// Si une catégorie n'est pas listée ici, on affiche son nom FR même en mode AR.
-const CATEGORY_AR = {
-  'Politique':            'سياسة',
-  'Économie':             'اقتصاد',
-  'Société':              'مجتمع',
-  'Sport':                'رياضة',
-  'Culture':              'ثقافة',
-  'Éducation':            'تعليم',
-  'Santé':                'صحة',
-  'Environnement':        'بيئة',
-  'Technologie':          'تكنولوجيا',
-  'International':        'دولي',
-  'Régional':             'جهوي',
-  'Justice':              'قضاء',
-  'Sécurité':             'أمن',
-  'Tourisme':             'سياحة',
-  'Immobilier':           'عقار',
-  'Emploi':               'شغل',
-  'Agriculture':          'فلاحة',
-  'Religieux':            'ديني',
-  'Art & Spectacle':      'فن وترفيه',
-  'Médias':               'إعلام',
-  'Transports':           'نقل',
-  'Urbanisme':            'تعمير',
-  'Entreprises':          'مقاولات',
-  'Énergie':              'طاقة',
-  'Droits & Libertés':    'حقوق وحريات',
-  'Faits divers':         'حوادث',
-  'Météo':                'طقس',
-};
+// Détecte si un nom contient majoritairement des caractères arabes.
+const ARABIC_RE = /[\u0600-\u06FF]/;
+function isArabicName(name) { return ARABIC_RE.test(name); }
 
-/** Retourne le nom de la catégorie selon la langue courante. */
-function catLabel(cat, language) {
-  if (language !== 'AR') return cat.name;
-  return CATEGORY_AR[cat.name] || cat.name;
+/** Filtre les catégories selon la langue du formulaire :
+ *  - FR → garde les noms NON-arabes
+ *  - AR → garde les noms arabes */
+function filterCatsByLanguage(cats, language) {
+  return cats.filter((c) =>
+    language === 'AR' ? isArabicName(c.name) : !isArabicName(c.name)
+  );
 }
 
 const citiesByRegion = cities.reduce((acc, city) => {
@@ -501,8 +476,8 @@ export default function CreateNewsArticlePage() {
           <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.categoryLabel}</label>
           <select value={form.categoryId} onChange={(e) => set('categoryId', e.target.value)} className={inputCls}>
             <option value="">{t.categoryNone}</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{catLabel(c, form.language)}</option>
+            {filterCatsByLanguage(categories, form.language).map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
           <div className="flex gap-2 mt-2">
