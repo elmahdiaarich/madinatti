@@ -40,7 +40,7 @@ const EXPERIENCE_LABELS = {
 // ─── Logo ─────────────────────────────────────────────────────────────────────
 function CompanyLogo({ logo, name }) {
   return (
-    <div className="w-[130px] h-[130px] shrink-0 bg-white border border-[#A7D129]/40 rounded-xl flex items-center justify-center overflow-hidden">
+    <div className="w-[80px] h-[80px] sm:w-[130px] sm:h-[130px] shrink-0 bg-white border border-[#A7D129]/40 rounded-xl flex items-center justify-center overflow-hidden">
       {logo ? (
         <>
           <img
@@ -223,7 +223,7 @@ export default function JobCard({ job, initialFavorited = false, onFavoriteToggl
     <>
       <div className="relative">
         <Link href={`/jobs/${job.id}`} className="block group">
-          <div className="relative bg-[#E8F5D0] hover:bg-[#d8edbb] border border-[#A7D129]/50 rounded-2xl p-5 transition-all duration-200 hover:shadow-md hover:border-[#A7D129]">
+          <div className="relative bg-[#E8F5D0] hover:bg-[#d8edbb] border border-[#A7D129]/50 rounded-2xl p-3 sm:p-5 transition-all duration-200 hover:shadow-md hover:border-[#A7D129]">
 
             {/* Top-right action buttons */}
             <div className="absolute top-3 right-3 z-10 flex flex-col items-center gap-1.5">
@@ -235,20 +235,20 @@ export default function JobCard({ job, initialFavorited = false, onFavoriteToggl
               {showShare && <ShareButton job={job} />}
             </div>
 
-            <div className="flex gap-5">
+             <div className="flex gap-3 sm:gap-5">
               {/* Logo */}
               <CompanyLogo logo={job.user?.companyLogo} name={job.companyName} />
 
               {/* Content */}
-              <div className="flex-1 min-w-0 flex flex-col gap-3 pr-16">
+              <div className="flex-1 min-w-0 flex flex-col gap-2 sm:gap-3 pr-10 sm:pr-16">
 
                 {/* Title + company + date */}
                 <div>
                   <div className="flex items-start justify-between gap-2">
-                    <h2 className="font-bold text-gray-900 text-lg leading-snug group-hover:text-[#2D5016] transition-colors line-clamp-2">
+                    <h2 className="font-bold text-gray-900 text-base sm:text-lg leading-snug group-hover:text-[#2D5016] transition-colors line-clamp-2">
                       {job.title}
                     </h2>
-                    <span className={`text-[15px] shrink-0 mt-1 font-semibold ${isRecent ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className={`text-xs sm:text-[15px] shrink-0 mt-1 font-semibold whitespace-nowrap ${isRecent ? 'text-green-600' : 'text-gray-500'}`}>
                       {dateStr}
                     </span>
                   </div>

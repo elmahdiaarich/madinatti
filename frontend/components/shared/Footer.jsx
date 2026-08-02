@@ -33,7 +33,7 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto border-t border-gray-600 mt-8 pt-6 flex justify-between items-center">
+      <div className="max-w-6xl mx-auto border-t border-gray-600 mt-8 pt-6 flex flex-col sm:flex-row gap-2 justify-between items-center text-center sm:text-left">
         <p className="text-xs text-gray-400">© 2024 Madinatti. Tous droits réservés. | Plateforme de services locaux au Maroc</p>
         <p className="text-xs text-gray-400">Fait avec ❤️ au Maroc</p>
       </div>

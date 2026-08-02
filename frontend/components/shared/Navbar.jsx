@@ -701,7 +701,7 @@ export default function Navbar() {
         </a>
 
         {/* Sous-nav modules — au même niveau que logo & profil */}
-        <div className="hidden md:flex flex-1 items-center justify-center flex-wrap gap-x-1 gap-y-1">
+        <div className="hidden md:flex flex-1 items-center justify-center flex-wrap gap-x-0.5 gap-y-1">
           {SUB_NAV_LINKS.map((link) => {
           const svc = ENABLE_SUBCATEGORY_HOVER
               ? NAV_SERVICES.find((s) => s.href === link.href)
@@ -715,22 +715,22 @@ export default function Navbar() {
             return (
               <div
                 key={link.label}
-                className="relative px-1"
+                className="relative px-0.5"
                 onMouseEnter={() => svc && handleModuleMouseEnter(link.label)}
               >
                 <a
                   href={link.href}
-                  className={`flex items-center gap-1.5 text-xs font-bold tracking-wide uppercase transition whitespace-nowrap px-3 py-1.5 rounded-full ${
+                  className={`flex items-center gap-1 text-[12px] font-bold tracking-normal uppercase transition whitespace-nowrap px-2 py-1.5 rounded-full ${
                     active
                       ? "bg-[#E8F5D0] text-[#2D5016]"
                       : "text-gray-400 hover:text-[#2D5016] hover:bg-gray-50"
                   }`}
                 >
-                  {LinkIcon && <LinkIcon size={13} className="shrink-0" />}
+                  {LinkIcon && <LinkIcon size={12} className="shrink-0" />}
                   {link.label}
                   {svc && (
                     <ChevronDown
-                      size={11}
+                      size={10}
                       className={`transition-transform duration-150 ${
                         isHovered ? "rotate-180" : ""
                       }`}
@@ -779,7 +779,7 @@ export default function Navbar() {
         </div>
 
         {/* Action controls / User dropdown */}
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center gap-2 lg:gap-4 shrink-0">
           <div className="hidden sm:flex items-center gap-3">
             {role === "admin" && (
               <a

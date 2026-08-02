@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Bookmark, BookmarkCheck, MapPin, Newspaper } from 'lucide-react';
+import { Bookmark, BookmarkCheck, MapPin, Newspaper, Play } from 'lucide-react';
+import { videoThumbnailUrl } from '@/lib/cloudinaryHelpers';
 import { useAuth } from '@/context/AuthContext';
 import { pressService } from '@/services/pressService';
 
@@ -103,6 +104,7 @@ function SaveButton({ articleId, language, initialSaved = false, compact = false
 export function LeadStory({ article, language = 'FR', initialFavorited = false }) {
   const [imgErr, setImgErr] = useState(false);
   const hasImage = article.imageUrl && !imgErr;
+  const isVideo = article.contentType === 'VIDEO' && article.videoUrl;
   const font = fontFor(language);
 
   return (
@@ -152,7 +154,13 @@ export function LeadStory({ article, language = 'FR', initialFavorited = false }
       </div>
 
       <div className="relative h-56 overflow-hidden border border-primary-sage bg-primary-mint sm:col-span-2 sm:h-auto">
-        {hasImage ? (
+        {isVideo ? (
+          <img
+            src={videoThumbnailUrl(article.videoUrl)}
+            alt={article.title}
+            className="h-full w-full object-cover grayscale-[15%] transition-all duration-500 group-hover:grayscale-0"
+          />
+        ) : hasImage ? (
           <img
             src={article.imageUrl}
             alt={article.title}
@@ -164,6 +172,11 @@ export function LeadStory({ article, language = 'FR', initialFavorited = false }
             <Newspaper size={40} />
           </div>
         )}
+        {isVideo && (
+          <span className="absolute bottom-2 right-2 rounded-full bg-black/60 p-2 text-white pointer-events-none">
+            <Play size={16} fill="white" />
+          </span>
+        )}
       </div>
     </Link>
   );
@@ -173,12 +186,19 @@ export function LeadStory({ article, language = 'FR', initialFavorited = false }
 export default function PressCard({ article, language = 'FR', initialFavorited = false }) {
   const [imgErr, setImgErr] = useState(false);
   const hasImage = article.imageUrl && !imgErr;
+  const isVideo = article.contentType === 'VIDEO' && article.videoUrl;
   const font = fontFor(language);
 
   return (
     <Link href={`/press/${article.id}`} className="group flex flex-col gap-3">
       <div className="relative h-40 w-full overflow-hidden border border-primary-sage bg-primary-mint">
-        {hasImage ? (
+        {isVideo ? (
+          <img
+            src={videoThumbnailUrl(article.videoUrl)}
+            alt={article.title}
+            className="h-full w-full object-cover grayscale-[10%] transition-all duration-500 group-hover:grayscale-0"
+          />
+        ) : hasImage ? (
           <img
             src={article.imageUrl}
             alt={article.title}
@@ -189,6 +209,11 @@ export default function PressCard({ article, language = 'FR', initialFavorited =
           <div className="flex h-full w-full items-center justify-center text-primary-sage/60">
             <Newspaper size={28} />
           </div>
+        )}
+        {isVideo && (
+          <span className="absolute bottom-1.5 right-1.5 rounded-full bg-black/60 p-1.5 text-white pointer-events-none">
+            <Play size={13} fill="white" />
+          </span>
         )}
       </div>
 

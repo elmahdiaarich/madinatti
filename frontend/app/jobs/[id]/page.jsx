@@ -129,7 +129,7 @@ function HeartButton({ isFavorited, loading, onClick, variant = 'hero' }) {
 
 function CompanyLogo({ logo, name, size = 'lg' }) {
   const [imgErr, setImgErr] = useState(false);
-  const dim = size === 'lg' ? 'w-[90px] h-[90px]' : 'w-10 h-10';
+  const dim = size === 'lg' ? 'w-16 h-16 sm:w-[90px] sm:h-[90px]' : 'w-10 h-10';
   const txt = size === 'lg' ? 'text-3xl' : 'text-base';
   const showImg = logo && !imgErr;
   return (
@@ -217,12 +217,12 @@ function RelatedJobCard({ job }) {
 function FloatingButtons({ isVisitor, userRole }) {
   const showPublish = isVisitor || userRole === 'citizen';
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-2 sm:gap-3">
       {showPublish && (
         isVisitor ? (
           <button
             onClick={scrollToInscription}
-            className="flex items-center gap-3 px-5 py-3 rounded-full shadow-xl bg-[#2D5016] text-white font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-300 hover:scale-105 active:scale-100 group"
+            className="flex items-center gap-3 px-4 py-2.5 sm:px-5 sm:py-3 rounded-full shadow-xl bg-[#2D5016] text-white font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-300 hover:scale-105 active:scale-100 group"
           >
             <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 bg-[#A7D129] group-hover:bg-[#2D5016] transition-colors duration-300">
               <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-white">
@@ -235,7 +235,7 @@ function FloatingButtons({ isVisitor, userRole }) {
         ) : (
           <Link
             href="/jobs/publier"
-            className="flex items-center gap-3 px-5 py-3 rounded-full shadow-xl bg-[#2D5016] text-white font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-300 hover:scale-105 active:scale-100 group"
+            className="flex items-center gap-3 px-4 py-2.5 sm:px-5 sm:py-3 rounded-full shadow-xl bg-[#2D5016] text-white font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-300 hover:scale-105 active:scale-100 group"
           >
             <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 bg-[#A7D129] group-hover:bg-[#2D5016] transition-colors duration-300">
               <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-white">
@@ -249,7 +249,7 @@ function FloatingButtons({ isVisitor, userRole }) {
       )}
       <Link
         href="/contact"
-        className="flex items-center gap-3 px-5 py-3 rounded-full shadow-xl bg-[#A7D129] text-[#2D5016] font-bold text-sm hover:bg-[#2D5016] hover:text-white transition-all duration-300 hover:scale-105 active:scale-100 group"
+        className="flex items-center gap-3 px-4 py-2.5 sm:px-5 sm:py-3 rounded-full shadow-xl bg-[#A7D129] text-[#2D5016] font-bold text-sm hover:bg-[#2D5016] hover:text-white transition-all duration-300 hover:scale-105 active:scale-100 group"
       >
         <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 bg-[#2D5016] group-hover:bg-[#A7D129] transition-colors duration-300">
           <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-white group-hover:fill-[#2D5016] transition-colors">
@@ -448,8 +448,8 @@ export default function JobDetailPage() {
             <span className="text-gray-800 font-medium truncate">{job.title}</span>
           </div>
 
-          <div className="flex items-center gap-4 shrink-0">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <div className="hidden sm:flex items-center gap-2">
               <a href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`} target="_blank" rel="noopener noreferrer"
                 className="w-8 h-8 rounded-full flex items-center justify-center bg-[#0A66C2] hover:scale-110 transition-all duration-150 shadow-sm" title="Partager sur LinkedIn">
                 <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white">
@@ -485,7 +485,7 @@ export default function JobDetailPage() {
       </div>
 
       {/* Hero */}
-      <div className="bg-gradient-to-br from-[#2D5016] via-[#3a6b1e] to-[#4a8525] text-white py-10">
+      <div className="bg-gradient-to-br from-[#2D5016] via-[#3a6b1e] to-[#4a8525] text-white py-6 sm:py-10">
         <div className="max-w-[1200px] mx-auto px-4">
           <div className="flex items-start gap-5 flex-wrap">
             <CompanyLogo logo={job.user?.companyLogo} name={job.companyName} size="lg" />

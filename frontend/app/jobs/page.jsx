@@ -128,27 +128,6 @@ function AlertModal({ token, initialFilters, onClose, apiUrl }) {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
         </div>
 
-        {/* WHATSAPP PREVIEW BUBBLE */}
-        {!saved && (
-          <div
-            className="mb-5 rounded-2xl p-3 flex items-start gap-2"
-            style={{ background: '#E7FCE3' }}
-          >
-            <div className="w-8 h-8 rounded-full bg-[#25D366] flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347" />
-              </svg>
-            </div>
-            <div className="bg-white rounded-xl rounded-tl-none px-3 py-2 shadow-sm flex-1">
-              <p className="text-[11px] text-gray-400 font-semibold mb-0.5">Madinatti • maintenant</p>
-              <p className="text-xs text-gray-700 leading-snug">
-                🔔 Nouvelle offre correspondant à votre alerte : <strong>Développeur React</strong> — CDI, Casablanca
-              </p>
-              <p className="text-[10px] text-gray-300 text-right mt-1">12:41 ✓✓</p>
-            </div>
-          </div>
-        )}
-
         {saved ? (
           <div className="flex flex-col items-center gap-2 py-8 text-green-700">
             <div className="text-4xl">✅</div>
@@ -259,11 +238,53 @@ function AlertModal({ token, initialFilters, onClose, apiUrl }) {
             </div>
 
             <p className="text-[11px] text-gray-400 text-center mt-3 leading-snug">
-              📩 Vous recevrez ces alertes par email, et aussi par{' '}
-              <span className="text-[#25D366] font-semibold">WhatsApp</span> si votre numéro est vérifié dans votre profil.
+              📩 Vous recevrez ces alertes par email.
             </p>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── MOBILE FILTER SHEET ──────────────────────────────────────────────────────
+function MobileFilterSheet({ resultsCount, onFilter, onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 lg:hidden">
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+
+      {/* Feuille glissante */}
+      <div className="absolute left-0 right-0 bottom-0 bg-gray-50 rounded-t-2xl shadow-2xl max-h-[85vh] flex flex-col animate-slide-up">
+        {/* Poignée + header */}
+        <div className="shrink-0 bg-white rounded-t-2xl px-4 pt-3 pb-2 border-b border-gray-100">
+          <div className="w-9 h-1 bg-gray-200 rounded-full mx-auto mb-3" />
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-[#2D5016] text-sm">Filtrer les offres</span>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 text-lg leading-none px-1"
+              aria-label="Fermer"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Contenu filtres (réutilise JobFilter tel quel) */}
+        <div className="flex-1 overflow-y-auto px-3 py-3">
+          <JobFilter onFilter={onFilter} />
+        </div>
+
+        {/* CTA de validation */}
+        <div className="shrink-0 bg-white border-t border-gray-100 px-4 py-3">
+          <button
+            onClick={onClose}
+            className="w-full py-3 bg-[#2D5016] text-white rounded-full font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition"
+          >
+            Voir {resultsCount != null ? resultsCount : ''} offres
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -283,6 +304,7 @@ export default function JobsPage() {
   const [favoritedIds, setFavoritedIds]     = useState(new Set());
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [showBusinessGate, setShowBusinessGate] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const isVisitor = !user;
   const userRole  = user?.role;
@@ -352,6 +374,10 @@ export default function JobsPage() {
     setFilters((prev) => ({ ...prev, page: newPage }));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // Compte approximatif des filtres actifs pour le badge du bouton mobile
+  const activeFilterKeys = ['categorySlug', 'contractType', 'experienceLevel', 'educationLevel', 'city', 'region', 'salarySpecified'];
+  const activeFiltersCount = activeFilterKeys.filter((k) => filters[k]).length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -427,21 +453,12 @@ export default function JobsPage() {
           {/* Right-side action buttons */}
           <div className="ml-auto flex items-center gap-2 shrink-0">
             {userRole === 'citizen' && (
-              <div className="relative inline-flex">
-                <button
-                  onClick={() => setShowAlertModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#A7D129] text-[#2D5016] font-semibold text-sm hover:bg-[#E8F5D0] transition-all duration-150"
-                >
-                  🔔 Créer une alerte
-                </button>
-                <span className="absolute -top-2 -right-2 flex items-center gap-1 bg-[#25D366] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-75 animate-ping" />
-                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
-                  </span>
-                  WhatsApp
-                </span>
-              </div>
+              <button
+                onClick={() => setShowAlertModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#A7D129] text-[#2D5016] font-semibold text-sm hover:bg-[#E8F5D0] transition-all duration-150"
+              >
+                🔔 Créer une alerte
+              </button>
             )}
             {userRole !== 'admin' && (
               <button
@@ -461,8 +478,8 @@ export default function JobsPage() {
       {/* MAIN CONTENT */}
       <div className="max-w-[1200px] mx-auto px-4 py-6 flex gap-6">
 
-        {/* SIDEBAR */}
-        <aside className="w-[280px] shrink-0">
+        {/* SIDEBAR — desktop uniquement */}
+        <aside className="hidden lg:block w-[280px] shrink-0">
           <div className="sticky top-[52px] overflow-y-auto max-h-[calc(100vh-52px)]">
             <JobFilter onFilter={handleFilter} />
           </div>
@@ -470,7 +487,7 @@ export default function JobsPage() {
 
         {/* JOBS LIST */}
         <main className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 gap-3">
             <p className="text-sm text-gray-500">
               {pagination ? (
                 <>
@@ -480,6 +497,23 @@ export default function JobsPage() {
                 <span className="animate-pulse bg-gray-200 rounded w-24 h-4 inline-block" />
               )}
             </p>
+
+            {/* Bouton filtres — mobile/tablette uniquement */}
+            <button
+              onClick={() => setMobileFiltersOpen(true)}
+              className="lg:hidden inline-flex items-center gap-1.5 border border-[#2D5016] text-[#2D5016] font-semibold text-xs px-3.5 py-2 rounded-full shrink-0 hover:bg-[#E8F5D0] transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+              </svg>
+              Filtrer
+              {activeFiltersCount > 0 && (
+                <span className="bg-[#A7D129] text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </button>
           </div>
 
           {loading ? (
@@ -562,6 +596,15 @@ export default function JobsPage() {
           </div>
           <InlineRegisterSection />
         </div>
+      )}
+
+      {/* MOBILE FILTER SHEET */}
+      {mobileFiltersOpen && (
+        <MobileFilterSheet
+          resultsCount={pagination?.total}
+          onFilter={handleFilter}
+          onClose={() => setMobileFiltersOpen(false)}
+        />
       )}
 
       {/* ALERT MODAL */}

@@ -1052,12 +1052,17 @@ enum FetchStatus {
   SUCCESS
   FAILED
 }
-
+enum NewsContentType {
+  ARTICLE
+  VIDEO
+}
 model NewsArticle {
   id          String       @id @default(cuid())
   title       String
   description String       @db.Text
   imageUrl    String?
+  videoUrl    String?
+  contentType NewsContentType @default(ARTICLE)
   sourceUrl   String?      @unique
   language    NewsLanguage
   city        String?
@@ -1073,9 +1078,8 @@ model NewsArticle {
   reviewedAt  DateTime?
   reviewedBy  String?
 
-  // Snapshot de la version APPROVED précédente, pris uniquement lors d'une
-  // édition qui repasse l'article en PENDING — permet d'afficher un diff
-  // à l'admin sans avoir à modéliser un historique complet de versions.
+  // Compteur d'éditions, simple trace d'audit visible admin + journaliste
+  // (pas de snapshot de version, pas de diff — juste un nombre incrémenté).
   editCount   Int          @default(0)
 
   createdAt   DateTime     @default(now())
@@ -1086,6 +1090,7 @@ model NewsArticle {
   @@index([source])
   @@index([userId])
   @@index([city])
+  @@index([contentType])
   @@map("news_articles")
 }
 

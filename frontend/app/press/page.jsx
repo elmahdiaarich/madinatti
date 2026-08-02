@@ -7,6 +7,8 @@ import { useAuth } from '@/context/AuthContext';
 import { pressService } from '@/services/pressService';
 import PressCard, { LeadStory, timeAgo } from '@/components/press/PressCard';
 import { pressFontVars } from '@/lib/pressFonts';
+import { tvChannels, radioStations } from '@/lib/tvRadioDirectory';
+import { Tv, Radio as RadioIcon, ExternalLink } from 'lucide-react';
 
 const PAGE_SIZE = 13; // 1 lead + 12 en grille
 
@@ -58,8 +60,16 @@ const LABELS = {
   },
 };
 
+const TABS = [
+  { id: 'journal', labelFR: 'Journal', labelAR: 'الجريدة' },
+  { id: 'video', labelFR: 'Vidéo', labelAR: 'فيديو' },
+  { id: 'tv', labelFR: 'TV', labelAR: 'التلفزة' },
+  { id: 'radio', labelFR: 'Radio', labelAR: 'الراديو' },
+];
+
 export default function PressPage() {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('journal');
   const [language, setLanguage] = useState('FR');
   const [categories, setCategories] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
@@ -105,6 +115,7 @@ export default function PressPage() {
         limit: PAGE_SIZE,
         categoryId: selectedCategoryId,
         city: selectedCity,
+        contentType: activeTab === 'video' ? 'VIDEO' : 'ARTICLE',
       });
       const newArticles = response.data || [];
 
@@ -120,7 +131,7 @@ export default function PressPage() {
     } finally {
       setLoading(false);
     }
-  }, [language, page, selectedCategoryId, selectedCity]);
+  }, [language, page, selectedCategoryId, selectedCity, activeTab]);
 
   useEffect(() => {
     pressService.getCategories(language)
@@ -134,7 +145,13 @@ export default function PressPage() {
       .catch((err) => console.error('Failed to load cities', err));
   }, [language]);
 
-  useEffect(() => { fetchArticles(page > 1); }, [fetchArticles, page]);
+  useEffect(() => {
+    if (activeTab === 'journal' || activeTab === 'video') fetchArticles(page > 1);
+  }, [fetchArticles, page, activeTab]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab]);
 
   useEffect(() => {
     setPage(1);
@@ -201,8 +218,6 @@ export default function PressPage() {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
 
-
-
   return (
     <div
       dir={dir}
@@ -245,6 +260,23 @@ export default function PressPage() {
             </div>
           </div>
 
+          {/* ONGLETS PRINCIPAUX : JOURNAL / VIDÉO / TV / RADIO */}
+          <div className="mt-4 flex gap-1 border-t border-primary-sage pt-3" style={{ fontFamily: 'var(--font-meta)' }}>
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-t-lg transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-primary-dark text-white'
+                    : 'text-primary-dark/70 hover:bg-primary-mint'
+                }`}
+              >
+                {language === 'AR' ? tab.labelAR : tab.labelFR}
+              </button>
+            ))}
+          </div>
+
           <div
             className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-primary-sage pt-3 text-xs text-primary-dark/80"
             style={{ fontFamily: 'var(--font-meta)' }}
@@ -255,152 +287,239 @@ export default function PressPage() {
             )}
           </div>
 
-          {/* BARRE DE FILTRAGE : 8 VILLES TOP + COMBOBOX CHERCHER UNE VILLE */}
-          <div className="mt-5 space-y-3" style={{ fontFamily: 'var(--font-meta)' }}>
-            <div className="flex flex-wrap items-center gap-2 text-xs border-t border-primary-sage/60 pt-3">
-              <span className="font-bold text-primary-dark shrink-0 flex items-center gap-1">
-                <MapPin size={13} className="text-accent" />
-                {t.filterByCity}
-              </span>
+          {/* BARRE DE FILTRAGE : 8 VILLES TOP + COMBOBOX CHERCHER UNE VILLE (Journal/Vidéo uniquement) */}
+          {(activeTab === 'journal' || activeTab === 'video') && (
+            <div className="mt-5 space-y-3" style={{ fontFamily: 'var(--font-meta)' }}>
+              <div className="flex flex-wrap items-center gap-2 text-xs border-t border-primary-sage/60 pt-3">
+                <span className="font-bold text-primary-dark shrink-0 flex items-center gap-1">
+                  <MapPin size={13} className="text-accent" />
+                  {t.filterByCity}
+                </span>
 
-              {/* Bouton "Toutes" */}
-              <button
-                onClick={() => setSelectedCity('')}
-                className={`rounded-full px-3 py-1 font-semibold transition-all ${
-                  selectedCity === ''
-                    ? 'bg-primary-dark text-white shadow-sm'
-                    : 'bg-primary-mint text-primary-dark/80 hover:bg-primary-sage hover:text-primary-dark'
-                }`}
-              >
-                {t.allCities}
-              </button>
-
-              {/* Top 8 villes rapides (FR=hardcoded, AR=depuis la base) */}
-              {topCities.map((city) => (
+                {/* Bouton "Toutes" */}
                 <button
-                  key={city}
-                  onClick={() => setSelectedCity(city)}
+                  onClick={() => setSelectedCity('')}
                   className={`rounded-full px-3 py-1 font-semibold transition-all ${
-                    selectedCity === city
-                      ? 'bg-accent text-white shadow-sm'
+                    selectedCity === ''
+                      ? 'bg-primary-dark text-white shadow-sm'
                       : 'bg-primary-mint text-primary-dark/80 hover:bg-primary-sage hover:text-primary-dark'
                   }`}
                 >
-                  {city}
-                </button>
-              ))}
-
-              {/* Searchable Combobox pour TOUTES les villes (morocco-cities) */}
-              <div className="relative inline-block ms-auto sm:ms-0" ref={dropdownRef}>
-                <button
-                  type="button"
-                  onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)}
-                  className="flex items-center gap-1.5 rounded-full border border-primary-dark/30 bg-white px-3.5 py-1 text-xs font-bold text-primary-dark outline-none hover:border-primary-dark hover:bg-primary-mint/50 transition-all shadow-sm"
-                >
-                  <span>{selectedCity && !topCities.includes(selectedCity) ? selectedCity : t.searchCityPlaceholder}</span>
-                  <ChevronDown size={13} className="text-primary-dark/70" />
+                  {t.allCities}
                 </button>
 
-                {/* Dropdown Menu avec Input de Recherche */}
-                {isCityDropdownOpen && (
-                  <div className="absolute end-0 sm:start-0 top-full mt-1.5 z-50 w-64 rounded-xl border border-primary-sage bg-white p-2 shadow-xl animate-in fade-in zoom-in-95 duration-150">
-                    <div className="relative mb-2">
-                      <Search size={14} className="absolute start-2.5 top-1/2 -translate-y-1/2 text-primary-dark/50" />
-                      <input
-                        type="text"
-                        value={citySearchQuery}
-                        onChange={(e) => setCitySearchQuery(e.target.value)}
-                        placeholder={t.searchCityPlaceholder}
-                        className="w-full rounded-lg border border-primary-sage/70 bg-primary-mint/30 py-1.5 pe-3 ps-8 text-xs outline-none focus:border-primary-dark font-medium"
-                        autoFocus
-                      />
-                    </div>
+                {/* Top 8 villes rapides (FR=hardcoded, AR=depuis la base) */}
+                {topCities.map((city) => (
+                  <button
+                    key={city}
+                    onClick={() => setSelectedCity(city)}
+                    className={`rounded-full px-3 py-1 font-semibold transition-all ${
+                      selectedCity === city
+                        ? 'bg-accent text-white shadow-sm'
+                        : 'bg-primary-mint text-primary-dark/80 hover:bg-primary-sage hover:text-primary-dark'
+                    }`}
+                  >
+                    {city}
+                  </button>
+                ))}
 
-                    <div className="max-h-56 overflow-y-auto space-y-0.5 pe-1 custom-scrollbar text-xs">
-                      {filteredCities.length === 0 ? (
-                        <p className="p-2 text-center text-xs text-primary-dark/50">{t.noCityFound}</p>
-                      ) : (
-                        filteredCities.map((cityName) => (
-                          <button
-                            key={cityName}
-                            onClick={() => {
-                              setSelectedCity(cityName);
-                              setIsCityDropdownOpen(false);
-                            }}
-                            className={`w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-start font-semibold transition-colors ${
-                              selectedCity === cityName
-                                ? 'bg-primary-dark text-white'
-                                : 'hover:bg-primary-mint text-primary-dark'
-                            }`}
-                          >
-                            <span>{cityName}</span>
-                            {/* Signale les villes qui ont des articles en DB (●) */}
-                            {dbCities.includes(cityName) && (
-                              <span className="text-[10px] opacity-70">●</span>
-                            )}
-                          </button>
-                        ))
-                      )}
+                {/* Searchable Combobox pour TOUTES les villes (morocco-cities) */}
+                <div className="relative inline-block ms-auto sm:ms-0" ref={dropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)}
+                    className="flex items-center gap-1.5 rounded-full border border-primary-dark/30 bg-white px-3.5 py-1 text-xs font-bold text-primary-dark outline-none hover:border-primary-dark hover:bg-primary-mint/50 transition-all shadow-sm"
+                  >
+                    <span>{selectedCity && !topCities.includes(selectedCity) ? selectedCity : t.searchCityPlaceholder}</span>
+                    <ChevronDown size={13} className="text-primary-dark/70" />
+                  </button>
+
+                  {/* Dropdown Menu avec Input de Recherche */}
+                  {isCityDropdownOpen && (
+                    <div className="absolute end-0 sm:start-0 top-full mt-1.5 z-50 w-64 rounded-xl border border-primary-sage bg-white p-2 shadow-xl animate-in fade-in zoom-in-95 duration-150">
+                      <div className="relative mb-2">
+                        <Search size={14} className="absolute start-2.5 top-1/2 -translate-y-1/2 text-primary-dark/50" />
+                        <input
+                          type="text"
+                          value={citySearchQuery}
+                          onChange={(e) => setCitySearchQuery(e.target.value)}
+                          placeholder={t.searchCityPlaceholder}
+                          className="w-full rounded-lg border border-primary-sage/70 bg-primary-mint/30 py-1.5 pe-3 ps-8 text-xs outline-none focus:border-primary-dark font-medium"
+                          autoFocus
+                        />
+                      </div>
+
+                      <div className="max-h-56 overflow-y-auto space-y-0.5 pe-1 custom-scrollbar text-xs">
+                        {filteredCities.length === 0 ? (
+                          <p className="p-2 text-center text-xs text-primary-dark/50">{t.noCityFound}</p>
+                        ) : (
+                          filteredCities.map((cityName) => (
+                            <button
+                              key={cityName}
+                              onClick={() => {
+                                setSelectedCity(cityName);
+                                setIsCityDropdownOpen(false);
+                              }}
+                              className={`w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-start font-semibold transition-colors ${
+                                selectedCity === cityName
+                                  ? 'bg-primary-dark text-white'
+                                  : 'hover:bg-primary-mint text-primary-dark'
+                              }`}
+                            >
+                              <span>{cityName}</span>
+                              {/* Signale les villes qui ont des articles en DB (●) */}
+                              {dbCities.includes(cityName) && (
+                                <span className="text-[10px] opacity-70">●</span>
+                              )}
+                            </button>
+                          ))
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
+                </div>
+
+                {/* Badges de réinitialisation si une ville hors top est active */}
+                {selectedCity && !topCities.includes(selectedCity) && (
+                  <button
+                    onClick={() => setSelectedCity('')}
+                    className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-2.5 py-1 text-accent hover:bg-accent hover:text-white transition-colors"
+                    title="Effacer le filtre ville"
+                  >
+                    <span className="font-bold">{selectedCity}</span>
+                    <X size={12} />
+                  </button>
                 )}
               </div>
 
-              {/* Badges de réinitialisation si une ville hors top est active */}
-              {selectedCity && !topCities.includes(selectedCity) && (
-                <button
-                  onClick={() => setSelectedCity('')}
-                  className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-2.5 py-1 text-accent hover:bg-accent hover:text-white transition-colors"
-                  title="Effacer le filtre ville"
-                >
-                  <span className="font-bold">{selectedCity}</span>
-                  <X size={12} />
-                </button>
+              {/* CATEGORIES TABS */}
+              {categories.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-primary-sage/40">
+                  <button
+                    onClick={() => setSelectedCategoryId('')}
+                    className={`rounded-full px-3.5 py-1 text-xs font-semibold transition-colors ${
+                      selectedCategoryId === ''
+                        ? 'bg-primary-dark text-white'
+                        : 'bg-primary-mint/80 text-primary-dark/80 hover:bg-primary-sage hover:text-primary-dark'
+                    }`}
+                  >
+                    {t.allCategories}
+                  </button>
+                  {categories.map((cat) => {
+                    const displayName = cat.name?.toLowerCase() === 'uncategorized'
+                      ? (language === 'AR' ? 'متنوع' : 'Divers')
+                      : cat.name;
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => setSelectedCategoryId(cat.id)}
+                        className={`rounded-full px-3.5 py-1 text-xs font-semibold transition-colors ${
+                          selectedCategoryId === cat.id
+                            ? 'bg-primary-dark text-white'
+                            : 'bg-primary-mint/80 text-primary-dark/80 hover:bg-primary-sage hover:text-primary-dark'
+                        }`}
+                      >
+                        {displayName}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
-
-            {/* CATEGORIES TABS */}
-            {categories.length > 0 && (
-              <div className="flex flex-wrap gap-2 pt-2 border-t border-primary-sage/40">
-                <button
-                  onClick={() => setSelectedCategoryId('')}
-                  className={`rounded-full px-3.5 py-1 text-xs font-semibold transition-colors ${
-                    selectedCategoryId === ''
-                      ? 'bg-primary-dark text-white'
-                      : 'bg-primary-mint/80 text-primary-dark/80 hover:bg-primary-sage hover:text-primary-dark'
-                  }`}
-                >
-                  {t.allCategories}
-                </button>
-                {categories.map((cat) => {
-                  const displayName = cat.name?.toLowerCase() === 'uncategorized'
-                    ? (language === 'AR' ? 'متنوع' : 'Divers')
-                    : cat.name;
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => setSelectedCategoryId(cat.id)}
-                      className={`rounded-full px-3.5 py-1 text-xs font-semibold transition-colors ${
-                        selectedCategoryId === cat.id
-                          ? 'bg-primary-dark text-white'
-                          : 'bg-primary-mint/80 text-primary-dark/80 hover:bg-primary-sage hover:text-primary-dark'
-                      }`}
-                    >
-                      {displayName}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </header>
 
-
-
       {/* CONTENT */}
       <div className="mx-auto max-w-[1160px] px-5 py-8">
-        {loading ? (
+        {activeTab === 'tv' && (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {tvChannels.map((ch) => (
+              <a
+                key={ch.id}
+                href={ch.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex flex-col items-center gap-2 rounded-xl border border-primary-sage bg-white p-5 text-center transition-colors hover:border-primary-dark"
+              >
+                <Tv size={28} className="text-primary-sage group-hover:text-primary-dark transition-colors" />
+                <span className="text-sm font-bold text-primary-dark">{ch.name}</span>
+                <span className="text-[11px] text-primary-dark/60">{ch.category}</span>
+                <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-accent">
+                  {language === 'AR' ? 'الموقع الرسمي' : 'Site officiel'} <ExternalLink size={11} />
+                </span>
+              </a>
+            ))}
+          </div>
+        )}
+
+        {activeTab === 'radio' && (
+          <div className="space-y-8">
+            <div>
+              <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-primary-dark/70" style={{ fontFamily: 'var(--font-meta)' }}>
+                {language === 'AR' ? 'إذاعات وطنية' : 'Radios nationales'}
+              </h2>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {radioStations.national.map((r) => (
+                  <a
+                    key={r.id}
+                    href={r.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex flex-col items-center gap-2 rounded-xl border border-primary-sage bg-white p-5 text-center transition-colors hover:border-primary-dark"
+                  >
+                    <RadioIcon size={28} className="text-primary-sage group-hover:text-primary-dark transition-colors" />
+                    <span className="text-sm font-bold text-primary-dark">{r.name}</span>
+                    <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-accent">
+                      {language === 'AR' ? 'الموقع الرسمي' : 'Site officiel'} <ExternalLink size={11} />
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-primary-dark/70" style={{ fontFamily: 'var(--font-meta)' }}>
+                {language === 'AR' ? 'إذاعات جهوية' : 'Radios régionales'}
+              </h2>
+              <a
+                href={radioStations.regional.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-3 rounded-xl border border-primary-sage bg-white p-5 transition-colors hover:border-primary-dark"
+              >
+                <RadioIcon size={28} className="shrink-0 text-primary-sage group-hover:text-primary-dark transition-colors" />
+                <span className="flex-1 text-sm text-primary-dark">{radioStations.regional.label}</span>
+                <ExternalLink size={14} className="shrink-0 text-accent" />
+              </a>
+            </div>
+
+            <div>
+              <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-primary-dark/70" style={{ fontFamily: 'var(--font-meta)' }}>
+                {language === 'AR' ? 'إذاعات خاصة' : 'Radios privées'}
+              </h2>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {radioStations.private.map((r) => (
+                  <a
+                    key={r.id}
+                    href={r.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex flex-col items-center gap-2 rounded-xl border border-primary-sage bg-white p-5 text-center transition-colors hover:border-primary-dark"
+                  >
+                    <RadioIcon size={28} className="text-primary-sage group-hover:text-primary-dark transition-colors" />
+                    <span className="text-sm font-bold text-primary-dark">{r.name}</span>
+                    <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-accent">
+                      {language === 'AR' ? 'الموقع الرسمي' : 'Site officiel'} <ExternalLink size={11} />
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {(activeTab === 'journal' || activeTab === 'video') && (loading ? (
           <div className="space-y-8">
             <div className="grid animate-pulse gap-6 border-b-2 border-primary-dark pb-8 sm:grid-cols-5">
               <div className="space-y-3 sm:col-span-3">
@@ -410,9 +529,9 @@ export default function PressPage() {
               </div>
               <div className="h-56 border border-primary-sage bg-primary-mint sm:col-span-2" />
             </div>
-            <div className="columns-1 gap-10 sm:columns-2 lg:columns-3">
+            <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className="mb-8 animate-pulse space-y-3 break-inside-avoid">
+                <div key={i} className="animate-pulse space-y-3">
                   <div className="h-40 border border-primary-sage bg-primary-mint" />
                   <div className="h-3 w-16 bg-primary-sage" />
                   <div className="h-5 w-full bg-primary-sage" />
@@ -443,18 +562,18 @@ export default function PressPage() {
               </div>
             )}
 
-            <div className="columns-1 gap-10 sm:columns-2 lg:columns-3">
+            <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
               {rest.map((article) => (
-                <div key={article.id} className="mb-8 border-b border-primary-sage pb-6 break-inside-avoid">
+                <div key={article.id} className="border-b border-primary-sage pb-6">
                   <PressCard article={article} language={language} initialFavorited={favoritedIds.has(article.id)} />
                 </div>
               ))}
             </div>
           </>
-        )}
+        ))}
 
         {/* SENTINEL FOR INFINITE SCROLL */}
-        {hasMore && (
+        {(activeTab === 'journal' || activeTab === 'video') && hasMore && (
           <div ref={observerRef} className="mt-8 py-4 text-center text-sm text-primary-dark/80" style={{ fontFamily: 'var(--font-meta)' }}>
             {t.loadingMore}
           </div>
