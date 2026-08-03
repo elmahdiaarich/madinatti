@@ -647,6 +647,8 @@ model TouristicListing {
   publishedAt   DateTime?
   downloadsCount Int      @default(0)
   images        Json?
+  videoUrl      String?
+
 
   // Previously buried in `attributes` Json — now real, typed, filterable/sortable columns.
   rating        Decimal?  // 0.0 - 5.0

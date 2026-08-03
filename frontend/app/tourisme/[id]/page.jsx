@@ -20,6 +20,8 @@ import {
   Share2,
   Heart,
   Images,
+  Play,
+ Maximize,
   Globe,
 } from "lucide-react";
 import StarRating from "@/components/explore/StarRating";

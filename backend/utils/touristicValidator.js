@@ -74,6 +74,12 @@ function validateTouristicPayload(data, category, { isUpdate = false } = {}) {
     errors.images = "Format des images invalide.";
   }
 
+  if (has("videoUrl") && data.videoUrl) {
+    if (!URL_RE.test(String(data.videoUrl).trim())) {
+      errors.videoUrl = "L'URL de la vidéo est invalide.";
+    }
+  }
+
   if (data.rating !== undefined && data.rating !== null && data.rating !== "") {
     const rating = parseFloat(data.rating);
     if (Number.isNaN(rating) || rating < 0 || rating > 5) {

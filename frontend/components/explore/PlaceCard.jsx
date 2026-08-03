@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Phone, Download } from "lucide-react";
+import { MapPin, Phone, Download, Play } from "lucide-react";
 import { tourismService } from "@/services/tourismService";
 import CategoryImage from "@/components/explore/CategoryImage";
 import StarRating from "@/components/explore/StarRating";
@@ -41,14 +41,19 @@ export default function PlaceCard({
         href={`${basePath}/${item.id}`}
         className="group flex flex-col overflow-hidden rounded-xl border border-black/[0.06] bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--color-primary)] hover:shadow-md"
       >
-<div className="relative h-56 w-full bg-[var(--color-primary-mint)]">
-<CategoryImage
+        <div className="relative h-44 w-full bg-[var(--color-primary-mint)]">
+          <CategoryImage
             src={cover}
             alt={item.name}
             icon={categoryConfig.icon}
             iconSize={28}
             className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
           />
+         {item.videoUrl && (
+           <span className="absolute top-2.5 left-2.5 rounded-full bg-red-600/90 p-1 text-white shadow-sm hover:scale-110 transition-transform" title="Contient une vidéo">
+             <Play size={10} fill="white" />
+           </span>
+         )}
           <span className="absolute bottom-2.5 right-2.5 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-medium text-white">
             {categoryConfig.label}
           </span>
