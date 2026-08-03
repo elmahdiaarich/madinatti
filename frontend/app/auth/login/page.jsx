@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../context/AuthContext";
 import AuthLayout from "../../../components/auth/AuthLayout";
@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [turnstileToken, setTurnstileToken] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const turnstileRef = useRef(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,6 +37,8 @@ export default function LoginPage() {
         }
       } else {
         setError(res.message);
+        turnstileRef.current?.reset();
+        setTurnstileToken("");
       }
     } catch {
       setError("Erreur serveur");
@@ -66,7 +69,8 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          <Turnstile
+         <Turnstile
+            ref={turnstileRef}
             siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
             onVerify={(token) => setTurnstileToken(token)}
             onExpire={() => setTurnstileToken("")}

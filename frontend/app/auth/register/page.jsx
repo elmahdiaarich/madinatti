@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../../context/AuthContext";
 import { cities } from "morocco-cities";
@@ -41,6 +41,7 @@ function RegisterForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState("");
+  const turnstileRef = useRef(null);
   const isBusiness = formData.role === "business";
 
   // Pré-sélectionner "business" si ?type=business
@@ -128,7 +129,11 @@ function RegisterForm() {
       }
       const res = await register(data);
       if (res.token) router.push("/");
-      else setError(res.message);
+      else {
+        setError(res.message);
+        turnstileRef.current?.reset();
+        setTurnstileToken("");
+      }
     } catch {
       setError("Erreur serveur");
     } finally {
@@ -259,6 +264,7 @@ function RegisterForm() {
             {/* Pour le flow citoyen (pas de step 2), le captcha se valide ici */}
             {!isBusiness && (
               <Turnstile
+                ref={turnstileRef}
                 siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
                 onVerify={(token) => setTurnstileToken(token)}
                 onExpire={() => setTurnstileToken("")}
@@ -362,6 +368,7 @@ function RegisterForm() {
 
             {/* Pour le flow business, le captcha se valide ici (step 2) */}
             <Turnstile
+              ref={turnstileRef}
               siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
               onVerify={(token) => setTurnstileToken(token)}
               onExpire={() => setTurnstileToken("")}
