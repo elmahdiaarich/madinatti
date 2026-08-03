@@ -11,6 +11,7 @@ const prisma = new PrismaClient();
 const { cloudinary } = require('../config/cloudinary');
 const { cities: moroccoCities } = require('morocco-cities');
 const { getVehicleCatalog } = require('../data/vehicleCatalog');
+const { prepareListingOwnership, buildAccountBoutique } = require('./shopService');
 
 // ── Build region → cities lookup once at startup ──────────────────────────────
 const citiesByRegion = moroccoCities.reduce((acc, c) => {
@@ -69,12 +70,32 @@ const BUSINESS_SELECT = {
   status: true,
   isActive: true,
   isFeatured: true,
+  sellerType: true,
+  shopId: true,
   viewsCount: true,
   adminNotes: true,
   createdAt: true,
   updatedAt: true,
   publishedAt: true,
   category: { select: { id: true, name: true } },
+  shop: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      logo: true,
+      isVerified: true,
+      status: true,
+      subscriptions: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: {
+          status: true,
+          plan: { select: { id: true, name: true, slug: true, displayedPrice: true } },
+        },
+      },
+    },
+  },
   _count: { select: { inquiries: true } },
 };
 
@@ -101,6 +122,27 @@ function getCatalog() {
   return getVehicleCatalog();
 }
 
+const accountSubscriptionSelect = {
+  where: {
+    status: 'ACTIVE',
+    expiresAt: { gt: new Date() },
+  },
+  orderBy: { startedAt: 'desc' },
+  take: 1,
+  include: { plan: true },
+};
+
+function normalizeListingShop(listing) {
+  if (!listing) return listing;
+  const existingShop = listing.shop || null;
+  const accountShop = buildAccountBoutique(listing.user);
+  const shop = existingShop || accountShop;
+  return {
+    ...listing,
+    shop,
+  };
+}
+
 // ── PUBLIC ────────────────────────────────────────────────────────────────────
 
 /**
@@ -108,10 +150,12 @@ function getCatalog() {
  */
 async function createListing(data, userId) {
   const slug = generateSlug(`${data.make} ${data.model} ${data.title}`);
+  const listingOwner = await prepareListingOwnership(data.shopId, userId);
 
   return prisma.carListing.create({
     data: {
       userId,
+      ...listingOwner,
       categoryId:   data.categoryId,
       title:        data.title.trim(),
       slug,
@@ -145,7 +189,7 @@ async function createListing(data, userId) {
     select: {
       id: true, slug: true, title: true, make: true, model: true,
       year: true, status: true, listingType: true, price: true,
-      city: true, categoryId: true, createdAt: true,
+      city: true, categoryId: true, sellerType: true, shopId: true, createdAt: true,
     },
   });
 }
@@ -238,16 +282,50 @@ async function getListings(query) {
         price: true, isNegotiable: true,
         city: true, images: true,
         isFeatured: true, isSponsored: true, // ← add isSponsored to select
+        sellerType: true,
         createdAt: true,
-        user:     { select: { id: true, name: true, avatar: true } },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            avatar: true,
+            city: true,
+            companyName: true,
+            companyLogo: true,
+            companyWebsite: true,
+            createdAt: true,
+            updatedAt: true,
+            subscriptions: accountSubscriptionSelect,
+          },
+        },
         category: { select: { id: true, name: true } },
+        shop: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            logo: true,
+            isVerified: true,
+            status: true,
+            subscriptions: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: {
+                status: true,
+                plan: { select: { id: true, name: true, slug: true, displayedPrice: true } },
+              },
+            },
+          },
+        },
       },
     }),
     prisma.carListing.count({ where }),
   ]);
 
   return {
-    listings,
+    listings: listings.map(normalizeListingShop),
     pagination: { total, page: parseInt(page), limit: take, totalPages: Math.ceil(total / take) },
   };
 }
@@ -256,13 +334,54 @@ async function getListings(query) {
  * 3. GET LISTING DETAIL — public (caller must check status externally)
  */
 async function getListingById(id) {
-  return prisma.carListing.findUnique({
-    where: { id },
-    include: {
-      user:     { select: { id: true, name: true, avatar: true, phone: true, city: true } },
-      category: { select: { id: true, name: true, slug: true } },
+  return prisma.carListing.findFirst({
+    where: {
+      OR: [
+        { id },
+        { slug: id },
+      ],
     },
-  });
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          avatar: true,
+          phone: true,
+          city: true,
+          companyName: true,
+          companyLogo: true,
+          companyWebsite: true,
+          createdAt: true,
+          updatedAt: true,
+          subscriptions: accountSubscriptionSelect,
+        },
+      },
+      category: { select: { id: true, name: true, slug: true } },
+      shop: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          logo: true,
+          isVerified: true,
+          status: true,
+          professionalPhone: true,
+          professionalEmail: true,
+          city: true,
+          subscriptions: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: {
+              status: true,
+              plan: { select: { id: true, name: true, slug: true, displayedPrice: true } },
+            },
+          },
+        },
+      },
+    },
+  }).then(normalizeListingShop);
 }
 
 // ── FAVORITES ─────────────────────────────────────────────────────────────────

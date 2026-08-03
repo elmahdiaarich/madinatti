@@ -51,6 +51,22 @@ const formatDate = (iso) => {
 const getInitials = (name = '') =>
   name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()
 
+const PLAN_STYLES = {
+  Gratuit: 'bg-gray-100 text-gray-600 border-gray-200',
+  Basic: 'bg-blue-50 text-blue-700 border-blue-200',
+  Pro: 'bg-[#E8F5D0] text-[#2D5016] border-[#A7D129]/40',
+  Max: 'bg-amber-50 text-amber-700 border-amber-200',
+  Standard: 'bg-gray-100 text-gray-600 border-gray-200',
+}
+
+const PLAN_FILTERS = [
+  { key: '', label: 'Tous' },
+  { key: 'Gratuit', label: 'Gratuit' },
+  { key: 'Basic', label: 'Basic' },
+  { key: 'Pro', label: 'Pro' },
+  { key: 'Max', label: 'Max' },
+]
+
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 const SkeletonCard = () => (
   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 animate-pulse">
@@ -74,14 +90,10 @@ const SkeletonCard = () => (
 
 // ── Plan badge ────────────────────────────────────────────────────────────────
 const PlanBadge = ({ plan }) => {
-  const isPremium = plan === 'Premium'
+  const style = PLAN_STYLES[plan] || PLAN_STYLES.Standard
   return (
-    <span className={`px-2.5 py-1 rounded-full text-xs font-bold
-      ${isPremium
-        ? 'bg-amber-50 text-amber-600 border border-amber-200'
-        : 'bg-gray-100 text-gray-500 border border-gray-200'
-      }`}>
-      {isPremium ? '⭐ Premium' : 'Standard'}
+    <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${style}`}>
+      {plan || 'Gratuit'}
     </span>
   )
 }
@@ -286,7 +298,7 @@ export default function AdminBusinessesPage() {
           {/* Plan filter */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-400">Plan :</span>
-            {[{ key: '', label: 'Tous' }, { key: 'Premium', label: '⭐ Premium' }, { key: 'Standard', label: 'Standard' }].map((f) => (
+            {PLAN_FILTERS.map((f) => (
               <button key={f.key} onClick={() => setPlanFilter(f.key)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors
                   ${planFilter === f.key ? 'bg-[#2D5016] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>

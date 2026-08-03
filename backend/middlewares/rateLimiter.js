@@ -1,4 +1,7 @@
 const rateLimit = require('express-rate-limit');
+const skipAutomatedTests = (req) => (
+  process.env.NODE_ENV !== 'production' && req.get('x-e2e-test') === 'true'
+);
 // ── Réponse standard en cas de dépassement ────────────────────────────────────
 const handler = (req, res) => {
   res.status(429).json({
@@ -10,6 +13,7 @@ const handler = (req, res) => {
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
+  skip: skipAutomatedTests,
   standardHeaders: true,
   legacyHeaders: false,
   handler,
@@ -18,6 +22,7 @@ const loginLimiter = rateLimit({
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 10,
+  skip: skipAutomatedTests,
   standardHeaders: true,
   legacyHeaders: false,
   handler,
@@ -26,6 +31,7 @@ const registerLimiter = rateLimit({
 const forgotPasswordLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 3,
+  skip: skipAutomatedTests,
   standardHeaders: true,
   legacyHeaders: false,
   handler,
@@ -34,6 +40,7 @@ const forgotPasswordLimiter = rateLimit({
 const createListingLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 20,
+  skip: skipAutomatedTests,
   standardHeaders: true,
   legacyHeaders: false,
   handler,
@@ -42,6 +49,7 @@ const createListingLimiter = rateLimit({
 const applyLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 10,
+  skip: skipAutomatedTests,
   standardHeaders: true,
   legacyHeaders: false,
   handler,
@@ -50,6 +58,7 @@ const applyLimiter = rateLimit({
 const inquiryLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 15,
+  skip: skipAutomatedTests,
   standardHeaders: true,
   legacyHeaders: false,
   handler,
@@ -58,6 +67,7 @@ const inquiryLimiter = rateLimit({
 const reportLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 5,
+  skip: skipAutomatedTests,
   standardHeaders: true,
   legacyHeaders: false,
   handler,
@@ -66,6 +76,7 @@ const reportLimiter = rateLimit({
 const chatLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 20,
+  skip: skipAutomatedTests,
   standardHeaders: true,
   legacyHeaders: false,
   handler,
@@ -74,6 +85,7 @@ const chatLimiter = rateLimit({
 const createTaskRequestLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 15,
+  skip: skipAutomatedTests,
   message: {
     success: false,
     message: 'Trop de demandes de tâches créées. Réessayez plus tard.',
@@ -83,6 +95,7 @@ const createTaskRequestLimiter = rateLimit({
 const createBookingLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 20,
+  skip: skipAutomatedTests,
   message: {
     success: false,
     message: 'Trop de réservations créées. Réessayez plus tard.',
@@ -95,6 +108,7 @@ const createBookingLimiter = rateLimit({
 const createWorkerProfileLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 10,
+  skip: skipAutomatedTests,
   message: {
     success: false,
     message: 'Trop de créations de profil prestataire. Réessayez plus tard.',
@@ -104,6 +118,7 @@ const createWorkerProfileLimiter = rateLimit({
 const healthSearchLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 30,
+  skip: skipAutomatedTests,
   standardHeaders: true,
   legacyHeaders: false,
   handler,
@@ -112,6 +127,7 @@ const healthSearchLimiter = rateLimit({
 const reviewLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 10,
+  skip: skipAutomatedTests,
   message: {
     success: false,
     message: "Trop d'avis créés. Réessayez plus tard.",

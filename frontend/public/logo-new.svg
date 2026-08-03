@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 427 212" role="img" aria-labelledby="title desc">
+  <title id="title">Madinatti Ma Ville My Town</title>
+  <desc id="desc">Green Madinatti Ma Ville My Town logo with a leaf, circular M mark, and roofline.</desc>
+  <rect width="427" height="212" fill="#fff"/>
+  <g fill="#43a51e">
+    <path d="M236.8 21.8 154.5 68.9v23.5l82.3-46.8 82 46.8V68.9L236.8 21.8Z"/>
+    <path d="M295.7 22.8v23.5l81 46.1V68.9l-81-46.1Z"/>
+    <path d="M348.3 30h14.4v23.1h-14.4z"/>
+    <path d="M119.5 47.7c-33.1-25.4-76.8-11-92.1 23.6-15.4 34.7-.4 77.7 33.4 91.5 27 11 54.1-2 66.5-23.4-15.5 15.8-39.5 22.6-62.2 13.4C37.6 141.7 24.7 105.3 37.1 76.2c12.5-29.2 46-41.5 82.4-28.5Z"/>
+    <path d="M40.4 76.2c23.9-4 38.2-24.3 83.2-28.5-11.1 10.4-27.4 30.2-52.4 31.7-12.5.7-21.4-2-30.8-3.2Z"/>
+    <path d="M44.3 84.4c16.4-.1 27.4 9.2 33.5 24.3l27.1 59.9h-9.8L63.8 99.5C59 89 50.2 85.7 44.3 84.4Z"/>
+    <path d="M53.4 150.8h17.3V91.6h-3.3l-14 59.2Z"/>
+    <path d="M80.7 150.8h13.2l21.7-62.7 12.9 62.7h18.9v-3.3c-6.8-.8-9.7-4.6-11-10.7L126.7 91h-10.9l-25.4 58.2L65.3 91.5l-7.2 31.7 12 27.6h10.6Z"/>
+  </g>
+  <g fill="#43a51e" font-family="Georgia, 'Times New Roman', serif" font-weight="700">
+    <text x="141" y="138" font-size="45" letter-spacing="1">MADINATTI</text>
+  </g>
+  <g fill="#111" font-family="Georgia, 'Times New Roman', serif" font-weight="700">
+    <text x="185" y="164" font-size="29" letter-spacing="3">MA VILLE</text>
+  </g>
+  <g fill="#8bc53f" font-family="Arial, Helvetica, sans-serif" font-weight="400">
+    <text x="197" y="188" font-size="24">My Town</text>
+  </g>
+</svg>

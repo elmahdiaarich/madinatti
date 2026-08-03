@@ -30,6 +30,8 @@ const professionalSpaceRoutes = require('./routes/professionalSpaces');
 const healthRoutes = require('./routes/health');
 const eventRoutes = require('./routes/events');
 const geoRoutes = require("./routes/geo");
+const subscriptionRoutes = require('./routes/subscriptions');
+const shopRoutes = require('./routes/shops');
 
 const googleAuthRoutes = require("./routes/googleAuth")
 const pressRoutes = require('./routes/press');
@@ -45,6 +47,8 @@ app.use('/api/tourism', tourismRoutes);
 app.use('/api/industriel-zones', professionalSpaceRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/shops', shopRoutes);
 
 app.use("/api/geo", geoRoutes);
 

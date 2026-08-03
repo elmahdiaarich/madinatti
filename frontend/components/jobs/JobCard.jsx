@@ -80,6 +80,16 @@ function InfoRow({ label, value, valueClass = '' }) {
 }
 
 // ─── Bouton cœur ──────────────────────────────────────────────────────────────
+function ShopBadge({ shop }) {
+  if (!shop) return null;
+  return (
+    <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
+      <span className="truncate">{shop.name}</span>
+      {shop.isVerified && <span className="shrink-0">✓</span>}
+    </span>
+  );
+}
+
 function FavoriteButton({ jobId, initialFavorited = false, onToggle }) {
   const { user, token } = useAuth();
   const [favorited, setFavorited] = useState(initialFavorited);
@@ -260,6 +270,7 @@ export default function JobCard({ job, initialFavorited = false, onFavoriteToggl
                       </span>
                     )}
                   </span>
+                  <div className="mt-1"><ShopBadge shop={job.shop} /></div>
                 </div>
 
                 {/* Info rows */}

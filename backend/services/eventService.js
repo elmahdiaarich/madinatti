@@ -6,6 +6,23 @@ const { boundingBox, haversineMeters } = require('../utils/healthGeo');
 
 const PUBLIC_STATUSES = ['PUBLISHED', 'CANCELLED', 'POSTPONED'];
 
+const FORM_TEMPLATE_INCLUDE = {
+  formTemplate: {
+    include: {
+      fields: {
+        orderBy: { displayOrder: 'asc' },
+      },
+    },
+  },
+};
+
+const EVENT_INCLUDE = {
+  category: { include: FORM_TEMPLATE_INCLUDE },
+  fieldValues: {
+    include: { formField: true },
+  },
+};
+
 function slugify(value) {
   return String(value || '')
     .normalize('NFD')
@@ -141,6 +158,9 @@ function generateOccurrences(event, from = new Date(), to = new Date(Date.now() 
 
 function serializeEvent(event, extras = {}) {
   if (!event) return null;
+  const eventFieldValues = Array.isArray(event.fieldValues)
+    ? Object.fromEntries(event.fieldValues.map((item) => [item.formField?.fieldName, item.value]).filter(([key]) => key))
+    : {};
   return {
     ...event,
     latitude: event.latitude == null ? null : Number(event.latitude),
@@ -149,6 +169,8 @@ function serializeEvent(event, extras = {}) {
     priceMax: event.priceMax == null ? null : Number(event.priceMax),
     categorySlug: event.category?.slug,
     categoryLabel: event.category?.name,
+    formTemplate: event.category?.formTemplate || null,
+    eventFieldValues,
     gallery: event.gallery || [],
     ...extras,
   };
@@ -222,7 +244,7 @@ async function listEvents(filters, user) {
 
   const rawEvents = await prisma.event.findMany({
     where,
-    include: { category: true },
+    include: EVENT_INCLUDE,
     orderBy: [{ featured: 'desc' }, { startsAt: 'asc' }],
   });
   const favoriteCounts = await withFavoriteCounts(rawEvents);
@@ -269,6 +291,7 @@ async function listEvents(filters, user) {
 async function getCategories() {
   const data = await prisma.category.findMany({
     where: { module: EVENT_CATEGORY_MODULE, isActive: true },
+    include: FORM_TEMPLATE_INCLUDE,
     orderBy: { name: 'asc' },
   });
   return data;
@@ -290,7 +313,7 @@ async function getEventByIdOrSlug(idOrSlug, user) {
         visibility,
       ],
     },
-    include: { category: true },
+    include: EVENT_INCLUDE,
   });
   if (!event) return null;
   const favoriteCount = await prisma.favorite.count({ where: { itemType: 'EVENT', itemId: event.id } });
@@ -311,6 +334,7 @@ function payloadToData(payload, user, existing) {
     shortDescription: optionalString(payload.shortDescription),
     description: payload.description?.trim(),
     categoryId: payload.categoryId,
+    customSubsubcategory: optionalString(payload.customSubsubcategory),
     organizerName: payload.organizerName?.trim(),
     organizerId: payload.organizerId || null,
     organizerPhone: optionalString(payload.organizerPhone),
@@ -353,11 +377,56 @@ function payloadToData(payload, user, existing) {
   };
 }
 
+function normalizeDynamicValues(values) {
+  if (!values || typeof values !== 'object' || Array.isArray(values)) return {};
+  return Object.fromEntries(
+    Object.entries(values).filter(([key]) => typeof key === 'string' && key.trim()),
+  );
+}
+
+async function syncEventFieldValues(eventId, categoryId, values) {
+  const category = await prisma.category.findFirst({
+    where: { id: categoryId, module: EVENT_CATEGORY_MODULE, isActive: true },
+    include: FORM_TEMPLATE_INCLUDE,
+  });
+  if (!category?.formTemplate) {
+    const err = new Error('EVENT_FORM_TEMPLATE_NOT_FOUND');
+    err.status = 400;
+    throw err;
+  }
+
+  const fields = category.formTemplate.fields || [];
+  const byName = new Map(fields.map((field) => [field.fieldName, field]));
+  const normalized = normalizeDynamicValues(values);
+
+  await prisma.eventFieldValue.deleteMany({
+    where: {
+      eventId,
+      formFieldId: { in: fields.map((field) => field.id) },
+    },
+  });
+
+  const rows = Object.entries(normalized)
+    .map(([fieldName, value]) => {
+      const field = byName.get(fieldName);
+      if (!field) return null;
+      if (value === undefined || value === null || value === '') return null;
+      return { eventId, formFieldId: field.id, value };
+    })
+    .filter(Boolean);
+
+  if (rows.length) {
+    await prisma.eventFieldValue.createMany({ data: rows });
+  }
+}
+
 async function createEvent(payload, user) {
   const data = payloadToData(payload, user);
   data.slug = await uniqueSlug(payload.slug || payload.title);
   data.createdById = user.userId;
-  const created = await prisma.event.create({ data, include: { category: true } });
+  const createdBase = await prisma.event.create({ data });
+  await syncEventFieldValues(createdBase.id, data.categoryId, payload.eventFieldValues);
+  const created = await prisma.event.findUnique({ where: { id: createdBase.id }, include: EVENT_INCLUDE });
   return serializeEvent(created);
 }
 
@@ -378,7 +447,11 @@ async function updateEvent(id, payload, user) {
     data.verified = false;
     data.featured = false;
   }
-  const updated = await prisma.event.update({ where: { id }, data, include: { category: true } });
+  const updatedBase = await prisma.event.update({ where: { id }, data });
+  if (payload.eventFieldValues !== undefined || payload.categoryId !== undefined) {
+    await syncEventFieldValues(updatedBase.id, data.categoryId, payload.eventFieldValues);
+  }
+  const updated = await prisma.event.findUnique({ where: { id }, include: EVENT_INCLUDE });
   return serializeEvent(updated);
 }
 
@@ -403,7 +476,7 @@ async function updateStatus(id, payload, admin) {
     publishedAt: payload.status === 'PUBLISHED' ? new Date() : undefined,
   };
   Object.keys(data).forEach((key) => data[key] === undefined && delete data[key]);
-  const updated = await prisma.event.update({ where: { id }, data, include: { category: true } });
+  const updated = await prisma.event.update({ where: { id }, data, include: EVENT_INCLUDE });
   return serializeEvent(updated);
 }
 
@@ -426,7 +499,7 @@ async function getUserFavorites(userId) {
   if (!favorites.length) return [];
   const events = await prisma.event.findMany({
     where: { id: { in: favorites.map((item) => item.itemId) }, status: { in: PUBLIC_STATUSES } },
-    include: { category: true },
+    include: EVENT_INCLUDE,
   });
   return events.map((event) => serializeEvent(event));
 }

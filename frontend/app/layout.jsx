@@ -2,6 +2,7 @@ import { AuthProvider } from "../context/AuthContext";
 import { ToastProvider } from "../context/ToastContext";
 import DevTools from "../components/shared/DevTools";
 import LayoutShell from "../components/shared/LayoutShell";
+import GlobalImageViewer from "../components/shared/GlobalImageViewer";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import Script from "next/script";
 import ChatWidget from '@/components/shared/ChatWidget';
@@ -30,6 +31,7 @@ export default function RootLayout({ children }) {
           <AuthProvider>
             <ToastProvider>
               <LayoutShell>{children}</LayoutShell>
+              <GlobalImageViewer />
             {/*  <DevTools  /> */  }
              <ChatWidget /> 
             </ToastProvider>

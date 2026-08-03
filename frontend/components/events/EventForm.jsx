@@ -14,6 +14,8 @@ const emptyForm = () => ({
   shortDescription: "",
   description: "",
   categoryId: "",
+  customSubsubcategory: "",
+  eventFieldValues: {},
   organizerName: "",
   organizerPhone: "",
   organizerEmail: "",
@@ -60,6 +62,8 @@ function hydrate(event) {
     ...emptyForm(),
     ...event,
     categoryId: event.categoryId || "",
+    customSubsubcategory: event.customSubsubcategory || "",
+    eventFieldValues: event.eventFieldValues || {},
     latitude: event.latitude ?? "",
     longitude: event.longitude ?? "",
     priceMin: event.priceMin ?? "",
@@ -124,26 +128,125 @@ function recurrenceRuleFor(form) {
   return `FREQ=${form.recurrenceType}`;
 }
 
+function DynamicField({ field, value, error, onChange }) {
+  const commonClass = "h-11 rounded-xl border border-gray-200 px-3 text-sm";
+  if (field.fieldType === "textarea") {
+    return (
+      <Field label={`${field.label}${field.required ? " *" : ""}`} error={error}>
+        <textarea rows={3} value={value || ""} onChange={(e) => onChange(e.target.value)} className="rounded-xl border border-gray-200 px-3 py-2 text-sm" />
+      </Field>
+    );
+  }
+  if (field.fieldType === "select") {
+    const options = Array.isArray(field.options) ? field.options : [];
+    return (
+      <Field label={`${field.label}${field.required ? " *" : ""}`} error={error}>
+        <select value={value || ""} onChange={(e) => onChange(e.target.value)} className={commonClass}>
+          <option value="">Choisir</option>
+          {options.map((option) => <option key={option} value={option}>{option}</option>)}
+        </select>
+      </Field>
+    );
+  }
+  if (field.fieldType === "checkbox") {
+    return (
+      <label className="flex h-11 items-center gap-2 rounded-xl border border-gray-200 px-3 text-sm">
+        <input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} />
+        {field.label}
+      </label>
+    );
+  }
+  if (field.fieldType === "number") {
+    return (
+      <Field label={`${field.label}${field.required ? " *" : ""}`} error={error}>
+        <input type="number" value={value ?? ""} onChange={(e) => onChange(e.target.value)} className={commonClass} />
+      </Field>
+    );
+  }
+  if (field.fieldType === "date") {
+    return (
+      <Field label={`${field.label}${field.required ? " *" : ""}`} error={error}>
+        <input type="date" value={value || ""} onChange={(e) => onChange(e.target.value)} className={commonClass} />
+      </Field>
+    );
+  }
+  return (
+    <Field label={`${field.label}${field.required ? " *" : ""}`} error={error}>
+      <input value={value || ""} onChange={(e) => onChange(e.target.value)} className={commonClass} />
+    </Field>
+  );
+}
+
 export default function EventForm({ event, admin = false }) {
   const router = useRouter();
   const { token } = useAuth();
   const fileInputRef = useRef(null);
   const [form, setForm] = useState(event ? hydrate(event) : emptyForm());
   const [categories, setCategories] = useState([]);
+  const [categoryStep, setCategoryStep] = useState(admin && !event ? "select" : "form");
+  const [categorySearch, setCategorySearch] = useState("");
+  const [pendingCategoryId, setPendingCategoryId] = useState(event?.categoryId || "");
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const images = imagesFromForm(form);
+  const selectedCategory = categories.find((category) => category.id === form.categoryId) || null;
+  const pendingCategory = categories.find((category) => category.id === pendingCategoryId) || null;
+  const specificFields = selectedCategory?.formTemplate?.fields || [];
+  const filteredCategories = categories.filter((category) =>
+    category.name.toLowerCase().includes(categorySearch.trim().toLowerCase()),
+  );
 
   useEffect(() => {
     eventsService.categories().then((res) => {
       setCategories(res.data || []);
-      if (!form.categoryId && res.data?.[0]?.id) setForm((prev) => ({ ...prev, categoryId: res.data[0].id }));
+      if (!form.categoryId && !admin && res.data?.[0]?.id) {
+        setForm((prev) => ({ ...prev, categoryId: res.data[0].id }));
+        setPendingCategoryId(res.data[0].id);
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+  const updateSpecific = (fieldName, value) => {
+    setForm((prev) => ({
+      ...prev,
+      eventFieldValues: {
+        ...(prev.eventFieldValues || {}),
+        [fieldName]: value,
+      },
+    }));
+  };
+
+  const hasSpecificData = () => Object.values(form.eventFieldValues || {}).some((value) => {
+    if (Array.isArray(value)) return value.length > 0;
+    return value !== undefined && value !== null && value !== "" && value !== false;
+  });
+
+  const applyCategory = (categoryId) => {
+    if (!categoryId || categoryId === form.categoryId) {
+      setCategoryStep("form");
+      return;
+    }
+    if (form.categoryId && hasSpecificData() && !confirm("Changer de sous-categorie supprimera les donnees specifiques deja saisies. Continuer ?")) {
+      setPendingCategoryId(form.categoryId);
+      return;
+    }
+    setForm((prev) => ({
+      ...prev,
+      categoryId,
+      eventFieldValues: {},
+    }));
+    setPendingCategoryId(categoryId);
+    setCategoryStep("form");
+    setErrors((prev) => ({ ...prev, categoryId: undefined }));
+  };
+
+  const modifyCategory = () => {
+    setPendingCategoryId(form.categoryId);
+    setCategoryStep("select");
+  };
 
   const setCover = (index) => {
     setForm((prev) => formWithImages(prev, imagesFromForm(prev).map((image, i) => ({ ...image, isCover: i === index }))));
@@ -188,11 +291,21 @@ export default function EventForm({ event, admin = false }) {
     if (!form.title.trim()) next.title = "Titre requis.";
     if (!form.description.trim()) next.description = "Description requise.";
     if (!form.categoryId) next.categoryId = "Categorie requise.";
+    if (!form.customSubsubcategory.trim()) next.customSubsubcategory = "Sous-sous-categorie requise.";
     if (!form.organizerName.trim()) next.organizerName = "Organisateur requis.";
     if (!form.city.trim()) next.city = "Ville requise.";
     if (!form.startsAt) next.startsAt = "Date de debut requise.";
     if (!form.endsAt) next.endsAt = "Date de fin requise.";
     if (form.startsAt && form.endsAt && new Date(form.endsAt) <= new Date(form.startsAt)) next.endsAt = "La fin doit etre apres le debut.";
+    for (const field of specificFields) {
+      const value = form.eventFieldValues?.[field.fieldName];
+      if (field.required && (value === undefined || value === null || value === "")) {
+        next[`eventFieldValues.${field.fieldName}`] = `${field.label} requis.`;
+      }
+      if (field.fieldType === "number" && value !== undefined && value !== "" && Number.isNaN(Number(value))) {
+        next[`eventFieldValues.${field.fieldName}`] = `${field.label} doit etre un nombre.`;
+      }
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -216,7 +329,14 @@ export default function EventForm({ event, admin = false }) {
       priceMax: form.isFree || form.priceMax === "" ? null : Number(form.priceMax),
       capacity: form.capacity === "" ? null : Number(form.capacity),
       gallery,
-      status: admin ? form.status : intent === "draft" ? "DRAFT" : "PENDING_REVIEW",
+      eventFieldValues: form.eventFieldValues || {},
+      status: admin
+        ? intent === "draft"
+          ? "DRAFT"
+          : intent === "publish"
+          ? "PUBLISHED"
+          : form.status
+        : intent === "draft" ? "DRAFT" : "PENDING_REVIEW",
     };
     delete payload.galleryText;
 
@@ -231,15 +351,94 @@ export default function EventForm({ event, admin = false }) {
     }
   };
 
+  if (admin && categoryStep === "select") {
+    return (
+      <div className="grid gap-5">
+        {errors.categoryId && <div className="border border-red-200 bg-red-50 p-3 text-sm text-red-700">{errors.categoryId}</div>}
+        <div className="grid gap-2">
+          <h2 className="text-lg font-bold text-gray-900">Choisir la sous-categorie</h2>
+          <p className="text-sm text-gray-500">Selectionnez une sous-categorie d evenement avant de charger le formulaire adapte.</p>
+        </div>
+        <input
+          value={categorySearch}
+          onChange={(e) => setCategorySearch(e.target.value)}
+          placeholder="Rechercher une sous-categorie..."
+          className="h-11 rounded-xl border border-gray-200 px-3 text-sm"
+        />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredCategories.map((category) => (
+            <button
+              key={category.id}
+              type="button"
+              onClick={() => setPendingCategoryId(category.id)}
+              className={`min-h-24 rounded-xl border p-4 text-left transition ${
+                pendingCategoryId === category.id
+                  ? "border-[#2D5016] bg-[#E8F5D0] text-[#2D5016]"
+                  : "border-gray-200 bg-white hover:border-[#2D5016]"
+              }`}
+            >
+              <span className="block text-sm font-bold">{category.name}</span>
+              <span className="mt-1 block text-xs text-gray-500">{category.formTemplate?.name || "Aucun modele"}</span>
+            </button>
+          ))}
+        </div>
+        {filteredCategories.length === 0 && (
+          <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-400">
+            Aucune sous-categorie trouvee.
+          </div>
+        )}
+        <div className="flex justify-end gap-3">
+          {form.categoryId && (
+            <button type="button" onClick={() => setCategoryStep("form")} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-700">
+              Annuler
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={!pendingCategory?.formTemplate}
+            onClick={() => applyCategory(pendingCategoryId)}
+            className="rounded-xl bg-[#2D5016] px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Continuer
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={submit} className="grid gap-5">
       {errors.form && <div className="border border-red-200 bg-red-50 p-3 text-sm text-red-700">{errors.form}</div>}
+      {selectedCategory && (
+        <div className="flex flex-col gap-3 rounded-xl border border-[#2D5016]/20 bg-[#E8F5D0]/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase text-[#2D5016]/70">Sous-categorie choisie</p>
+            <p className="text-base font-bold text-[#2D5016]">{selectedCategory.name}</p>
+            <p className="text-xs text-gray-500">{selectedCategory.formTemplate?.name || "Modele non configure"}</p>
+          </div>
+          {admin && (
+            <button type="button" onClick={modifyCategory} className="rounded-xl border border-[#2D5016]/30 bg-white px-4 py-2 text-sm font-semibold text-[#2D5016]">
+              Modifier
+            </button>
+          )}
+        </div>
+      )}
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Categorie" error={errors.categoryId}>
-          <select value={form.categoryId} onChange={(e) => update("categoryId", e.target.value)} className="h-11 rounded-xl border border-gray-200 px-3 text-sm">
-            <option value="">Choisir</option>
-            {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-          </select>
+        {!admin && (
+          <Field label="Categorie" error={errors.categoryId}>
+            <select value={form.categoryId} onChange={(e) => applyCategory(e.target.value)} className="h-11 rounded-xl border border-gray-200 px-3 text-sm">
+              <option value="">Choisir</option>
+              {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+            </select>
+          </Field>
+        )}
+        <Field label="Sous-sous-categorie" error={errors.customSubsubcategory}>
+          <input
+            value={form.customSubsubcategory}
+            onChange={(e) => update("customSubsubcategory", e.target.value)}
+            placeholder="Ex: Exposition de peinture"
+            className="h-11 rounded-xl border border-gray-200 px-3 text-sm"
+          />
         </Field>
         {admin && (
           <Field label="Statut">
@@ -378,6 +577,26 @@ export default function EventForm({ event, admin = false }) {
         )}
       </div>
 
+      {specificFields.length > 0 && (
+        <section className="grid gap-4 rounded-xl border border-gray-200 p-4">
+          <div>
+            <h2 className="text-base font-bold text-gray-900">Champs specifiques</h2>
+            <p className="text-xs text-gray-500">Ces champs dependent de la sous-categorie selectionnee.</p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {specificFields.map((field) => (
+              <DynamicField
+                key={field.id}
+                field={field}
+                value={form.eventFieldValues?.[field.fieldName]}
+                error={errors[`eventFieldValues.${field.fieldName}`]}
+                onChange={(value) => updateSpecific(field.fieldName, value)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
       <Field label="Description courte">
         <input value={form.shortDescription || ""} onChange={(e) => update("shortDescription", e.target.value)} className="h-11 rounded-xl border border-gray-200 px-3 text-sm" />
       </Field>
@@ -402,13 +621,11 @@ export default function EventForm({ event, admin = false }) {
       <MapPicker latitude={form.latitude} longitude={form.longitude} onChange={(lat, lng) => setForm((prev) => ({ ...prev, latitude: lat, longitude: lng }))} />
 
       <div className="flex justify-end gap-3">
-        {!admin && (
-          <button type="submit" value="draft" disabled={saving} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-700 disabled:opacity-60">
-            Enregistrer brouillon
-          </button>
-        )}
-        <button disabled={saving} className="rounded-xl bg-[#2D5016] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
-          {saving ? "Enregistrement..." : "Enregistrer"}
+        <button type="submit" value="draft" disabled={saving} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-700 disabled:opacity-60">
+          Enregistrer comme brouillon
+        </button>
+        <button type="submit" value={admin ? "publish" : "submit"} disabled={saving} className="rounded-xl bg-[#2D5016] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
+          {saving ? "Enregistrement..." : admin ? "Publier" : "Enregistrer"}
         </button>
       </div>
     </form>

@@ -24,6 +24,9 @@ import {
   Compass,
   Factory,
   CalendarDays,
+  Moon,
+  Sun,
+  Store,
 } from "lucide-react";
 import GoogleAuth from "../../components/auth/GoogleAuth";
 import Logo from "./logos/Logo";
@@ -497,6 +500,7 @@ export default function Navbar() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [theme, setTheme] = useState("light");
 
   // Categories drawer state
   const [categoriesOpen, setCategoriesOpen] = useState(false);
@@ -507,6 +511,19 @@ export default function Navbar() {
   const notifRef = useRef(null);
   const moreMenuRef = useRef(null);
   const hoverTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("theme") || "light";
+    setTheme(saved);
+    document.documentElement.classList.toggle("dark", saved === "dark");
+  }, []);
+
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    localStorage.setItem("theme", next);
+    document.documentElement.classList.toggle("dark", next === "dark");
+  };
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 10);
@@ -720,6 +737,7 @@ export default function Navbar() {
   const isModuleActive = (href) =>
     pathname === href || pathname?.startsWith(href + "/");
   const role = user?.role;
+  const hasProBoutique = role === "business" && Boolean(user?.subscription?.plan?.hasBadge);
 
   // ── Shared logout buttons ─────────────────────────────────────────────────
   const LogoutButtons = () => (
@@ -784,7 +802,7 @@ export default function Navbar() {
         onMouseLeave={handleModuleMouseLeave}
       >
         {/* LOGO */}
-        <a href="/" className="flex min-w-0 shrink-0 items-center gap-2 [&_img]:h-12 [&_img]:w-auto sm:[&_img]:h-auto">
+        <a href="/" className="flex min-w-0 shrink-0 items-center gap-2 [&_img]:h-12 [&_img]:w-auto sm:[&_img]:h-16">
           <Logo />
         </a>
 
@@ -794,12 +812,12 @@ export default function Navbar() {
           {PRIMARY_SUB_NAV_LINKS.map(renderSubNavLink)}
 
           {/* Modules secondaires : réintégrés en ligne à partir du desktop (lg = 1024px) */}
-          <div className="hidden lg:contents">
+          <div className="hidden 2xl:contents">
             {SECONDARY_SUB_NAV_LINKS.map(renderSubNavLink)}
           </div>
 
           {/* Bouton "Plus" : uniquement en tablette 768–1023px, regroupe Tourisme/Industrie/Santé */}
-          <div className="relative lg:hidden" ref={moreMenuRef}>
+          <div className="relative 2xl:hidden" ref={moreMenuRef}>
             <button
               type="button"
               onClick={() => setMoreMenuOpen((p) => !p)}
@@ -872,6 +890,15 @@ export default function Navbar() {
                 <span>Espace Admin</span>
               </a>
             )}
+            {hasProBoutique && (
+              <a
+                href="/dashboard/shop"
+                className="relative flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 overflow-hidden bg-[#E8F5D0] text-[#2D5016] hover:bg-[#A7D129]/40 shadow-sm"
+              >
+                <Store size={13} className="stroke-[2.5]" />
+                <span>Ma boutique</span>
+              </a>
+            )}
             {!loading && !user && (
               <>
                 <a
@@ -891,6 +918,16 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="hidden h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition hover:border-[#A7D129] hover:text-[#2D5016] sm:flex"
+              aria-label={theme === "dark" ? "Activer le theme clair" : "Activer le theme sombre"}
+              title={theme === "dark" ? "Theme clair" : "Theme sombre"}
+            >
+              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+
             <button
               className="md:hidden text-gray-700 font-medium text-lg px-2"
               onClick={() => setMobileOpen(!mobileOpen)}
@@ -1081,6 +1118,15 @@ export default function Navbar() {
                             active={pathname === "/dashboard" || pathname?.startsWith("/my-space")}
                             onClick={() => setUserMenuOpen(false)}
                           />
+                          {hasProBoutique && (
+                            <DropdownItem
+                              href="/dashboard/shop"
+                              icon={<Store size={16} />}
+                              label="Ma boutique"
+                              active={pathname?.startsWith("/dashboard/shop")}
+                              onClick={() => setUserMenuOpen(false)}
+                            />
+                          )}
                           {role === "citizen" && (
                             <DropdownItem
                               href="/my-space/real-estate"
@@ -1222,6 +1268,15 @@ export default function Navbar() {
                     <User size={16} className="text-gray-400" />
                     Mon espace
                   </a>
+                  {hasProBoutique && (
+                    <a
+                      href="/dashboard/shop"
+                      className="flex items-center gap-3 text-sm font-semibold text-[#2D5016] px-2 py-2 rounded-lg bg-[#E8F5D0]"
+                    >
+                      <Store size={16} className="text-[#2D5016]" />
+                      Ma boutique
+                    </a>
+                  )}
                   {role === "citizen" && (
                     <a
                       href="/my-space/real-estate"
