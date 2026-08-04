@@ -25,6 +25,8 @@ export default function LoginPage() {
         const user = res.user;
         if (user?.profileCompleted === false) {
           router.push("/auth/complete-profile");
+        } else if (user?.role === "admin") {
+          router.push("/admin");
         } else {
           router.push("/");
         }
