@@ -2,6 +2,7 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { cloudinary } = require("../config/cloudinary");
 const { cities: MOROCCO_CITIES } = require("morocco-cities");
+const { isCurrentlyOpen } = require("../utils/openStatus");
 
 function regionFor(cityName) {
   if (!cityName) return null;
@@ -27,6 +28,7 @@ const getTouristicListings = async (filters) => {
     page = 1,
     limit = 20,
     isActive,
+    openOnly, 
   } = filters;
 
   const where = { category: { module: "tourisme" } };
@@ -89,6 +91,11 @@ const getTouristicListings = async (filters) => {
     prisma.touristicListing.count({ where }),
   ]);
 
+  const openFiltered =
+  openOnly === "true" || openOnly === true
+    ? allMatching.filter((l) => l.hours && isCurrentlyOpen(l.hours))
+    : allMatching;
+
   const searchedRegion = city ? regionFor(city) : null;
 
   const cityRank = (listing) => {
@@ -115,7 +122,7 @@ const getTouristicListings = async (filters) => {
   };
   const priceRank = (listing) => (priceMatches(listing) ? 0 : 1);
 
-  const sorted = [...allMatching].sort((a, b) => {
+  const sorted = [...openFiltered].sort((a, b) => {
     const cr = cityRank(a) - cityRank(b);
     if (cr !== 0) return cr;
 
@@ -140,17 +147,17 @@ const getTouristicListings = async (filters) => {
   });
 
   const skip = (pageNum - 1) * limitNum;
-  const listings = sorted.slice(skip, skip + limitNum);
+const listings = sorted.slice(skip, skip + limitNum);
 
-  return {
-    listings,
-    pagination: {
-      page: pageNum,
-      limit: limitNum,
-      total,
-      totalPages: Math.ceil(total / limitNum) || 1,
-    },
-  };
+return {
+  listings,
+  pagination: {
+    page: pageNum,
+    limit: limitNum,
+    total: openFiltered.length,
+    totalPages: Math.ceil(openFiltered.length / limitNum) || 1,
+  },
+};
 };
 
 const getTouristicListingById = async (id) => {

@@ -38,7 +38,7 @@ export const TOURISM_CATEGORIES = {
   "wellness-spa": { // Matches database 'wellness-spa'
     label: "Wellness / SPA",
     icon: Sparkles,
-    card: ["name", "contactPhone", "hours"],
+    card: ["name", "contactPhone"],
     detail: ["description", "priceRange"],
     filters: ["priceRange"],
   },
@@ -46,7 +46,7 @@ export const TOURISM_CATEGORIES = {
     label: "Hammam",
     icon: Droplet,
     card: ["name", "photoCount"],
-    detail: ["description", "hours", "priceRange"],
+    detail: ["description", "priceRange"],
     filters: ["priceRange"],
   },
   magazine: {

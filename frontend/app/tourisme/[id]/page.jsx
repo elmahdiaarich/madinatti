@@ -35,6 +35,7 @@ import {
 } from "@/constants/tourismCategories";
 import TourismDetailMap from "@/components/explore/TourismDetailMap";
 import CategoryImage from "@/components/explore/CategoryImage";
+import { isCurrentlyOpen } from "@/lib/openStatus";
 
 const FIELD_ICONS = {
   contactPhone: Phone,
@@ -527,6 +528,32 @@ export default function TourismDetailPage() {
                 {listing.neighborhood && <span>{listing.neighborhood}</span>}
                 {listing.rating != null && (
                   <StarRating value={Number(listing.rating)} size={15} />
+                )}
+                {listing.hours && (
+                  <span className="flex items-center gap-2">
+                    {isCurrentlyOpen(listing.hours) !== null && (
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          isCurrentlyOpen(listing.hours)
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-600"
+                        }`}
+                      >
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            isCurrentlyOpen(listing.hours)
+                              ? "bg-green-600"
+                              : "bg-red-500"
+                          }`}
+                        />
+                        {isCurrentlyOpen(listing.hours) ? "Ouvert" : "Fermé"}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <Clock size={13} className="shrink-0" />
+                      {listing.hours}
+                    </span>
+                  </span>
                 )}
               </div>
 

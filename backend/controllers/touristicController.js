@@ -6,8 +6,8 @@ const prisma = new PrismaClient();
 
 const getAllListings = async (req, res) => {
   try {
-    const { categorySlug, city, neighborhood, search, page, limit, isActive, ...dynamicAttributes } = req.query;
-    const filters = { categorySlug, city, neighborhood, search, page, limit, isActive, attributes: dynamicAttributes };
+    const { categorySlug, city, neighborhood, search, page, limit, isActive, openOnly, ...dynamicAttributes } = req.query;
+    const filters = { categorySlug, city, neighborhood, search, page, limit, isActive, openOnly, attributes: dynamicAttributes };
     const { listings, pagination } = await touristicService.getTouristicListings(filters);
 
     const data = listings.map((item) => ({
