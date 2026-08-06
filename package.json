@@ -6,7 +6,8 @@
     "test:e2e:cars": "playwright test tests/car-listings.e2e.spec.js",
     "test:e2e:tourism": "playwright test tests/tourism.e2e.spec.js",
     "test:e2e:health": "playwright test tests/health.e2e.spec.js",
-    "test:e2e:events": "playwright test tests/events.e2e.spec.js"
+    "test:e2e:events": "playwright test tests/events.e2e.spec.js",
+    "test:e2e:shops": "playwright test tests/shops.e2e.spec.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",

@@ -328,6 +328,7 @@ export default function DashboardLayout({ children }) {
   });
 
   const isInListings = pathname?.startsWith("/dashboard/listings");
+  const hasProBoutique = user?.role === "business" && Boolean(user?.subscription?.plan?.hasBadge);
 
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
@@ -585,6 +586,15 @@ export default function DashboardLayout({ children }) {
                 active={pathname?.startsWith("/dashboard/stats")}
                 collapsed={!sidebarOpen}
               />
+              {hasProBoutique && (
+                <NavItem
+                  href="/dashboard/shop"
+                  icon={IconBuilding}
+                  label="Boutique"
+                  active={pathname?.startsWith("/dashboard/shop")}
+                  collapsed={!sidebarOpen}
+                />
+              )}
               <NavItem
                 href="/dashboard/subscription"
                 icon={IconStar}

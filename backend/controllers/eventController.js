@@ -70,6 +70,7 @@ async function createEvent(req, res) {
     const created = await eventService.createEvent(req.body, req.user);
     res.status(201).json({ success: true, data: created });
   } catch (error) {
+    if (error.status === 400) return res.status(400).json({ success: false, message: error.message });
     console.error('events createEvent error:', error.message);
     res.status(500).json({ success: false, message: 'Creation impossible.' });
   }
@@ -85,6 +86,7 @@ async function updateEvent(req, res) {
     res.json({ success: true, data: updated });
   } catch (error) {
     if (error.status === 403) return res.status(403).json({ success: false, message: 'Acces refuse.' });
+    if (error.status === 400) return res.status(400).json({ success: false, message: error.message });
     console.error('events updateEvent error:', error.message);
     res.status(500).json({ success: false, message: 'Modification impossible.' });
   }

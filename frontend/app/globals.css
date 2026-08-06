@@ -23,6 +23,49 @@ html, body {
 html {
   scroll-behavior: smooth;
 }
+
+html.dark,
+html.dark body {
+  color: #f8fafc;
+  background-color: #0f172a;
+}
+
+html.dark .bg-white { background-color: #111827 !important; }
+html.dark .bg-gray-50,
+html.dark .bg-gray-50\/80 { background-color: #0f172a !important; }
+html.dark .bg-gray-100 { background-color: #1f2937 !important; }
+html.dark .bg-gray-950,
+html.dark .bg-gray-900 { background-color: #020617 !important; }
+html.dark .text-gray-950,
+html.dark .text-gray-900,
+html.dark .text-gray-800,
+html.dark .text-black { color: #f8fafc !important; }
+html.dark .text-gray-700,
+html.dark .text-gray-600 { color: #cbd5e1 !important; }
+html.dark .text-gray-500,
+html.dark .text-gray-400 { color: #94a3b8 !important; }
+html.dark .border-gray-50,
+html.dark .border-gray-100,
+html.dark .border-gray-200 { border-color: #334155 !important; }
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #0f172a;
+  color: #f8fafc;
+  border-color: #334155;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b;
+}
+html.dark .shadow,
+html.dark .shadow-sm,
+html.dark .shadow-md,
+html.dark .shadow-lg,
+html.dark .shadow-xl {
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35) !important;
+}
+
 /* register and login inputs */
 @layer components {
   .input-green {

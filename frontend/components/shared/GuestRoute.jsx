@@ -18,9 +18,9 @@ export default function GuestRoute({ children }) {
     const isBypass = params.get('type') === 'business';
 
     if (!isBypass) {
-      router.replace('/');
+      router.replace(user.role === 'admin' ? '/admin' : '/');
     }
-  }, [user, loading]);
+  }, [user, loading, router, pathname]);
 
   // Pendant le chargement → attendre
   if (loading) return null;

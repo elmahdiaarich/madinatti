@@ -13,6 +13,8 @@ const { seedTaskRequests }    = require('./taskRequests.seed');
 const { seedProfessionalSpaceListings } = require('./professionalSpaces.seed');
 const { seedHealthPlaces } = require('./health.seed');
 const { seedEvents } = require('./events.seed');
+const { seedEventFormTemplates } = require('./eventFormTemplates.seed');
+const { seedShopSubscriptionPlans } = require('./shopSubscriptionPlans.seed');
 
 const prisma = new PrismaClient();
 
@@ -21,6 +23,8 @@ async function main() {
   await seedUsers(prisma, roles);  
   await seedPlans(prisma);
   const categories = await seedCategories(prisma);
+  await seedEventFormTemplates(prisma);
+  await seedShopSubscriptionPlans(prisma);
 
 const jobCategories = {
     catInfo:              categories.emploi['informatique'],

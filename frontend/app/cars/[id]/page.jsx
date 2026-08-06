@@ -11,6 +11,7 @@ import MapFrame from "@/components/shared/MapFrame";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import ReportModal from "@/components/shared/ReportModal";
 import InlineRegisterSection from "@/components/cars/InlineRegisterSection";
+import { Mail, MapPin, MessageCircle, Phone, Store } from "lucide-react";
 
 const FUEL_LABELS  = { PETROL: "Essence", DIESEL: "Diesel", ELECTRIC: "Électrique", HYBRID: "Hybride", LPG: "GPL", OTHER: "Autre" };
 const TRANS_LABELS = { MANUAL: "Manuelle", AUTOMATIC: "Automatique", SEMI_AUTOMATIC: "Semi-automatique" };
@@ -151,6 +152,165 @@ function InquiryForm({ listingId }) {
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
+
+function hasProfessionalShopPlan(shop) {
+  const subscription = shop?.subscriptions?.[0];
+  return Boolean(shop?.status === "ACTIVE" && ["ACTIVE", "TRIAL"].includes(subscription?.status));
+}
+
+function SellerProfile({ listing }) {
+  const seller = listing.user || {};
+  const shop = listing.shop || null;
+  const professionalShop = hasProfessionalShopPlan(shop);
+  const displayName = shop?.name || seller.name || "Vendeur";
+  const displayAvatar = shop?.logo || seller.avatar;
+  const phone = listing.contactPhone || shop?.professionalPhone || seller.phone;
+  const email = shop?.professionalEmail || seller.email;
+  const city = shop?.city || seller.city || listing.city;
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+        <span className="w-1 h-5 rounded-full bg-[#A7D129] inline-block" />
+        <h2 className="font-bold text-gray-900 text-base">Profil vendeur</h2>
+      </div>
+      <div className="px-6 py-5">
+        <div className="flex items-start gap-3">
+          <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-[#A7D129]/40 bg-[#E8F5D0] flex items-center justify-center">
+            {displayAvatar ? (
+              <img src={displayAvatar} alt={displayName} className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-xl font-extrabold text-[#2D5016]">{displayName.charAt(0).toUpperCase()}</span>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="truncate font-extrabold text-gray-900">{displayName}</p>
+              {professionalShop && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700">
+                  <span>✓</span>
+                  Boutique verifiee
+                </span>
+              )}
+            </div>
+            {shop?.name && seller.name && <p className="mt-0.5 text-xs text-gray-500">Publie par {seller.name}</p>}
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-2 text-sm">
+          {phone && (
+            <a href={`tel:${phone}`} className="flex items-center justify-between gap-3 rounded-xl bg-gray-50 px-3 py-2 text-gray-700 hover:bg-[#E8F5D0]">
+              <span>Telephone</span>
+              <strong className="text-[#2D5016]">{phone}</strong>
+            </a>
+          )}
+          {email && (
+            <a href={`mailto:${email}`} className="flex items-center justify-between gap-3 rounded-xl bg-gray-50 px-3 py-2 text-gray-700 hover:bg-[#E8F5D0]">
+              <span>Email</span>
+              <strong className="truncate text-[#2D5016]">{email}</strong>
+            </a>
+          )}
+          {city && (
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-gray-50 px-3 py-2 text-gray-700">
+              <span>Ville</span>
+              <strong className="text-[#2D5016]">{city}</strong>
+            </div>
+          )}
+        </div>
+
+        {shop?.slug && (
+          <Link href={`/boutiques/${shop.slug}`} className="mt-4 flex w-full items-center justify-center rounded-xl border-2 border-[#2D5016] px-4 py-2.5 text-sm font-extrabold text-[#2D5016] hover:bg-[#2D5016] hover:text-white transition">
+            Voir la boutique publique
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SellerProfilePro({ listing }) {
+  const seller = listing.user || {};
+  const shop = listing.shop || null;
+  const professionalShop = hasProfessionalShopPlan(shop);
+  const displayName = shop?.name || seller.companyName || seller.name || "Vendeur";
+  const displayAvatar = shop?.logo || seller.companyLogo || seller.avatar;
+  const phone = listing.contactPhone || shop?.professionalPhone || seller.phone;
+  const email = shop?.professionalEmail || seller.email;
+  const city = shop?.city || seller.city || listing.city;
+  const whatsapp = phone ? `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Bonjour, je suis interesse par votre annonce : ${listing.title}`)}` : null;
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+      <div className="p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#E8F5D0] bg-[#F6F8F3]">
+            {displayAvatar ? (
+              <img src={displayAvatar} alt={displayName} className="h-full w-full object-cover" />
+            ) : (
+              <Store size={26} className="text-[#2D5016]" />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <h2 className="truncate text-lg font-extrabold text-gray-950">{displayName}</h2>
+              {professionalShop && <Store size={15} className="shrink-0 text-[#A7D129]" />}
+            </div>
+            {professionalShop && (
+              <span className="mt-1 inline-flex rounded-lg bg-[#2D5016] px-2.5 py-1 text-xs font-extrabold text-white">
+                Boutique verifiee
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {whatsapp && (
+            <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#E8F5D0] text-[#2D5016] transition hover:bg-[#A7D129]/30" aria-label="WhatsApp">
+              <MessageCircle size={20} />
+            </a>
+          )}
+          {email && (
+            <a href={`mailto:${email}`} className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#F0F7EA] text-[#2D5016] transition hover:bg-[#E8F5D0]" aria-label="Email">
+              <Mail size={19} />
+            </a>
+          )}
+          {phone && (
+            <a href={`tel:${phone}`} className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-[#2D5016] px-4 text-sm font-extrabold text-white transition hover:bg-[#1f3a0f] sm:flex-none">
+              <Phone size={17} />
+              Demander le prix
+            </a>
+          )}
+        </div>
+      </div>
+
+      <div className="border-t border-gray-100 px-5 py-4">
+        <div className="grid gap-2 text-sm sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+          {phone && <InfoPill icon={Phone} label="Telephone" value={phone} href={`tel:${phone}`} />}
+          {email && <InfoPill icon={Mail} label="Email" value={email} href={`mailto:${email}`} />}
+          {city && <InfoPill icon={MapPin} label="Ville" value={city} />}
+        </div>
+        {shop?.slug && (
+          <Link href={`/boutiques/${shop.slug}`} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-3 text-sm font-extrabold text-white transition hover:bg-gray-800">
+            <Store size={16} />
+            Voir la boutique
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function InfoPill({ icon: Icon, label, value, href }) {
+  const content = (
+    <>
+      <Icon size={15} className="shrink-0 text-[#2D5016]" />
+      <span className="text-gray-500">{label}</span>
+      <strong className="min-w-0 truncate text-gray-900">{value}</strong>
+    </>
+  );
+  const cls = "flex min-w-0 items-center gap-2 rounded-xl bg-gray-50 px-3 py-2";
+  return href ? <a href={href} className={`${cls} hover:bg-[#E8F5D0]`}>{content}</a> : <div className={cls}>{content}</div>;
+}
 
 export default function CarDetailPage() {
   const { id }   = useParams();
@@ -419,6 +579,8 @@ export default function CarDetailPage() {
               WhatsApp
             </a>
           </div>
+
+          <SellerProfilePro listing={listing} />
 
           <InquiryForm listingId={listing.id} />
 

@@ -23,6 +23,7 @@ function makeEvent(overrides = {}) {
     shortDescription: null,
     description: 'Description evenement test',
     categoryId: 'cat-1',
+    customSubsubcategory: 'Exposition de peinture',
     organizerName: 'Org Test',
     organizerId: null,
     organizerPhone: null,
@@ -65,19 +66,42 @@ function makeEvent(overrides = {}) {
     createdById: 'owner-1',
     createdAt: new Date('2026-07-24T00:00:00Z'),
     updatedAt: new Date('2026-07-24T00:00:00Z'),
-    category: { id: 'cat-1', slug: 'concert-musique', name: 'Concert et musique' },
+    category: {
+      id: 'cat-1',
+      slug: 'concert-musique',
+      name: 'Concert et musique',
+      formTemplate: {
+        id: 'tmpl-1',
+        name: 'Musique',
+        fields: [
+          { id: 'field-style', fieldName: 'musicStyle', label: 'Style musical', fieldType: 'text', required: true },
+        ],
+      },
+    },
+    fieldValues: [],
     ...overrides,
   };
 }
 
 test('event payload validation rejects inconsistent dates and negative prices', async () => {
   const { validateEventPayload } = require('../utils/eventValidator');
-  const prisma = { category: { findFirst: async () => ({ id: 'cat-1' }) } };
+  const prisma = {
+    category: {
+      findFirst: async () => ({
+        id: 'cat-1',
+        formTemplate: {
+          fields: [{ fieldName: 'musicStyle', label: 'Style musical', fieldType: 'text', required: true }],
+        },
+      }),
+    },
+  };
 
   const parsed = await validateEventPayload({
     title: 'Test',
     description: 'Description evenement test',
     categoryId: 'cat-1',
+    customSubsubcategory: 'Concert rock',
+    eventFieldValues: { musicStyle: 'Rock' },
     organizerName: 'Org',
     city: 'Kenitra',
     startsAt: '2026-08-02T12:00:00Z',
@@ -88,6 +112,39 @@ test('event payload validation rejects inconsistent dates and negative prices', 
   assert.equal(parsed.valid, false);
   assert.ok(parsed.errors.endsAt);
   assert.ok(parsed.errors.priceMin);
+});
+
+test('event payload validation requires form template and dynamic required fields', async () => {
+  const { validateEventPayload } = require('../utils/eventValidator');
+  const prisma = {
+    category: {
+      findFirst: async () => ({
+        id: 'cat-1',
+        formTemplate: {
+          fields: [
+            { fieldName: 'sportType', label: 'Discipline sportive', fieldType: 'text', required: true },
+            { fieldName: 'competitionLevel', label: 'Niveau', fieldType: 'select', required: false, options: ['Loisir'] },
+          ],
+        },
+      }),
+    },
+  };
+
+  const parsed = await validateEventPayload({
+    title: 'Tournoi Test',
+    description: 'Description evenement test',
+    categoryId: 'cat-1',
+    customSubsubcategory: 'Tournoi quartier',
+    organizerName: 'Org',
+    city: 'Kenitra',
+    startsAt: '2026-08-02T12:00:00Z',
+    endsAt: '2026-08-02T14:00:00Z',
+    eventFieldValues: { competitionLevel: 'Expert' },
+  }, prisma);
+
+  assert.equal(parsed.valid, false);
+  assert.ok(parsed.errors['eventFieldValues.sportType']);
+  assert.ok(parsed.errors['eventFieldValues.competitionLevel']);
 });
 
 test('event recurrence generates weekly occurrences without extra rows', () => {
@@ -125,12 +182,25 @@ test('non-owner cannot update an event', async () => {
 
 test('event create derives mainImage from gallery cover and stores a single cover', async () => {
   let createdData;
+  let createdEvent = null;
+  let dynamicRows = [];
   const prisma = {
     event: {
-      findUnique: async () => null,
+      findUnique: async ({ where }) => (where.id ? createdEvent : null),
       create: async ({ data }) => {
         createdData = data;
-        return makeEvent({ ...data, id: 'event-images-1' });
+        createdEvent = makeEvent({ ...data, id: 'event-images-1' });
+        return createdEvent;
+      },
+    },
+    category: {
+      findFirst: async () => makeEvent().category,
+    },
+    eventFieldValue: {
+      deleteMany: async () => ({}),
+      createMany: async ({ data }) => {
+        dynamicRows = data;
+        return { count: data.length };
       },
     },
   };
@@ -140,6 +210,8 @@ test('event create derives mainImage from gallery cover and stores a single cove
     title: 'Concert Images Test',
     description: 'Description evenement images test',
     categoryId: 'cat-1',
+    customSubsubcategory: 'Concert rock',
+    eventFieldValues: { musicStyle: 'Rock' },
     organizerName: 'Org Test',
     city: 'Kenitra',
     startsAt: '2026-08-15T19:00:00.000Z',
@@ -154,6 +226,8 @@ test('event create derives mainImage from gallery cover and stores a single cove
   assert.equal(created.mainImage, 'https://example.com/b.jpg');
   assert.equal(createdData.mainImage, 'https://example.com/b.jpg');
   assert.deepEqual(createdData.gallery.map((image) => image.isCover), [false, true, false]);
+  assert.equal(dynamicRows.length, 1);
+  assert.equal(dynamicRows[0].value, 'Rock');
 });
 
 test('event list supports city, date and proximity filtering', async () => {

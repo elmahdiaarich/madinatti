@@ -9,21 +9,23 @@ const prisma = require('../config/db');
  * et realEstate.js (controller), à l'endroit où viewsCount était déjà incrémenté.
  *
  * @param {string} listingId
- * @param {"JOB"|"REAL_ESTATE"} listingType
+ * @param {"JOB"|"REAL_ESTATE"|"CAR"} listingType
  * @param {string|null} userId - null si visiteur anonyme
  */
 const trackListingView = async (listingId, listingType, userId = null) => {
   try {
-    const updateCount =
-      listingType === 'JOB'
-        ? prisma.jobListing.update({
-            where: { id: listingId },
-            data: { viewsCount: { increment: 1 } },
-          })
-        : prisma.realEstateListing.update({
-            where: { id: listingId },
-            data: { viewsCount: { increment: 1 } },
-          });
+    const counters = {
+      JOB: prisma.jobListing,
+      REAL_ESTATE: prisma.realEstateListing,
+      CAR: prisma.carListing,
+    };
+    const model = counters[listingType];
+    if (!model) return;
+
+    const updateCount = model.update({
+      where: { id: listingId },
+      data: { viewsCount: { increment: 1 } },
+    });
 
     const logView = prisma.listingView.create({
       data: { listingId, listingType, userId },

@@ -3,13 +3,13 @@
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 
-const plans = ['standard', 'premium_tier1', 'premium_tier2']
+const plans = ['gratuit', 'basic', 'pro', 'max']
 const roles = ['citoyen', 'business', 'admin']
 
 export default function DevTools() {
   const { user, accounts = [], switchAccount } = useAuth()
   const [open, setOpen] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState('standard')
+  const [selectedPlan, setSelectedPlan] = useState('gratuit')
   const [selectedRole, setSelectedRole] = useState('citoyen')
 
   if (process.env.NODE_ENV === 'production') return null
@@ -86,7 +86,7 @@ export default function DevTools() {
                 const sessionUser = acc.user || acc
                 const email = sessionUser.email || acc.email || "Inconnu"
                 const role = sessionUser.role || acc.role || "citoyen"
-                const plan = sessionUser.plan || acc.plan || "standard"
+                const plan = sessionUser.plan || acc.plan || "gratuit"
                 const name = sessionUser.name || acc.name || (email.startsWith('admin') ? "Admin Madinatti" : "Sans nom")
                 const isActive = sessionUser.id === user?.id || acc.id === user?.id
 

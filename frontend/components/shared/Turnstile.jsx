@@ -1,27 +1,28 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 
-/**
- * Widget Cloudflare Turnstile réutilisable.
- * Usage :
- *   <Turnstile
- *     siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
- *     onVerify={(token) => setTurnstileToken(token)}
- *     onExpire={() => setTurnstileToken("")}
- *   />
- */
-export default function Turnstile({ siteKey, onVerify, onExpire }) {
+const Turnstile = forwardRef(function Turnstile(
+  { siteKey, onVerify, onExpire },
+  ref
+) {
   const containerRef = useRef(null);
   const widgetIdRef = useRef(null);
   const onVerifyRef = useRef(onVerify);
   const onExpireRef = useRef(onExpire);
 
-  // Garde toujours les derniers callbacks à jour SANS redéclencher l'effet ci-dessous
   useEffect(() => {
     onVerifyRef.current = onVerify;
     onExpireRef.current = onExpire;
   });
+
+  useImperativeHandle(ref, () => ({
+    reset: () => {
+      if (window.turnstile && widgetIdRef.current) {
+        window.turnstile.reset(widgetIdRef.current);
+      }
+    },
+  }));
 
   useEffect(() => {
     function renderWidget() {
@@ -31,6 +32,12 @@ export default function Turnstile({ siteKey, onVerify, onExpire }) {
         callback: (token) => onVerifyRef.current?.(token),
         "expired-callback": () => {
           onExpireRef.current?.();
+        },
+        "error-callback": () => {
+          onExpireRef.current?.();
+          if (window.turnstile && widgetIdRef.current) {
+            window.turnstile.reset(widgetIdRef.current);
+          }
         },
       });
     }
@@ -62,4 +69,6 @@ export default function Turnstile({ siteKey, onVerify, onExpire }) {
   }, [siteKey]);
 
   return <div ref={containerRef} />;
-}
+});
+
+export default Turnstile;

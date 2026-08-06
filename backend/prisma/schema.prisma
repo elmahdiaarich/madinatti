@@ -51,6 +51,29 @@ enum HealthPlaceStatus {
   SUSPENDED
   ARCHIVED
 }
+
+enum SellerType {
+  INDIVIDUAL
+  SHOP
+}
+
+enum ShopStatus {
+  DRAFT
+  PENDING
+  ACTIVE
+  REJECTED
+  SUSPENDED
+  CLOSED
+}
+
+enum ShopSubscriptionStatus {
+  PENDING
+  TRIAL
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  SUSPENDED
+}
 enum NewsSource {
   RSS
   ORIGINAL
@@ -102,6 +125,12 @@ model User {
   companyName      String?
   companyLogo      String?
   companyWebsite   String?
+  boutiqueDescription String?
+  boutiqueBanner      String?
+  boutiquePhone       String?
+  boutiqueEmail       String?
+  boutiqueListingSort String? @default("newest")
+  boutiqueFeaturedListingIds Json?
   notifications    Notification[]
 
   role              Role           @relation(fields: [roleId], references: [id])
@@ -128,6 +157,8 @@ model User {
   newsArticles         NewsArticle[]
   eventsCreated        Event[]        @relation("EventsCreatedBy")
   eventsOrganized      Event[]        @relation("EventsOrganizedBy")
+  ownedShops           Shop[]         @relation("ShopOwner")
+  shopMemberships      ShopMember[]
 
 }
 
@@ -185,6 +216,98 @@ model Subscription {
   plan Plan @relation(fields: [planId], references: [id])
 }
 
+model Shop {
+  id                 String     @id @default(uuid())
+  ownerUserId        String
+  name               String
+  slug               String     @unique
+  description        String?
+  categoryId         String?
+  logo               String?
+  coverImage         String?
+  city               String
+  address            String?
+  professionalPhone  String?
+  professionalEmail  String?
+  legalName          String?
+  taxIdentifier      String?
+  website            String?
+  socialLinks        Json?
+  openingHours       Json?
+  status             ShopStatus @default(PENDING)
+  isVerified         Boolean    @default(false)
+  rejectionReason    String?
+  adminNotes         String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  owner       User                   @relation("ShopOwner", fields: [ownerUserId], references: [id])
+  category    Category?              @relation(fields: [categoryId], references: [id])
+  members     ShopMember[]
+  subscriptions ShopSubscription[]
+  jobListings JobListing[]
+  realEstateListings RealEstateListing[]
+  carListings CarListing[]
+
+  @@index([ownerUserId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([city])
+  @@index([isVerified])
+  @@index([createdAt])
+}
+
+model ShopMember {
+  id        String   @id @default(uuid())
+  shopId    String
+  userId    String
+  role      String   @default("OWNER")
+  createdAt DateTime @default(now())
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([shopId, userId])
+  @@index([shopId])
+  @@index([userId])
+}
+
+model ShopSubscriptionPlan {
+  id             String             @id @default(uuid())
+  name           String
+  slug           String             @unique
+  displayedPrice String
+  billingPeriod  String             @default("monthly")
+  listingLimit   Int
+  features       Json
+  active         Boolean            @default(true)
+  displayOrder   Int                @default(0)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  subscriptions ShopSubscription[]
+}
+
+model ShopSubscription {
+  id        String                 @id @default(uuid())
+  shopId    String
+  planId    String
+  status    ShopSubscriptionStatus @default(PENDING)
+  startsAt  DateTime?
+  expiresAt DateTime?
+  cancelledAt DateTime?
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  plan ShopSubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@index([shopId])
+  @@index([planId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
 model Favorite {
   id       String @id @default(uuid())
   userId   String
@@ -212,6 +335,7 @@ model Category {
   module             String // "emploi" | "immobilier" | "vehicule"
   displayType        CategoryDisplayType @default(PLACE) // ← new
   isActive           Boolean             @default(true)
+  formTemplateId     String?
   jobListings        JobListing[]
   realEstateListings RealEstateListing[]
   carListings        CarListing[]
@@ -219,10 +343,43 @@ model Category {
   news               NewsArticle[]
   healthPlaces       HealthPlace[]
   events             Event[]
+  shops              Shop[]
   workerProfiles     WorkerProfile[]
   taskRequests       TaskRequest[]
   professionalSpaceListings ProfessionalSpaceListing[]
+  formTemplate       FormTemplate?       @relation(fields: [formTemplateId], references: [id])
 
+  @@index([formTemplateId])
+}
+
+model FormTemplate {
+  id         String      @id @default(uuid())
+  name       String      @unique
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  categories Category[]
+  fields     FormField[]
+}
+
+model FormField {
+  id              String            @id @default(uuid())
+  formTemplateId  String
+  fieldName       String
+  label           String
+  fieldType       String
+  required        Boolean           @default(false)
+  options         Json?
+  validationRules Json?
+  displayOrder    Int               @default(0)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  formTemplate FormTemplate      @relation(fields: [formTemplateId], references: [id], onDelete: Cascade)
+  values       EventFieldValue[]
+
+  @@unique([formTemplateId, fieldName])
+  @@index([formTemplateId, displayOrder])
 }
 
 enum EducationLevel {
@@ -264,6 +421,8 @@ enum RemoteType {
 model JobListing {
   id                  String           @id @default(uuid())
   userId              String
+  shopId              String?
+  sellerType          SellerType       @default(INDIVIDUAL)
   categoryId          String
   title               String
   description         String
@@ -299,10 +458,13 @@ model JobListing {
   deletedAt           DateTime?
 
   user         User             @relation(fields: [userId], references: [id])
+  shop         Shop?            @relation(fields: [shopId], references: [id])
   category     Category         @relation(fields: [categoryId], references: [id])
   applications JobApplication[]
 
   @@index([status])
+  @@index([shopId])
+  @@index([sellerType])
   @@index([categoryId])
   @@index([createdAt])
 }
@@ -338,6 +500,8 @@ model Alert {
 model RealEstateListing {
   id             String            @id @default(uuid())
   userId         String
+  shopId         String?
+  sellerType     SellerType        @default(INDIVIDUAL)
   categoryId     String
   title          String
   slug           String?           @unique
@@ -370,6 +534,7 @@ model RealEstateListing {
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   user           User              @relation(fields: [userId], references: [id])
+  shop           Shop?             @relation(fields: [shopId], references: [id])
   category       Category          @relation(fields: [categoryId], references: [id])
   inquiries      PropertyInquiry[]
   region         String?
@@ -377,6 +542,8 @@ model RealEstateListing {
   deletedAt      DateTime?
 
   @@index([categoryId])
+  @@index([shopId])
+  @@index([sellerType])
   @@index([status])
   @@index([price])
   @@index([city])
@@ -553,6 +720,8 @@ enum BodyType {
 model CarListing {
   id             String         @id @default(uuid())
   userId         String
+  shopId         String?
+  sellerType     SellerType     @default(INDIVIDUAL)
   categoryId     String
   title          String
   slug           String?        @unique
@@ -597,10 +766,13 @@ model CarListing {
   updatedAt      DateTime       @updatedAt
 
   user      User         @relation(fields: [userId], references: [id])
+  shop      Shop?        @relation(fields: [shopId], references: [id])
   category  Category     @relation(fields: [categoryId], references: [id])
   inquiries CarInquiry[]
 
   @@index([userId])
+  @@index([shopId])
+  @@index([sellerType])
   @@index([categoryId])
   @@index([status])
   @@index([make])
@@ -770,6 +942,7 @@ model Event {
   shortDescription           String?
   description                String
   categoryId                 String
+  customSubsubcategory       String?
   organizerName              String
   organizerId                String?
   organizerPhone             String?
@@ -816,8 +989,10 @@ model Event {
   category  Category @relation(fields: [categoryId], references: [id])
   organizer User?    @relation("EventsOrganizedBy", fields: [organizerId], references: [id])
   createdBy User     @relation("EventsCreatedBy", fields: [createdById], references: [id])
+  fieldValues EventFieldValue[]
 
   @@index([categoryId])
+  @@index([customSubsubcategory])
   @@index([status])
   @@index([city])
   @@index([province])
@@ -828,6 +1003,22 @@ model Event {
   @@index([verified])
   @@index([latitude, longitude])
   @@index([createdAt])
+}
+
+model EventFieldValue {
+  id          String   @id @default(uuid())
+  eventId     String
+  formFieldId String
+  value       Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  event     Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  formField FormField @relation(fields: [formFieldId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, formFieldId])
+  @@index([eventId])
+  @@index([formFieldId])
 }
 
 // ============================================================

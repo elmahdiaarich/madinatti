@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { carsService } from '@/services/carsService';
 import ReportModal from '@/components/shared/ReportModal';
 import ShareMenu from '@/components/shared/ShareMenu';
+import { Store } from 'lucide-react';
 
 const LISTING_TYPE_LABELS = {
   SALE: { label: 'Vente',    color: 'bg-[#2D5016] text-white' },
@@ -156,6 +157,44 @@ function ShareButton({ listing }) {
 }
 
 // ─── CarCard ──────────────────────────────────────────────────────────────────
+function ShopBadge({ shop }) {
+  const subscription = shop?.subscriptions?.[0];
+  const hasProfessionalPlan = shop?.status === 'ACTIVE' && ['ACTIVE', 'TRIAL'].includes(subscription?.status);
+  if (!shop || !hasProfessionalPlan) return null;
+  return (
+    <div className="mb-3 inline-flex max-w-full items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
+      <span className="truncate">Boutique verifiee</span>
+      {shop.isVerified && <span className="shrink-0">✓</span>}
+    </div>
+  );
+}
+
+function ProfessionalShopStrip({ shop }) {
+  const subscription = shop?.subscriptions?.[0];
+  const hasProfessionalPlan = shop?.status === 'ACTIVE' && ['ACTIVE', 'TRIAL'].includes(subscription?.status);
+  if (!shop || !hasProfessionalPlan) return null;
+  return (
+    <div className="mb-3 flex max-w-full items-center gap-2 rounded-xl border border-orange-100 bg-orange-50 px-2.5 py-2">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-orange-100">
+        {shop.logo ? (
+          <img src={shop.logo} alt={shop.name} className="h-full w-full object-cover" />
+        ) : (
+          <Store size={15} className="text-orange-500" />
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate text-xs font-extrabold text-gray-900">{shop.name}</span>
+          <Store size={12} className="shrink-0 text-orange-500" />
+        </div>
+        <span className="mt-0.5 inline-flex rounded-md bg-gray-950 px-2 py-0.5 text-[10px] font-bold text-white">
+          Voir la boutique
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function CarCard({ listing, initialFavorited = false, onFavoriteToggle, showShare = false }) {
   const [reportOpen, setReportOpen] = useState(false);
 
@@ -227,6 +266,7 @@ export default function CarCard({ listing, initialFavorited = false, onFavoriteT
                 {listing.make} {listing.model} {listing.year}
               </h2>
               <p className="text-xs text-gray-400 line-clamp-1 mb-2">{listing.title}</p>
+              <ProfessionalShopStrip shop={listing.shop} />
 
               {/* Location */}
               <div className="flex items-center gap-1 text-gray-500 text-xs mb-3">
