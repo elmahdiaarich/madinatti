@@ -6,7 +6,7 @@ import { MapPin, Phone, Download, Play } from "lucide-react";
 import { tourismService } from "@/services/tourismService";
 import CategoryImage from "@/components/explore/CategoryImage";
 import StarRating from "@/components/explore/StarRating";
-
+import { isCurrentlyOpen } from "@/lib/openStatus";
 export default function PlaceCard({
   item,
   categoryConfig,
@@ -30,7 +30,7 @@ export default function PlaceCard({
         window.open(fileUrl, "_blank", "noopener,noreferrer");
       } catch (err) {
         console.error("Failed to track download", err);
-        if (item.fileUrl) window.open(item.fileUrl, "_blank"); // fail open
+        if (item.fileUrl) window.open(item.fileUrl, "_blank");
       }
     };
 
@@ -39,45 +39,52 @@ export default function PlaceCard({
     return (
       <Link
         href={`${basePath}/${item.id}`}
-        className="group flex flex-col overflow-hidden rounded-xl border border-black/[0.06] bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--color-primary)] hover:shadow-md"
+        className="group relative flex flex-col overflow-hidden rounded-2xl border border-black/[0.06] bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--color-primary)] hover:shadow-lg"
       >
-        <div className="relative h-44 w-full bg-[var(--color-primary-mint)]">
+        <div className="relative h-52 w-full overflow-hidden bg-gradient-to-br from-[var(--color-primary-mint)] to-[var(--color-primary-mint)]/50">
           <CategoryImage
             src={cover}
             alt={item.name}
             icon={categoryConfig.icon}
             iconSize={28}
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
           />
-         {item.videoUrl && (
-           <span className="absolute top-2.5 left-2.5 rounded-full bg-red-600/90 p-1 text-white shadow-sm hover:scale-110 transition-transform" title="Contient une vidéo">
-             <Play size={10} fill="white" />
-           </span>
-         )}
-          <span className="absolute bottom-2.5 right-2.5 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-medium text-white">
-            {categoryConfig.label}
-          </span>
-        </div>
 
-        <div className="flex flex-1 flex-col gap-2 p-4">
-          <p className="font-semibold leading-snug text-black line-clamp-1">
-            {item.name}
-          </p>
+          {/* gradient scrim so title sits on top of the image */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 
-          {item.publishedAt && (
-            <p className="text-xs text-black/50">
-              {new Date(item.publishedAt).toLocaleDateString("fr-FR", {
-                month: "long",
-                year: "numeric",
-              })}
-            </p>
+          {item.videoUrl && (
+            <span className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-full bg-red-600/90 px-2 py-1 text-[10px] font-semibold text-white shadow-sm">
+              <Play size={10} fill="white" /> Vidéo
+            </span>
           )}
 
-          <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-{item.rating != null && (
-  <StarRating value={item.rating} size={13} />
-)}
-            <span className="flex items-center gap-1 text-xs text-black/50">
+          <span className="absolute top-2.5 right-2.5 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-black/70 backdrop-blur-sm">
+            {categoryConfig.label}
+          </span>
+
+          {/* title over the scrim, document-style */}
+          <div className="absolute inset-x-0 bottom-0 p-4">
+            <p className="font-semibold leading-snug text-white line-clamp-2 drop-shadow-sm">
+              {item.name}
+            </p>
+            {item.publishedAt && (
+              <p className="mt-0.5 text-xs text-white/70">
+                {new Date(item.publishedAt).toLocaleDateString("fr-FR", {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 p-4">
+          <div className="flex items-center gap-3">
+            {item.rating != null && (
+              <StarRating value={item.rating} size={13} />
+            )}
+            <span className="flex items-center gap-1 text-xs text-black/40">
               <Download size={12} className="shrink-0" />
               {downloadCount.toLocaleString("fr-FR")}
             </span>
@@ -87,21 +94,27 @@ export default function PlaceCard({
             type="button"
             onClick={handleDownload}
             disabled={!item.fileUrl}
-            className="mt-1 flex items-center justify-center gap-1.5 rounded-lg bg-[var(--color-primary)] px-3.5 py-2 text-sm font-semibold text-black transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex items-center gap-1.5 rounded-full bg-[var(--color-primary)] px-3.5 py-2 text-xs font-semibold text-black transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <Download size={14} /> Télécharger
+            <Download size={13} /> Télécharger
           </button>
         </div>
       </Link>
     );
   }
-
+  const isNew = (() => {
+    if (!item.createdAt) return false;
+    const ageMs = Date.now() - new Date(item.createdAt).getTime();
+    return ageMs < 1000 * 60 * 60 * 24 * 30; // under 30 days old
+  })();
   return (
     <Link
       href={`${basePath}/${item.id}`}
       className="group flex flex-col overflow-hidden rounded-xl border border-black/[0.06] bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--color-primary)] hover:shadow-md"
     >
-<div className="relative h-44 w-full bg-[var(--color-primary-mint)]">      <CategoryImage
+      <div className="relative h-44 w-full bg-[var(--color-primary-mint)]">
+        {" "}
+        <CategoryImage
           src={cover}
           alt={item.name}
           icon={categoryConfig.icon}
@@ -119,9 +132,27 @@ export default function PlaceCard({
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <p className="font-semibold leading-snug text-black line-clamp-1">
-          {item.name}
-        </p>
+        <div className="flex items-start justify-between gap-2">
+          <p className="font-semibold leading-snug text-black line-clamp-1">
+            {item.name}
+          </p>
+          {item.hours && isCurrentlyOpen(item.hours) !== null && (
+            <span
+              className={`flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                isCurrentlyOpen(item.hours)
+                  ? "bg-green-100 text-green-700"
+                  : "bg-red-100 text-red-600"
+              }`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  isCurrentlyOpen(item.hours) ? "bg-green-600" : "bg-red-500"
+                }`}
+              />
+              {isCurrentlyOpen(item.hours) ? "Ouvert" : "Fermé"}
+            </span>
+          )}
+        </div>
 
         {location && (
           <p className="flex items-center gap-1.5 text-sm text-black/55">
@@ -137,20 +168,20 @@ export default function PlaceCard({
           </p>
         )}
 
-<div className="mt-auto flex items-center justify-between gap-2 pt-1">
-  {item.rating != null ? (
-    <StarRating value={item.rating} size={13} />
-  ) : (
-    <span className="text-xs text-black/40">Nouveau</span>
-  )}
+        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+          {item.rating != null ? (
+            <StarRating value={item.rating} size={13} />
+          ) : isNew ? (
+            <span className="text-xs text-black/40">Nouveau</span>
+          ) : null}
 
-  {item.prix != null && (
-  <span className="text-sm font-semibold text-black">
-    {Number(item.prix) === 0 ? "Gratuit" : `${item.prix} DH`}
-  </span>
-)}
-</div>
-</div>
+          {item.prix != null && (
+            <span className="text-sm font-semibold text-black">
+              {Number(item.prix) === 0 ? "Gratuit" : `${item.prix} DH`}
+            </span>
+          )}
+        </div>
+      </div>
     </Link>
   );
 }

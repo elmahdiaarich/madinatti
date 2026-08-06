@@ -42,21 +42,21 @@ const jobCategories = {
   };
 
   
-  await seedJobs(prisma, roles, jobCategories);
-  await seedRealEstate(prisma, roles, categories);
-  await seedCars(prisma, roles, categories);
+  // await seedJobs(prisma, roles, jobCategories);
+  // await seedRealEstate(prisma, roles, categories);
+  // await seedCars(prisma, roles, categories);
 
   
   await seedTourismListings(prisma, roles, categories); 
-  await seedJobs(prisma, roles, jobCategories);
-  await seedRealEstate(prisma, roles, categories);
-  await seedCars(prisma, roles, categories);
+  // await seedJobs(prisma, roles, jobCategories);
+  // await seedRealEstate(prisma, roles, categories);
+  // await seedCars(prisma, roles, categories);
 
-  await seedWorkerProfiles(prisma, categories);   
-  await seedTaskRequests(prisma, categories);     
-  await seedProfessionalSpaceListings(prisma, roles, categories);
-  await seedHealthPlaces(prisma, categories);
-  await seedEvents(prisma, categories);
+  // await seedWorkerProfiles(prisma, categories);   
+  // await seedTaskRequests(prisma, categories);     
+  // await seedProfessionalSpaceListings(prisma, roles, categories);
+  // await seedHealthPlaces(prisma, categories);
+  // await seedEvents(prisma, categories);
 
 }
 
