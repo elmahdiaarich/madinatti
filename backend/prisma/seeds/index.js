@@ -1,4 +1,4 @@
-const prisma = require('../config/db');
+const prisma = require('../../config/db');
 
 const { seedTourismListings } = require('./tourism.seed'); // 1. Import the tourism seeder
 const { seedUsers }           = require('./users.seed');
