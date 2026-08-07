@@ -22,6 +22,12 @@ export const uploadService = {
     const response = await axios.post(`${BASE}/document`, form, authHeaders(token));
     return response.data; // { success, url, publicId }
   },
+   uploadVideo: async (file, token) => {
+   const form = new FormData();
+   form.append("file", file);
+   const response = await axios.post(`${BASE}/video`, form, authHeaders(token));
+   return response.data; // { success, url, publicId }
+  },
   deleteUpload: async (publicId, resourceType, token) => {
     const response = await axios.delete(BASE, {
       data: { publicId, resourceType },

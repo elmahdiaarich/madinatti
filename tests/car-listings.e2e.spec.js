@@ -10,7 +10,7 @@ const REQUIRED_CATEGORIES = ['Voitures', 'Motos', 'Utilitaires', 'Camions', 'Bat
 const now = Date.now();
 const TITLE_PREFIX = `E2E-CARS-${now}`;
 
-const IMAGE_URL = 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800';
+const IMAGE_URL = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800"%3E%3Crect width="1200" height="800" fill="%232d5016"/%3E%3Ctext x="600" y="410" text-anchor="middle" font-size="52" fill="white"%3EMadinatti Auto%3C/text%3E%3C/svg%3E';
 
 const listingsSeed = [
   { category: 'Voitures', title: 'Toyota Corolla', make: 'Toyota', model: 'Corolla', year: 2020, bodyType: 'SEDAN', price: 185000 },
@@ -29,6 +29,7 @@ function authHeaders(token) {
   return {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
+    'x-e2e-test': 'true',
   };
 }
 
@@ -59,10 +60,65 @@ function listingPayload(item, categoryId) {
     city: 'Casablanca',
     region: 'Casablanca-Settat',
     location: 'Casablanca',
+    latitude: 33.5731,
+    longitude: -7.5898,
     images: [{ url: IMAGE_URL, isCover: true }],
     features: { e2e: true },
   };
 }
+
+test('car create form map click writes exact latitude and longitude', async ({ page }) => {
+  test.skip(!USER_TOKEN, 'USER_TOKEN is required');
+
+  await page.route('**/api/cars/categories', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: [{ id: 'cat-car', name: 'Voitures', slug: 'voitures', module: 'automobile' }] }),
+    });
+  });
+  await page.addInitScript((token) => {
+    localStorage.setItem('token', token);
+    window.__leafletMarkers = [];
+    window.__leafletMaps = [];
+    window.__clickLastLeafletMap = (lat, lng) => {
+      const map = window.__leafletMaps[window.__leafletMaps.length - 1];
+      map?.listeners?.click?.({ latlng: { lat, lng } });
+    };
+    window.L = {
+      map: () => {
+        const map = {
+          listeners: {},
+          setView() { return this; },
+          on(name, cb) { this.listeners[name] = cb; return this; },
+          remove() {},
+          flyTo() {},
+        };
+        window.__leafletMaps.push(map);
+        return map;
+      },
+      tileLayer: () => ({ addTo() {} }),
+      icon: (options) => options,
+      marker: (coords, options) => {
+        const marker = {
+          coords,
+          options,
+          addTo() { window.__leafletMarkers.push(this); return this; },
+          setLatLng(next) { this.coords = next; return this; },
+        };
+        return marker;
+      },
+    };
+  }, USER_TOKEN);
+
+  await page.goto(`${FRONT_URL}/dashboard/listings/cars/create`);
+  await expect(page.getByLabel('Latitude')).toBeVisible({ timeout: 15000 });
+  await page.evaluate(() => window.__clickLastLeafletMap(33.573101, -7.589801));
+
+  await expect(page.getByLabel('Latitude')).toHaveValue('33.573101');
+  await expect(page.getByLabel('Longitude')).toHaveValue('-7.589801');
+  await expect.poll(() => page.evaluate(() => window.__leafletMarkers.length)).toBeGreaterThan(0);
+  await expect.poll(() => page.evaluate(() => window.__leafletMarkers.at(-1)?.options?.icon?.iconUrl || '')).toContain('marker-icon.png');
+});
 
 test.describe.serial('automobile categories and car listings E2E', () => {
   let categoriesByName = new Map();
@@ -176,7 +232,7 @@ test.describe.serial('automobile categories and car listings E2E', () => {
 
   test('renders approved automobile listings and category filters on /cars', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.goto(`${FRONT_URL}/cars`, { waitUntil: 'networkidle' });
+    await page.goto(`${FRONT_URL}/cars?search=${encodeURIComponent(TITLE_PREFIX)}`, { waitUntil: 'networkidle' });
 
     await expect(page.getByText(`${TITLE_PREFIX} Bayliner Element`)).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(`${TITLE_PREFIX} Sea-Doo Spark`)).toBeVisible();
@@ -201,5 +257,22 @@ test.describe.serial('automobile categories and car listings E2E', () => {
       await expect(page.getByText(visibleTitle)).toBeVisible({ timeout: 15000 });
       await expect(page.getByText(hiddenTitle)).toHaveCount(0);
     }
+  });
+
+  test('opens car detail with image viewer and saved map coordinates', async ({ page }) => {
+    const listing = createdListings[0];
+    await page.goto(`${FRONT_URL}/cars/${listing.id}`, { waitUntil: 'networkidle' });
+
+    await expect(page.getByRole('heading', { name: /Toyota Corolla 2020/ })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Casablanca, Casablanca')).toBeVisible();
+    await expect(page.locator('img[alt="Photo 1"]')).toBeVisible();
+
+    await page.locator('img[alt="Photo 1"]').click();
+    await expect(page.locator('[data-image-viewer="open"]')).toBeVisible();
+    await expect(page.getByText('1200 x 800px')).toBeVisible();
+    await page.getByRole('button', { name: 'Zoom plus' }).click();
+    await expect(page.getByText('125%')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-image-viewer="open"]')).toHaveCount(0);
   });
 });

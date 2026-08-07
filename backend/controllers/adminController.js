@@ -1384,7 +1384,7 @@ const getBusinesses = async (req, res) => {
       ];
 
       const activeSub = b.subscriptions[0];
-      const plan = activeSub?.plan?.name || "Standard";
+      const plan = activeSub?.plan?.name || "Gratuit";
 
       return {
         id: b.id,

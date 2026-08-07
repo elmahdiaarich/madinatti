@@ -1,10 +1,21 @@
 // frontend/app/tourisme/page.jsx
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, useRef , Suspense } from "react";
+import {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+  Suspense,
+} from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CATEGORY_LIST } from "@/constants/tourismCategories";
-import { Loader2 } from "lucide-react";
+import {
+  Loader2,
+  Map as MapIcon,
+  X as MapCloseIcon,
+} from "lucide-react";
 import { tourismService } from "@/services/tourismService";
 import { TOURISM_CATEGORIES } from "@/constants/tourismCategories";
 import CategoryDropdown from "@/components/explore/CategoryDropdown";
@@ -31,7 +42,9 @@ function buildPageWindow(current, total) {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
 
   const pages = new Set([1, total, current, current - 1, current + 1]);
-  const sorted = [...pages].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+  const sorted = [...pages]
+    .filter((p) => p >= 1 && p <= total)
+    .sort((a, b) => a - b);
 
   const withEllipses = [];
   sorted.forEach((p, i) => {
@@ -40,14 +53,14 @@ function buildPageWindow(current, total) {
   });
   return withEllipses;
 }
- function TourismExplorer() {
+function TourismExplorer() {
   const searchParams = useSearchParams();
   const router = useRouter();
-const [activeCategory, setActiveCategory] = useState(() => {
-  const label = searchParams.get("category");
-  const match = CATEGORY_LIST.find((c) => c.label === label);
-  return match ? match.slug : "all";
-});
+  const [activeCategory, setActiveCategory] = useState(() => {
+    const label = searchParams.get("category");
+    const match = CATEGORY_LIST.find((c) => c.label === label);
+    return match ? match.slug : "all";
+  });
   const [filters, setFilters] = useState(() => {
     const city = searchParams.get("city") || "";
     const region = searchParams.get("region") || "";
@@ -66,35 +79,35 @@ const [activeCategory, setActiveCategory] = useState(() => {
     page: 1,
     totalPages: 1,
     total: 0,
-
   });
+  const [mapVisible, setMapVisible] = useState(true);
   const [neighborhoodsByCity, setNeighborhoodsByCity] = useState({});
   const listingsRef = useRef(null);
 
-useEffect(() => {
-  const el = listingsRef.current;
-  if (!el) return;
+  useEffect(() => {
+    const el = listingsRef.current;
+    if (!el) return;
 
-  const handleWheel = (e) => {
-    const { scrollTop, scrollHeight, clientHeight } = el;
-    const atTop = scrollTop <= 0;
-    const atBottom = scrollTop + clientHeight >= scrollHeight - 1;
+    const handleWheel = (e) => {
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      const atTop = scrollTop <= 0;
+      const atBottom = scrollTop + clientHeight >= scrollHeight - 1;
 
-    // If we're at an edge and still trying to scroll further in that
-    // direction, don't let the browser get stuck waiting for a mousemove
-    // to re-target — just let the event pass through naturally without
-    // manually scrolling (prevents the Chromium trackpad lock bug).
-    if ((atTop && e.deltaY < 0) || (atBottom && e.deltaY > 0)) {
-      return;
-    }
+      // If we're at an edge and still trying to scroll further in that
+      // direction, don't let the browser get stuck waiting for a mousemove
+      // to re-target — just let the event pass through naturally without
+      // manually scrolling (prevents the Chromium trackpad lock bug).
+      if ((atTop && e.deltaY < 0) || (atBottom && e.deltaY > 0)) {
+        return;
+      }
 
-    e.preventDefault();
-    el.scrollTop += e.deltaY;
-  };
+      e.preventDefault();
+      el.scrollTop += e.deltaY;
+    };
 
-  el.addEventListener("wheel", handleWheel, { passive: false });
-  return () => el.removeEventListener("wheel", handleWheel);
-}, []);
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, []);
 
   const fetchListings = useCallback(async () => {
     setLoading(true);
@@ -137,7 +150,7 @@ useEffect(() => {
   // listings (not the current filtered/paginated set). Keyed by a
   // normalized (accent/case-insensitive) city string so it matches
   // whatever spelling the "Ville" dropdown uses.
-    // Fetch distinct neighborhoods from the backend
+  // Fetch distinct neighborhoods from the backend
   useEffect(() => {
     tourismService
       .getNeighborhoods()
@@ -179,7 +192,9 @@ useEffect(() => {
         the full row height, and drops the mobile-only sticky/height rules.
       */}
       <div
-        className={`order-1 sticky top-0 z-10 w-full shrink-0 ${MAP_MOBILE_HEIGHT_CLASS} lg:order-2 lg:sticky-none lg:static lg:h-auto lg:w-full lg:max-w-[50%] lg:border-l lg:border-black/[0.06]`}
+        className={`order-1 sticky top-0 z-10 w-full shrink-0 overflow-hidden transition-[height] duration-300 ease-in-out ${
+          mapVisible ? MAP_MOBILE_HEIGHT_CLASS : "h-0"
+        } lg:order-2 lg:sticky-none lg:static lg:h-auto lg:w-full lg:max-w-[50%] lg:border-l lg:border-black/[0.06]`}
       >
         <TourismMap listings={listings} />
       </div>
@@ -207,14 +222,24 @@ useEffect(() => {
               onChange={setFilters}
               neighborhoodsByCity={neighborhoodsByCity}
             />
+            <button
+              type="button"
+              onClick={() => setMapVisible((v) => !v)}
+              className="flex items-center gap-1.5 rounded-full border border-black/10 px-3 py-1.5 text-xs font-medium text-black/60 transition hover:border-[var(--color-primary)] hover:text-black lg:hidden"
+            >
+              {mapVisible ? <MapCloseIcon size={13} /> : <MapIcon size={13} />}
+              {mapVisible ? "Masquer la carte" : "Afficher la carte"}
+            </button>
           </div>
         </div>
 
         {/* Results — this is the ONLY part that scrolls. */}
-<div
-  ref={listingsRef}
-  className="min-h-0 flex-1 overflow-y-auto overscroll-auto px-6 py-5"
->          {!loading && !error && listings.length > 0 && (
+        <div
+          ref={listingsRef}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-auto px-6 py-5"
+        >
+          {" "}
+          {!loading && !error && listings.length > 0 && (
             <p className="mb-3 text-sm text-black/40">
               <span className="font-semibold text-black/70">
                 {pagination.total}
@@ -224,7 +249,6 @@ useEffect(() => {
               {pagination.total > 1 ? "s" : ""}
             </p>
           )}
-
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-20 text-black/40">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -241,7 +265,9 @@ useEffect(() => {
               </p>
             </div>
           ) : (
-<div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2">              {listings.map((item) => (
+            <div className="grid grid-cols-1 items-start gap-x-6 gap-y-8 sm:grid-cols-2">
+              {" "}
+              {listings.map((item) => (
                 <PlaceCard
                   key={item.id}
                   item={item}
@@ -267,7 +293,10 @@ useEffect(() => {
 
               {pageWindow.map((p, i) =>
                 p === "..." ? (
-                  <span key={`ellipsis-${i}`} className="w-9 text-center text-sm text-black/30">
+                  <span
+                    key={`ellipsis-${i}`}
+                    className="w-9 text-center text-sm text-black/30"
+                  >
                     …
                   </span>
                 ) : (

@@ -1,7 +1,7 @@
 // frontend/components/explore/FilterBar.jsx
 "use client";
 
-import { MapPin, Star, Tag } from "lucide-react";
+import { MapPin, Star, Tag, Clock } from "lucide-react";
 import { cities as MOROCCO_CITIES } from "morocco-cities";
 import SearchableDropdown from "./SearchableDropdown";
 
@@ -38,10 +38,12 @@ export function normalizeCityKey(value) {
  * neighborhoods available for each city, derived from listing data by the
  * parent (the "morocco-cities" package itself has no neighborhood data).
  */
+
+// ... PRICE_RANGES, RATINGS, CITY_OPTIONS, normalizeCityKey unchanged ...
+
 export default function FilterBar({ filters, onChange, neighborhoodsByCity = {} }) {
   const set = (key, value) => {
     const next = { ...filters, [key]: value || undefined };
-    // Changing city invalidates whatever neighborhood was selected.
     if (key === "city") next.neighborhood = undefined;
     onChange(next);
   };
@@ -96,6 +98,19 @@ export default function FilterBar({ filters, onChange, neighborhoodsByCity = {} 
         emptyLabel="Tous les prix"
         width="w-40"
       />
+
+      <button
+        type="button"
+        onClick={() => set("openOnly", filters.openOnly ? undefined : "true")}
+        className={`flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition ${
+          filters.openOnly
+            ? "border-green-600 bg-green-50 text-green-700"
+            : "border-black/10 text-black/60 hover:border-[var(--color-primary)] hover:text-black"
+        }`}
+      >
+        <Clock size={13} />
+        Ouvert maintenant
+      </button>
     </>
   );
 }

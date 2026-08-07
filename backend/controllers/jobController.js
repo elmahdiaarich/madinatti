@@ -2,6 +2,7 @@ const prisma = require("../config/db");
 const { cloudinary } = require("../config/cloudinary");
 const { cities: moroccoCities } = require('morocco-cities');
 const { trackListingView } = require("../services/viewTrackingService");
+const { prepareListingOwnership } = require("../services/shopService");
 
 // Build once at module load — same pattern as real estate
 const citiesByRegion = moroccoCities.reduce((acc, city) => {
@@ -90,6 +91,8 @@ const getJobs = async (req, res) => {
           skills: true,
           category: { select: { id: true, name: true } },
           user: { select: { companyLogo: true } },
+          sellerType: true,
+          shop: { select: { id: true, name: true, slug: true, logo: true, isVerified: true, status: true } },
         },
       }),
       prisma.jobListing.count({ where }),
@@ -132,6 +135,7 @@ const getJobById = async (req, res) => {
           },
         },
         _count: { select: { applications: true } },
+        shop: { select: { id: true, name: true, slug: true, logo: true, isVerified: true, status: true, professionalPhone: true } },
       },
     });
 
@@ -327,10 +331,12 @@ const createJob = async (req, res) => {
       where: { id: userId },
       select: { companyName: true },
     });
+    const listingOwner = await prepareListingOwnership(req.body.shopId, userId);
 
     const job = await prisma.jobListing.create({
       data: {
         userId,
+        ...listingOwner,
         categoryId: category.id,
         title: title.trim(),
         description: description.trim(),
@@ -361,6 +367,9 @@ const createJob = async (req, res) => {
     });
   } catch (error) {
     console.error("createJob error:", error);
+    if (error.status) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     res.status(500).json({ success: false, message: "Erreur serveur" });
   }
 };

@@ -28,6 +28,49 @@ function isSafeUrl(value) {
   }
 }
 
+function isEmptyDynamicValue(value) {
+  return value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
+}
+
+function validateDynamicValue(field, value) {
+  if (isEmptyDynamicValue(value)) return null;
+  const type = field.fieldType;
+  const rules = field.validationRules || {};
+
+  if (['text', 'textarea'].includes(type)) {
+    const text = String(value).trim();
+    if (rules.minLength && text.length < rules.minLength) return `${field.label} trop court.`;
+    if (rules.maxLength && text.length > rules.maxLength) return `${field.label} trop long.`;
+    return null;
+  }
+
+  if (type === 'number') {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return `${field.label} doit etre un nombre.`;
+    if (rules.min !== undefined && number < Number(rules.min)) return `${field.label} invalide.`;
+    if (rules.max !== undefined && number > Number(rules.max)) return `${field.label} invalide.`;
+    return null;
+  }
+
+  if (type === 'checkbox') {
+    if (typeof value !== 'boolean') return `${field.label} doit etre oui/non.`;
+    return null;
+  }
+
+  if (type === 'select') {
+    const options = Array.isArray(field.options) ? field.options : [];
+    if (options.length && !options.includes(value)) return `${field.label} invalide.`;
+    return null;
+  }
+
+  if (type === 'date') {
+    if (!parseDate(value)) return `${field.label} invalide.`;
+    return null;
+  }
+
+  return null;
+}
+
 function validateEventListQuery(query) {
   const errors = {};
   const page = Math.max(1, parseInt(query.page, 10) || 1);
@@ -96,6 +139,7 @@ async function validateEventPayload(body, prisma, { partial = false } = {}) {
   const priceMax = toNumber(body.priceMax);
   const capacity = body.capacity === undefined || body.capacity === null || body.capacity === '' ? null : parseInt(body.capacity, 10);
   const categoryId = body.categoryId;
+  let category = null;
 
   if (!partial || body.title !== undefined) {
     if (!body.title || String(body.title).trim().length < 3) errors.title = 'Titre requis.';
@@ -110,10 +154,27 @@ async function validateEventPayload(body, prisma, { partial = false } = {}) {
     if (!body.city || String(body.city).trim().length < 2) errors.city = 'Ville requise.';
   }
   if (!partial || body.categoryId !== undefined) {
-    const category = categoryId
-      ? await prisma.category.findFirst({ where: { id: categoryId, module: EVENT_CATEGORY_MODULE, isActive: true } })
+    category = categoryId
+      ? await prisma.category.findFirst({
+          where: { id: categoryId, module: EVENT_CATEGORY_MODULE, isActive: true },
+          include: {
+            formTemplate: {
+              include: {
+                fields: {
+                  orderBy: { displayOrder: 'asc' },
+                },
+              },
+            },
+          },
+        })
       : null;
     if (!category) errors.categoryId = 'Categorie Evenements invalide.';
+    else if (!category.formTemplate) errors.categoryId = 'Modele de formulaire introuvable pour cette sous-categorie.';
+  }
+  if (!partial || body.customSubsubcategory !== undefined) {
+    if (!body.customSubsubcategory || String(body.customSubsubcategory).trim().length < 2) {
+      errors.customSubsubcategory = 'Sous-sous-categorie requise.';
+    }
   }
   if (!partial || body.startsAt !== undefined) {
     if (!startsAt) errors.startsAt = 'Date de debut invalide.';
@@ -142,6 +203,26 @@ async function validateEventPayload(body, prisma, { partial = false } = {}) {
   ['websiteUrl', 'onlineUrl', 'ticketUrl', 'mainImage', 'sourceUrl'].forEach((field) => {
     if (body[field] && !isSafeUrl(body[field])) errors[field] = 'Lien invalide.';
   });
+
+  if (category?.formTemplate && (!partial || body.eventFieldValues !== undefined)) {
+    const values = body.eventFieldValues && typeof body.eventFieldValues === 'object' && !Array.isArray(body.eventFieldValues)
+      ? body.eventFieldValues
+      : {};
+    const fields = category.formTemplate.fields || [];
+    const allowed = new Set(fields.map((field) => field.fieldName));
+    for (const key of Object.keys(values)) {
+      if (!allowed.has(key)) errors[`eventFieldValues.${key}`] = 'Champ non autorise pour cette sous-categorie.';
+    }
+    for (const field of fields) {
+      const value = values[field.fieldName];
+      if (field.required && body.status !== 'DRAFT' && isEmptyDynamicValue(value)) {
+        errors[`eventFieldValues.${field.fieldName}`] = `${field.label} requis.`;
+        continue;
+      }
+      const error = validateDynamicValue(field, value);
+      if (error) errors[`eventFieldValues.${field.fieldName}`] = error;
+    }
+  }
 
   return { valid: Object.keys(errors).length === 0, errors };
 }

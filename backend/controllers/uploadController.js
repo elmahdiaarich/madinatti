@@ -36,6 +36,31 @@ const uploadImage = async (req, res) => {
   }
 };
 
+// POST /api/uploads/video  (field name: "file")
+const uploadVideo = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Aucun fichier reçu.' });
+    }
+    if (!req.file.mimetype.startsWith('video/')) {
+      return res.status(400).json({ message: 'Seuls les fichiers vidéo sont acceptés.' });
+    }
+    if (req.file.size > 50 * 1024 * 1024) { // 50 MB Max
+      return res.status(400).json({ message: 'Fichier vidéo trop volumineux (max 50 Mo).' });
+    }
+
+    const result = await streamUpload(req.file.buffer, {
+      folder: 'madinatti/tourism/videos',
+      resource_type: 'video',
+    });
+
+    res.status(201).json({ success: true, url: result.secure_url, publicId: result.public_id });
+  } catch (error) {
+    console.error('Cloudinary video upload error:', error);
+    res.status(500).json({ message: "Échec de l'upload de la vidéo." });
+  }
+};
+
 // POST /api/uploads/document  (field name: "file")
 // Used for the Magazine / Carte Touristique PDF field — same pattern, but
 // resource_type "raw" since Cloudinary treats non-image files that way.
@@ -77,4 +102,4 @@ const deleteUpload = async (req, res) => {
   }
 };
 
-module.exports = { uploadImage, uploadDocument, deleteUpload };
+module.exports = { uploadImage, uploadDocument, uploadVideo, deleteUpload };

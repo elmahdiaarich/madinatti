@@ -2,6 +2,7 @@ const { PrismaClient, Prisma } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { cloudinary } = require("../config/cloudinary");
 const { cities: moroccoCities } = require('morocco-cities');
+const { prepareListingOwnership } = require('./shopService');
 
 // Build once at module load
 const citiesByRegion = moroccoCities.reduce((acc, city) => {
@@ -73,6 +74,8 @@ const BUSINESS_LISTING_SELECT = {
   status: true,
   isActive: true,
   isFeatured: true,
+  sellerType: true,
+  shopId: true,
 
   adminNotes: true,
   viewsCount: true,
@@ -87,6 +90,7 @@ const BUSINESS_LISTING_SELECT = {
       name: true,
     },
   },
+  shop: { select: { id: true, name: true, slug: true, logo: true, isVerified: true, status: true } },
 
   _count: {
     select: {
@@ -108,6 +112,7 @@ const SLUG_TO_PROPERTY_TYPE = {
 // ─── 1. CREATE LISTING ───────────────────────────────────────────────────────
 async function createListing(data, userId) {
   const slug = generateSlug(data.title);
+  const listingOwner = await prepareListingOwnership(data.shopId, userId);
  
   // Derive propertyType from category slug
   const category = await prisma.category.findUnique({
@@ -120,6 +125,7 @@ async function createListing(data, userId) {
   return prisma.realEstateListing.create({
     data: {
       userId,
+      ...listingOwner,
       categoryId: data.categoryId,
       title: data.title.trim(),
       slug,
@@ -153,6 +159,8 @@ async function createListing(data, userId) {
       priceNegotiable: true,
       city: true,
       categoryId: true,
+      sellerType: true,
+      shopId: true,
       createdAt: true,
     },
   });
@@ -287,6 +295,7 @@ async function getListingById(id) {
         select: { id: true, name: true, avatar: true, phone: true, city: true },
       },
       category: { select: { id: true, name: true, slug: true } },
+      shop: { select: { id: true, name: true, slug: true, logo: true, isVerified: true, status: true, professionalPhone: true } },
     },
   });
 }

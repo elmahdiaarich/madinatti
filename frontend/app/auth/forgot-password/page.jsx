@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
       <div className="min-h-screen flex items-center justify-center bg-primary-mint px-4">
         <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md">
           <div className="flex justify-center mb-5">
-            <img src="/logo.png" alt="Madinatti" className="h-12" />
+            <img src="/logo-new.svg" alt="Madinatti Ma Ville My Town" className="h-16" />
           </div>
 
           <h1 className="text-3xl font-bold text-center text-primary-dark mb-2">

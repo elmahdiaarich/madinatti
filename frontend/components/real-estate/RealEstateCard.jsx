@@ -316,6 +316,16 @@ function ShareButton({ listing }) {
 }
 
 // ─── RealEstateCard ───────────────────────────────────────────────────────────
+function ShopBadge({ shop }) {
+  if (!shop) return null;
+  return (
+    <div className="mb-3 inline-flex max-w-full items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
+      <span className="truncate">{shop.name}</span>
+      {shop.isVerified && <span className="shrink-0">✓</span>}
+    </div>
+  );
+}
+
 export default function RealEstateCard({
   listing,
   initialFavorited = false,
@@ -410,6 +420,7 @@ export default function RealEstateCard({
               <h2 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 mb-2">
                 {listing.title}
               </h2>
+              <ShopBadge shop={listing.shop} />
 
               {/* Location */}
               <div className="flex items-center gap-1 text-gray-500 text-xs mb-3">

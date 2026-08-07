@@ -8,25 +8,10 @@ const { cloudinary } = require("../config/cloudinary");
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-const verifyTurnstileToken = async (token, remoteip) => {
-  if (!token) return false;
-  const params = new URLSearchParams();
-  params.append("secret", process.env.TURNSTILE_SECRET_KEY);
-  params.append("response", token);
-  if (remoteip) params.append("remoteip", remoteip);
-
-  try {
-    const response = await fetch(
-      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-      { method: "POST", body: params }
-    );
-    const data = await response.json();
-    return data.success === true;
-  } catch (err) {
-    console.error("Erreur vérification Turnstile:", err.message);
-    return false;
-  }
-};
+function normalizeOptional(value) {
+  const normalized = typeof value === "string" ? value.trim() : value;
+  return normalized || null;
+}
 
 // Inscription
 const register = async (req, res) => {
@@ -40,20 +25,29 @@ const register = async (req, res) => {
       role,
       companyName,
       companyWebsite,
-      turnstileToken,
     } = req.body;
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const normalizedRole = role || "citizen";
 
-    // Vérification anti-bot (Cloudflare Turnstile)
-    const isHuman = await verifyTurnstileToken(turnstileToken, req.ip);
-    if (!isHuman) {
-      return res.status(400).json({
-        message: "Vérification anti-robot échouée, veuillez réessayer",
-      });
+    if (!String(name || "").trim()) {
+      return res.status(400).json({ message: "Nom requis" });
+    }
+    if (!normalizedEmail || !normalizedEmail.includes("@")) {
+      return res.status(400).json({ message: "Email invalide" });
+    }
+    if (!password || String(password).length < 6) {
+      return res.status(400).json({ message: "Mot de passe trop court" });
+    }
+    if (!String(phone || "").trim()) {
+      return res.status(400).json({ message: "Telephone requis" });
+    }
+    if (!String(city || "").trim()) {
+      return res.status(400).json({ message: "Ville requise" });
     }
 
     // Vérifier si l'email existe déjà
     const existingUser = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     });
 
     if (existingUser) {
@@ -61,13 +55,13 @@ const register = async (req, res) => {
     }
 
     // Validation business
-    if (role === "business" && !companyName) {
+    if (normalizedRole === "business" && !String(companyName || "").trim()) {
       return res.status(400).json({ message: "Nom de la société requis" });
     }
 
     // Récupérer le rôle
     const userRole = await prisma.role.findUnique({
-      where: { name: role || "citizen" },
+      where: { name: normalizedRole },
     });
 
     if (!userRole) {
@@ -75,41 +69,45 @@ const register = async (req, res) => {
     }
 
     // Hasher le mot de passe
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(String(password), 10);
 
     // Upload logo si présent
     let companyLogoUrl = null;
     if (req.file) {
-      const result = await new Promise((resolve, reject) => {
-        cloudinary.uploader
-          .upload_stream(
-            {
-              folder: "madinatti/logos",
-              transformation: [{ width: 300, height: 300, crop: "limit" }],
-            },
-            (error, result) => {
-              if (error) reject(error);
-              else resolve(result);
-            },
-          )
-          .end(req.file.buffer);
-      });
-      companyLogoUrl = result.secure_url;
+      try {
+        const result = await new Promise((resolve, reject) => {
+          cloudinary.uploader
+            .upload_stream(
+              {
+                folder: "madinatti/logos",
+                transformation: [{ width: 300, height: 300, crop: "limit" }],
+              },
+              (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+              },
+            )
+            .end(req.file.buffer);
+        });
+        companyLogoUrl = result.secure_url;
+      } catch (uploadError) {
+        console.warn("Company logo upload skipped:", uploadError.message);
+      }
     }
 
     // Créer l'utilisateur
     const user = await prisma.user.create({
       data: {
-        name,
-        email,
+        name: String(name).trim(),
+        email: normalizedEmail,
         password: hashedPassword,
-        phone,
-        city,
+        phone: normalizeOptional(phone),
+        city: normalizeOptional(city),
         profileCompleted: true,
         roleId: userRole.id,
-        companyName: role === "business" ? companyName : null,
-        companyWebsite: role === "business" ? companyWebsite : null,
-        companyLogo: role === "business" ? companyLogoUrl : null,
+        companyName: normalizedRole === "business" ? String(companyName).trim() : null,
+        companyWebsite: normalizedRole === "business" ? normalizeOptional(companyWebsite) : null,
+        companyLogo: normalizedRole === "business" ? companyLogoUrl : null,
       },
     });
 
@@ -131,6 +129,10 @@ const register = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error("register error:", error);
+    if (error.code === "P2002") {
+      return res.status(400).json({ message: "Cet email est deja utilise" });
+    }
     res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 };
@@ -138,18 +140,22 @@ const register = async (req, res) => {
 // Connexion
 const login = async (req, res) => {
   try {
-    const { email, password, turnstileToken } = req.body;
-
-    const isHuman = await verifyTurnstileToken(turnstileToken, req.ip);
-    if (!isHuman) {
-      return res.status(400).json({
-        message: "Vérification anti-robot échouée, veuillez réessayer",
-      });
-    }
+    const { email, password } = req.body;
 
     const user = await prisma.user.findUnique({
       where: { email },
-      include: { role: true },
+      include: {
+        role: true,
+        subscriptions: {
+          where: {
+            status: "ACTIVE",
+            expiresAt: { gt: new Date() },
+          },
+          orderBy: { startedAt: "desc" },
+          take: 1,
+          include: { plan: true },
+        },
+      },
     });
 
     if (!user) {
@@ -176,6 +182,8 @@ const login = async (req, res) => {
       { expiresIn: "7d" },
     );
 
+    const activeSubscription = user.subscriptions?.[0] || null;
+
     res.status(200).json({
       message: "Connexion réussie",
       token,
@@ -183,7 +191,22 @@ const login = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
+        city: user.city,
+        avatar: user.avatar,
+        companyName: user.companyName,
+        companyLogo: user.companyLogo,
+        companyWebsite: user.companyWebsite,
         role: user.role.name,
+        subscription: activeSubscription
+          ? {
+              ...activeSubscription,
+              plan: {
+                ...activeSubscription.plan,
+                price: Number(activeSubscription.plan.price),
+              },
+            }
+          : null,
       },
     });
   } catch (error) {
@@ -424,6 +447,36 @@ const getMe = async (req, res) => {
         role: {
           select: { name: true }, // ← on récupère le nom du rôle
         },
+        subscriptions: {
+          where: {
+            status: "ACTIVE",
+            expiresAt: { gt: new Date() },
+          },
+          orderBy: { startedAt: "desc" },
+          take: 1,
+          select: {
+            id: true,
+            status: true,
+            startedAt: true,
+            expiresAt: true,
+            planId: true,
+            plan: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                durationDays: true,
+                maxListings: true,
+                maxPhotos: true,
+                canBoost: true,
+                canSponsor: true,
+                hasBadge: true,
+                hasStatistics: true,
+                hasChat: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -435,10 +488,22 @@ const getMe = async (req, res) => {
       return res.status(403).json({ message: "Compte désactivé" });
     }
 
+    const activeSubscription = user.subscriptions?.[0] || null;
+    const { subscriptions, ...safeUser } = user;
+
     res.json({
       user: {
-        ...user,
+        ...safeUser,
         role: user.role.name, // ← "business" | "citizen" | "admin"
+        subscription: activeSubscription
+          ? {
+              ...activeSubscription,
+              plan: {
+                ...activeSubscription.plan,
+                price: Number(activeSubscription.plan.price),
+              },
+            }
+          : null,
       },
     });
   } catch (error) {

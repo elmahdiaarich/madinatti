@@ -1,151 +1,115 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
-  AreaChart,
   Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
 } from "recharts";
-import { Eye, LayoutGrid, MessageSquare, TrendingUp, Sparkles } from "lucide-react";
+import {
+  BadgeCheck,
+  BarChart3,
+  CheckCircle2,
+  Copy,
+  Eye,
+  HeartPulse,
+  ImageOff,
+  LayoutGrid,
+  MessageSquare,
+  PhoneOff,
+  Rocket,
+  Store,
+  TrendingUp,
+  Wand2,
+} from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { statsService } from "@/services/statsService";
 
-// Couleurs reprises des tokens de globals.css (--color-primary, --color-accent, ...)
 const COLORS = {
   primary: "#A7D129",
-  primaryDark: "#2D5016",
+  dark: "#2D5016",
+  mint: "#E8F5D0",
   accent: "#FF8C42",
 };
 
-// ───────────────────────────────────────────────────────────────────────────
-// MODE DÉMO — données factices pour voir le rendu de la page avant d'avoir
-// assez de vraies vues en base. Mettre MOCK_MODE à false pour repasser sur
-// l'API réelle (statsService). À retirer entièrement une fois en production.
-// ───────────────────────────────────────────────────────────────────────────
-const MOCK_MODE = true;
-
-const MOCK_DAILY_VIEWS = [
-  12, 18, 9, 25, 31, 14, 20, 17, 29, 35, 22, 19, 26, 33, 15, 21, 28, 24, 30,
-  38, 17, 23, 27, 32, 19, 14, 25, 29, 33, 21,
-];
-
-const buildMockTimeline = () =>
-  MOCK_DAILY_VIEWS.map((views, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (MOCK_DAILY_VIEWS.length - 1 - i));
-    return { date: d.toISOString().split("T")[0], views };
-  });
-
-const MOCK_OVERVIEW = {
-  totalViews: 742,
-  totalListings: 50,
-  totalApplications: 32,
-  totalInquiries: 15,
-  conversionRate: 6.3,
-  jobs: {
-    count: 36,
-    viewsCount: 612,
-    applications: 32,
-    statusBreakdown: { APPROVED: 28, PENDING: 5, REJECTED: 3 },
-  },
-  realEstate: {
-    count: 14,
-    viewsCount: 130,
-    inquiries: 15,
-    statusBreakdown: { APPROVED: 11, PENDING: 2, REJECTED: 1 },
-  },
-};
-
-const MOCK_TOP_LISTINGS = [
-  { id: "mock-1", type: "JOB", title: "Développeur Full-Stack React / Node.js", views: 145, conversions: 12, status: "APPROVED", isFeatured: true },
-  { id: "mock-2", type: "REAL_ESTATE", title: "Appartement 3 pièces vue mer — Tanger", views: 98, conversions: 6, status: "APPROVED", isFeatured: false },
-  { id: "mock-3", type: "JOB", title: "Comptable senior — CDI", views: 87, conversions: 9, status: "APPROVED", isFeatured: true },
-  { id: "mock-4", type: "REAL_ESTATE", title: "Villa avec piscine — Marrakech", views: 76, conversions: 3, status: "APPROVED", isFeatured: false },
-  { id: "mock-5", type: "JOB", title: "Assistant marketing digital", views: 64, conversions: 4, status: "PENDING", isFeatured: false },
-];
-
-const MOCK_BOOST_IMPACT = {
-  boostedAvgViews: 116.5,
-  regularAvgViews: 58.2,
-  boostedCount: 12,
-  regularCount: 38,
-};
-
-function StatCard({ icon: Icon, label, value, sublabel }) {
+function KpiCard({ icon: Icon, label, value, sublabel, tone = "green" }) {
+  const tones = {
+    green: "bg-[#E8F5D0] text-[#2D5016]",
+    blue: "bg-blue-50 text-blue-700",
+    orange: "bg-orange-50 text-orange-600",
+    gray: "bg-gray-100 text-gray-700",
+  };
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between">
-        <p className="text-sm text-gray-500">{label}</p>
-        {Icon && (
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-mint text-primary-dark">
-            <Icon size={16} strokeWidth={2} />
-          </span>
-        )}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-gray-500">{label}</p>
+          <p className="mt-2 text-3xl font-extrabold text-gray-950">{value}</p>
+        </div>
+        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tones[tone]}`}>
+          <Icon size={19} />
+        </span>
       </div>
-      <p className="mt-2 text-3xl font-semibold text-primary-dark">{value}</p>
-      {sublabel && <p className="mt-1 text-xs text-gray-400">{sublabel}</p>}
+      {sublabel && <p className="mt-3 text-xs text-gray-500">{sublabel}</p>}
     </div>
   );
 }
 
-function EmptyState({ message }) {
+function HealthItem({ icon: Icon, label, value, tone = "gray" }) {
+  const color = tone === "bad" ? "text-red-600 bg-red-50" : tone === "warn" ? "text-orange-600 bg-orange-50" : "text-[#2D5016] bg-[#E8F5D0]";
   return (
-    <div className="flex h-40 flex-1 items-center justify-center text-center text-sm text-gray-400">
-      {message}
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white p-3">
+      <div className="flex items-center gap-2">
+        <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${color}`}><Icon size={17} /></span>
+        <span className="text-sm font-semibold text-gray-700">{label}</span>
+      </div>
+      <strong className="text-lg text-gray-950">{value}</strong>
     </div>
   );
+}
+
+function moduleLabel(type) {
+  if (type === "CAR") return "Vehicule";
+  if (type === "REAL_ESTATE") return "Immobilier";
+  if (type === "JOB") return "Emploi";
+  return type;
 }
 
 export default function StatsPage() {
   const { token } = useAuth();
-
   const [overview, setOverview] = useState(null);
   const [timeline, setTimeline] = useState([]);
   const [topListings, setTopListings] = useState([]);
   const [boostImpact, setBoostImpact] = useState(null);
-
   const [days, setDays] = useState(30);
-  const [typeFilter, setTypeFilter] = useState(""); // "" | "JOB" | "REAL_ESTATE"
-
+  const [typeFilter, setTypeFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [message, setMessage] = useState("");
 
   const loadAll = useCallback(async () => {
-    if (MOCK_MODE) {
-      const mockTimeline = buildMockTimeline().slice(-Math.min(days, MOCK_DAILY_VIEWS.length));
-      setOverview(MOCK_OVERVIEW);
-      setTimeline(mockTimeline);
-      setTopListings(MOCK_TOP_LISTINGS);
-      setBoostImpact(MOCK_BOOST_IMPACT);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-
     if (!token) return;
     setLoading(true);
     setError(null);
     try {
-      const timelineParams = { days };
-      if (typeFilter) timelineParams.type = typeFilter;
-
+      const params = { days };
+      if (typeFilter) params.type = typeFilter;
       const [overviewRes, timelineRes, topRes, boostRes] = await Promise.all([
         statsService.getOverview(token),
-        statsService.getViewsTimeline(timelineParams, token),
-        statsService.getTopListings({ limit: 5 }, token),
+        statsService.getViewsTimeline(params, token),
+        statsService.getTopListings({ limit: 8 }, token),
         statsService.getBoostImpact(token),
       ]);
-
       setOverview(overviewRes);
       setTimeline(timelineRes.timeline || []);
       setTopListings(topRes.topListings || []);
       setBoostImpact(boostRes);
     } catch (err) {
-      console.error("loadAll stats error:", err);
       setError(err.message || "Erreur lors du chargement des statistiques");
     } finally {
       setLoading(false);
@@ -156,246 +120,209 @@ export default function StatsPage() {
     loadAll();
   }, [loadAll]);
 
+  const formattedTimeline = useMemo(() => timeline.map((point) => ({
+    ...point,
+    label: new Date(point.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }),
+  })), [timeline]);
+
+  const totalConversions = overview?.totalContacts || ((overview?.totalApplications || 0) + (overview?.totalInquiries || 0));
+  const boostDelta = boostImpact?.regularAvgViews > 0
+    ? Math.round(((boostImpact.boostedAvgViews - boostImpact.regularAvgViews) / boostImpact.regularAvgViews) * 100)
+    : null;
+
   if (loading && !overview) {
-    return (
-      <div className="flex h-64 items-center justify-center text-gray-400">
-        Chargement des statistiques…
-      </div>
-    );
+    return <div className="flex h-64 items-center justify-center text-gray-400">Chargement des statistiques...</div>;
   }
 
   if (error) {
     return (
       <div className="rounded-2xl border border-red-100 bg-red-50 p-6 text-red-600">
         {error}
-        <button
-          onClick={loadAll}
-          className="ml-3 underline underline-offset-2 hover:text-red-700"
-        >
-          Réessayer
-        </button>
+        <button onClick={loadAll} className="ml-3 underline underline-offset-2 hover:text-red-700">Reessayer</button>
       </div>
     );
   }
 
-  const totalConversions =
-    (overview?.totalApplications || 0) + (overview?.totalInquiries || 0);
-
-  const formattedTimeline = timeline.map((point) => ({
-    ...point,
-    label: new Date(point.date).toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-    }),
-  }));
-
-  const boostDelta =
-    boostImpact && boostImpact.regularAvgViews > 0
-      ? Math.round(
-          ((boostImpact.boostedAvgViews - boostImpact.regularAvgViews) /
-            boostImpact.regularAvgViews) *
-            100,
-        )
-      : null;
-
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-semibold text-primary-dark">Statistiques</h1>
-        <p className="text-sm text-gray-500">
-          Performance de vos annonces emploi et immobilier.
-        </p>
+    <div className="space-y-6">
+      <section className="overflow-hidden rounded-3xl bg-[#2D5016] text-white shadow-sm">
+        <div className="grid gap-6 p-6 lg:grid-cols-[1fr_360px] lg:p-7">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-bold">
+              <BarChart3 size={14} />
+              Business cockpit
+            </div>
+            <h1 className="mt-4 text-3xl font-extrabold tracking-normal">Statistiques et performance</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/75">
+              Suivez vos vues, contacts, annonces, boutique PRO et actions utiles pour ameliorer vos resultats.
+            </p>
+          </div>
+          {overview?.boutique && (
+            <div className="rounded-2xl bg-white p-4 text-gray-950">
+              <div className="flex items-center gap-3">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#E8F5D0]">
+                  {overview.boutique.logo ? <img src={overview.boutique.logo} alt="" className="h-full w-full object-cover" /> : <Store size={24} className="text-[#2D5016]" />}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate font-extrabold">{overview.boutique.name}</p>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {overview.boutique.isVerified && <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700"><BadgeCheck size={12} /> Verifiee</span>}
+                    {overview.boutique.plan && <span className="rounded-full bg-[#E8F5D0] px-2 py-0.5 text-[11px] font-bold text-[#2D5016]">{overview.boutique.plan.name}</span>}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 flex gap-2">
+                <Link href={overview.boutique.url} className="flex-1 rounded-xl bg-[#2D5016] px-3 py-2 text-center text-sm font-extrabold text-white">Voir ma boutique</Link>
+                <button
+                  onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}${overview.boutique.url}`); setMessage("Lien boutique copie."); }}
+                  className="rounded-xl border border-gray-200 px-3 text-[#2D5016]"
+                  aria-label="Copier le lien boutique"
+                >
+                  <Copy size={17} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {message && <div className="rounded-xl border border-[#2D5016]/20 bg-[#E8F5D0] p-3 text-sm text-[#2D5016]">{message}</div>}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <KpiCard icon={Eye} label="Vues totales" value={overview?.totalViews ?? 0} />
+        <KpiCard icon={LayoutGrid} label="Annonces" value={overview?.totalListings ?? 0} sublabel={`${overview?.cars?.count ?? 0} vehicules · ${overview?.realEstate?.count ?? 0} immo · ${overview?.jobs?.count ?? 0} emploi`} />
+        <KpiCard icon={MessageSquare} label="Contacts" value={totalConversions} sublabel={`${overview?.totalApplications ?? 0} candidatures · ${overview?.totalInquiries ?? 0} demandes`} tone="blue" />
+        <KpiCard icon={TrendingUp} label="Conversion" value={`${overview?.conversionRate ?? 0}%`} tone="orange" />
+        <KpiCard icon={Store} label="Boutique visites" value={overview?.boutique?.visits ?? 0} tone="gray" />
       </div>
 
-      {/* KPI cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={Eye} label="Vues totales" value={overview?.totalViews ?? 0} />
-        <StatCard
-          icon={LayoutGrid}
-          label="Annonces publiées"
-          value={overview?.totalListings ?? 0}
-          sublabel={`${overview?.jobs?.count ?? 0} emploi · ${overview?.realEstate?.count ?? 0} immobilier`}
-        />
-        <StatCard
-          icon={MessageSquare}
-          label="Conversions"
-          value={totalConversions}
-          sublabel={`${overview?.totalApplications ?? 0} candidatures · ${overview?.totalInquiries ?? 0} demandes`}
-        />
-        <StatCard
-          icon={TrendingUp}
-          label="Taux de conversion"
-          value={`${overview?.conversionRate ?? 0}%`}
-        />
-      </div>
-
-      {/* Graphique des vues + Annonces les plus vues, côte à côte pour profiter de l'espace */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <div className="flex flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm lg:col-span-3">
+      <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
+        <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-medium text-primary-dark">Évolution des vues</h2>
+            <div>
+              <h2 className="font-extrabold text-gray-950">Evolution des vues</h2>
+              <p className="text-sm text-gray-500">Analyse par type d'annonce et periode.</p>
+            </div>
             <div className="flex flex-wrap gap-2">
-              <div className="flex rounded-lg border border-gray-200 p-0.5 text-xs">
-                {[
-                  { label: "Tout", value: "" },
-                  { label: "Emploi", value: "JOB" },
-                  { label: "Immobilier", value: "REAL_ESTATE" },
-                ].map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setTypeFilter(opt.value)}
-                    className={`rounded-md px-2.5 py-1 transition ${
-                      typeFilter === opt.value
-                        ? "bg-primary text-white"
-                        : "text-gray-500 hover:text-primary-dark"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-              <div className="flex rounded-lg border border-gray-200 p-0.5 text-xs">
-                {[7, 30, 90].map((d) => (
-                  <button
-                    key={d}
-                    onClick={() => setDays(d)}
-                    className={`rounded-md px-2.5 py-1 transition ${
-                      days === d
-                        ? "bg-primary text-white"
-                        : "text-gray-500 hover:text-primary-dark"
-                    }`}
-                  >
-                    {d}j
-                  </button>
-                ))}
-              </div>
+              <Segmented value={typeFilter} onChange={setTypeFilter} options={[["", "Tout"], ["CAR", "Vehicules"], ["REAL_ESTATE", "Immo"], ["JOB", "Emploi"]]} />
+              <Segmented value={days} onChange={setDays} options={[[7, "7j"], [30, "30j"], [90, "90j"]]} />
             </div>
           </div>
+          <ResponsiveContainer width="100%" height={310}>
+            <AreaChart data={formattedTimeline}>
+              <defs>
+                <linearGradient id="viewsFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={COLORS.primary} stopOpacity={0.45} />
+                  <stop offset="100%" stopColor={COLORS.primary} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#EEF2EA" />
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#94A3B8" }} axisLine={false} tickLine={false} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#94A3B8" }} axisLine={false} tickLine={false} width={28} />
+              <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #E5E7EB", fontSize: 12 }} formatter={(value) => [value, "Vues"]} />
+              <Area type="monotone" dataKey="views" stroke={COLORS.dark} strokeWidth={2.5} fill="url(#viewsFill)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </section>
 
-          {formattedTimeline.every((p) => p.views === 0) ? (
-            <EmptyState message="Aucune vue enregistrée sur cette période." />
-          ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <AreaChart data={formattedTimeline}>
-                <defs>
-                  <linearGradient id="viewsFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={COLORS.primary} stopOpacity={0.35} />
-                    <stop offset="100%" stopColor={COLORS.primary} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 11, fill: "#9CA3AF" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  allowDecimals={false}
-                  tick={{ fontSize: 11, fill: "#9CA3AF" }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={28}
-                />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: 8,
-                    border: "1px solid #E5E7EB",
-                    fontSize: 12,
-                  }}
-                  labelFormatter={(label) => `Le ${label}`}
-                  formatter={(value) => [value, "Vues"]}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="views"
-                  stroke={COLORS.primaryDark}
-                  strokeWidth={2}
-                  fill="url(#viewsFill)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
-        {/* Annonces les plus vues — remontée ici pour occuper l'espace à côté du graphique */}
-        <div className="flex flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm lg:col-span-2">
-          <h2 className="mb-4 font-medium text-primary-dark">Annonces les plus vues</h2>
-          {topListings.length === 0 ? (
-            <EmptyState message="Aucune annonce publiée pour le moment." />
-          ) : (
-            <ol className="flex flex-1 flex-col justify-between gap-3">
-              {topListings.map((listing, index) => (
-                <li
-                  key={`${listing.type}-${listing.id}`}
-                  className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition hover:bg-gray-50"
-                >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-mint text-xs font-semibold text-primary-dark">
-                    {index + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <p className="truncate text-sm font-medium text-gray-700">
-                        {listing.title}
-                      </p>
-                      {listing.isFeatured && (
-                        <Sparkles size={12} className="shrink-0 text-accent" />
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-400">
-                      {listing.type === "JOB" ? "Emploi" : "Immobilier"} ·{" "}
-                      {listing.conversions} conversion{listing.conversions > 1 ? "s" : ""}
-                    </p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-sm font-semibold text-primary-dark">
-                      {listing.views}
-                    </p>
-                    <p className="text-[10px] text-gray-400">vues</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          )}
-        </div>
+        <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <h2 className="font-extrabold text-gray-950">Sante des annonces</h2>
+          <div className="mt-4 space-y-2">
+            <HealthItem icon={CheckCircle2} label="Approuvees" value={overview?.listingHealth?.approved || 0} />
+            <HealthItem icon={HeartPulse} label="En attente" value={overview?.listingHealth?.pending || 0} tone="warn" />
+            <HealthItem icon={ImageOff} label="Sans image" value={overview?.listingHealth?.missingImages || 0} tone="bad" />
+            <HealthItem icon={PhoneOff} label="Sans telephone" value={overview?.listingHealth?.missingPhone || 0} tone="bad" />
+            <HealthItem icon={TrendingUp} label="Faibles vues" value={overview?.listingHealth?.lowViews || 0} tone="warn" />
+          </div>
+        </section>
       </div>
 
-      {/* Impact du boost — bandeau compact en pleine largeur */}
-      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <h2 className="font-medium text-primary-dark">Impact du boost</h2>
+      <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
+        <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <h2 className="font-extrabold text-gray-950">Top annonces</h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {topListings.map((listing) => (
+              <Link key={`${listing.type}-${listing.id}`} href={listing.href || "#"} className="group flex gap-3 rounded-xl border border-gray-100 p-3 transition hover:border-[#A7D129] hover:bg-[#F6F8F3]">
+                <div className="h-20 w-24 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                  {listing.image ? <img src={listing.image} alt="" className="h-full w-full object-cover transition group-hover:scale-105" /> : <Store className="m-auto mt-6 text-gray-300" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-[#E8F5D0] px-2 py-0.5 text-[10px] font-bold text-[#2D5016]">{moduleLabel(listing.type)}</span>
+                    {(listing.isFeatured || listing.isSponsored) && <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-bold text-orange-600">Boost</span>}
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-sm font-bold text-gray-900">{listing.title}</p>
+                  <p className="mt-1 text-xs text-gray-500">{listing.views} vues · {listing.conversions} contacts</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
 
-          {boostImpact && (boostImpact.boostedCount > 0 || boostImpact.regularCount > 0) ? (
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="rounded-xl bg-primary-mint px-4 py-2.5">
-                <p className="text-xs text-primary-dark/70">
-                  Boostées ({boostImpact.boostedCount})
-                </p>
-                <p className="text-lg font-semibold text-primary-dark">
-                  {boostImpact.boostedAvgViews} vues / annonce
-                </p>
+        <section className="space-y-5">
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <h2 className="font-extrabold text-gray-950">Impact boost</h2>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-[#E8F5D0] p-3">
+                <p className="text-xs text-[#2D5016]/70">Boostees</p>
+                <p className="text-xl font-extrabold text-[#2D5016]">{boostImpact?.boostedAvgViews || 0}</p>
+                <p className="text-xs text-[#2D5016]/70">vues / annonce</p>
               </div>
-              <div className="rounded-xl bg-gray-50 px-4 py-2.5">
-                <p className="text-xs text-gray-500">
-                  Classiques ({boostImpact.regularCount})
-                </p>
-                <p className="text-lg font-semibold text-gray-700">
-                  {boostImpact.regularAvgViews} vues / annonce
-                </p>
+              <div className="rounded-xl bg-gray-50 p-3">
+                <p className="text-xs text-gray-500">Classiques</p>
+                <p className="text-xl font-extrabold text-gray-900">{boostImpact?.regularAvgViews || 0}</p>
+                <p className="text-xs text-gray-500">vues / annonce</p>
               </div>
-              {boostDelta !== null && (
-                <p className="text-sm font-medium text-accent">
-                  +{boostDelta}% de vues en moyenne
-                </p>
-              )}
             </div>
-          ) : (
-            <p className="text-sm text-gray-400">
-              Boostez une annonce pour comparer ses performances.
-            </p>
-          )}
-        </div>
+            <p className="mt-3 text-sm font-bold text-orange-600">{boostDelta !== null ? `+${boostDelta}% de vues en moyenne` : "Boostez une annonce pour comparer."}</p>
+            <p className="mt-1 text-xs text-gray-500">{boostImpact?.extraContactsEstimate || 0} contacts supplementaires estimes.</p>
+          </div>
+
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <h2 className="font-extrabold text-gray-950">Audience</h2>
+            <div className="mt-4 space-y-3">
+              {(overview?.audience?.topCities || []).map((city) => (
+                <div key={city.city} className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-gray-600">{city.city}</span>
+                  <span className="font-bold text-[#2D5016]">{city.views} vues</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
       </div>
+
+      <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="flex items-center gap-2">
+          <Wand2 size={19} className="text-[#2D5016]" />
+          <h2 className="font-extrabold text-gray-950">Recommandations</h2>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {(overview?.recommendations?.length ? overview.recommendations : ["Continuez a publier regulierement et gardez vos annonces avec photos, prix clair et telephone visible."]).map((text) => (
+            <div key={text} className="flex gap-3 rounded-xl bg-[#F6F8F3] p-4 text-sm text-gray-700">
+              <Rocket size={17} className="mt-0.5 shrink-0 text-[#2D5016]" />
+              <p>{text}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function Segmented({ value, onChange, options }) {
+  return (
+    <div className="flex rounded-xl border border-gray-200 bg-white p-1 text-xs">
+      {options.map(([optionValue, label]) => (
+        <button
+          key={String(optionValue)}
+          type="button"
+          onClick={() => onChange(optionValue)}
+          className={`rounded-lg px-3 py-1.5 font-bold transition ${value === optionValue ? "bg-[#2D5016] text-white" : "text-gray-500 hover:text-[#2D5016]"}`}
+        >
+          {label}
+        </button>
+      ))}
     </div>
   );
 }

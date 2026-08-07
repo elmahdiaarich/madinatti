@@ -196,6 +196,7 @@ const NAV_ITEMS = [
   { key: 'miniJobs',     label: 'Mini-jobs · Profils', href: '/admin/mini-jobs', icon: IconBriefcase },
   { key: 'taskRequests', label: 'Mini-jobs · Demandes', href: '/admin/task-requests', icon: IconClipboard },
   { key: 'journalists',  label: 'Journalistes',      href: '/admin/journalists', icon: IconUserCheck },
+  { key: 'shops',        label: 'Boutiques',         href: '/admin/shops',       icon: IconCompany    },
   { key: 'categories',   label: 'Catégories',       href: '/admin/categories',  icon: IconCategories },
   { key: 'signalements', label: 'Signalements',     href: '/admin/reports',     icon: IconFlag       },
   { key: 'entreprises',  label: 'Entreprises',      href: '/admin/businesses',  icon: IconCompany    },

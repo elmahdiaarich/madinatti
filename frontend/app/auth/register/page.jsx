@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../../context/AuthContext";
 import { cities } from "morocco-cities";
@@ -8,7 +8,6 @@ import GuestRoute from "@/components/shared/GuestRoute";
 import AuthLayout from "../../../components/auth/AuthLayout";
 import PasswordInput from "../../../components/auth/PasswordInput";
 import GoogleAuth from "../../../components/auth/GoogleAuth";
-import Turnstile from "../../../components/shared/Turnstile";
 
 // Grouper les villes par région
 const citiesByRegion = cities.reduce((acc, city) => {
@@ -37,11 +36,9 @@ function RegisterForm() {
 
   const [companyLogoFile, setCompanyLogoFile] = useState(null);
   const [companyLogoPreview, setCompanyLogoPreview] = useState(null);
-  const [turnstileToken, setTurnstileToken] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState("");
-  const turnstileRef = useRef(null);
   const isBusiness = formData.role === "business";
 
   // Pré-sélectionner "business" si ?type=business
@@ -90,7 +87,6 @@ function RegisterForm() {
 
   const validateStep2 = () => {
     if (isBusiness && !formData.companyName) return "Nom de la société requis";
-    if (!turnstileToken) return "Merci de valider la vérification anti-robot";
     return null;
   };
 
@@ -101,7 +97,6 @@ function RegisterForm() {
       setError("");
       setStep(2);
     } else {
-      if (!turnstileToken) return setError("Merci de valider la vérification anti-robot");
       setError("");
       handleSubmit();
     }
@@ -121,7 +116,6 @@ function RegisterForm() {
       data.append("phone", formData.phone);
       data.append("city", formData.city);
       data.append("role", formData.role);
-      data.append("turnstileToken", turnstileToken);
       if (isBusiness) {
         data.append("companyName", formData.companyName);
         data.append("companyWebsite", formData.companyWebsite);
@@ -131,11 +125,13 @@ function RegisterForm() {
       if (res.token) router.push("/");
       else {
         setError(res.message);
-        turnstileRef.current?.reset();
-        setTurnstileToken("");
       }
-    } catch {
-      setError("Erreur serveur");
+    } catch (error) {
+      setError(
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Creation du compte impossible. Veuillez reessayer."
+      );
     } finally {
       setLoading(false);
     }
@@ -261,16 +257,6 @@ function RegisterForm() {
               </select>
             )}
 
-            {/* Pour le flow citoyen (pas de step 2), le captcha se valide ici */}
-            {!isBusiness && (
-              <Turnstile
-                ref={turnstileRef}
-                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
-                onVerify={(token) => setTurnstileToken(token)}
-                onExpire={() => setTurnstileToken("")}
-              />
-            )}
-
             <button
               type="button"
               onClick={goToNextStep}
@@ -365,14 +351,6 @@ function RegisterForm() {
                 visibilité pour vos annonces.
               </p>
             </div>
-
-            {/* Pour le flow business, le captcha se valide ici (step 2) */}
-            <Turnstile
-              ref={turnstileRef}
-              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
-              onVerify={(token) => setTurnstileToken(token)}
-              onExpire={() => setTurnstileToken("")}
-            />
 
             <div className="flex gap-3">
               <button

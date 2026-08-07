@@ -20,6 +20,8 @@ import {
   Share2,
   Heart,
   Images,
+  Play,
+  Maximize,
   Globe,
 } from "lucide-react";
 import StarRating from "@/components/explore/StarRating";
@@ -33,6 +35,7 @@ import {
 } from "@/constants/tourismCategories";
 import TourismDetailMap from "@/components/explore/TourismDetailMap";
 import CategoryImage from "@/components/explore/CategoryImage";
+import { isCurrentlyOpen } from "@/lib/openStatus";
 
 const FIELD_ICONS = {
   contactPhone: Phone,
@@ -42,13 +45,27 @@ const FIELD_ICONS = {
 };
 
 const FacebookIcon = (props) => (
-  <svg viewBox="0 0 24 24" width={16} height={16} fill="currentColor" {...props}>
+  <svg
+    viewBox="0 0 24 24"
+    width={16}
+    height={16}
+    fill="currentColor"
+    {...props}
+  >
     <path d="M22 12a10 10 0 1 0-11.5 9.9v-7H8v-2.9h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.4h-1.3c-1.2 0-1.6.8-1.6 1.6v1.9H16l-.4 2.9h-2.1v7A10 10 0 0 0 22 12z" />
   </svg>
 );
 
 const InstagramIcon = (props) => (
-  <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+  <svg
+    viewBox="0 0 24 24"
+    width={16}
+    height={16}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    {...props}
+  >
     <rect x="2" y="2" width="20" height="20" rx="5" />
     <circle cx="12" cy="12" r="4" />
     <line x1="17.5" y1="6.5" x2="17.5" y2="6.5" />
@@ -93,6 +110,7 @@ export default function TourismDetailPage() {
   const [activeImage, setActiveImage] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [activeMedia, setActiveMedia] = useState(0);
 
   const [showReport, setShowReport] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
@@ -100,7 +118,9 @@ export default function TourismDetailPage() {
 
   useEffect(() => {
     if (!id) {
-      console.warn("TourismDetailPage: no `id` from useParams(), aborting fetch.");
+      console.warn(
+        "TourismDetailPage: no `id` from useParams(), aborting fetch.",
+      );
       return;
     }
     let cancelled = false;
@@ -110,7 +130,8 @@ export default function TourismDetailPage() {
       setError(null);
       try {
         const raw = await tourismService.getById(id);
-        const resolved = raw && typeof raw === "object" && "data" in raw ? raw.data : raw;
+        const resolved =
+          raw && typeof raw === "object" && "data" in raw ? raw.data : raw;
         if (!cancelled) setListing(resolved || null);
       } catch (err) {
         console.error("Failed to load tourism listing", err);
@@ -146,6 +167,11 @@ export default function TourismDetailPage() {
   }, [user, id]);
 
   const images = listing?.images?.length ? listing.images : [];
+  const hasVideo = !!listing?.videoUrl;
+  const media = [
+    ...(hasVideo ? [{ type: "video", url: listing.videoUrl }] : []),
+    ...images.map((img) => ({ type: "image", url: img.url })),
+  ];
 
   const goToImage = useCallback(
     (delta) => {
@@ -237,11 +263,11 @@ export default function TourismDetailPage() {
   const hasCoords = listing.latitude != null && listing.longitude != null;
 
   // Social link helpers
-// Social link helpers
-const facebookUrl = listing.facebook;
-const instagramUrl = listing.instagram;
-const websiteUrl = listing.website;
-const hasSocialLinks = facebookUrl || instagramUrl || websiteUrl;
+  // Social link helpers
+  const facebookUrl = listing.facebook;
+  const instagramUrl = listing.instagram;
+  const websiteUrl = listing.website;
+  const hasSocialLinks = facebookUrl || instagramUrl || websiteUrl;
 
   const isDocument = listing.categoryDisplayType === "DOCUMENT";
   const pdfUrl = getListingField(listing, "pdfUrl") || listing.fileUrl;
@@ -280,16 +306,20 @@ const hasSocialLinks = facebookUrl || instagramUrl || websiteUrl;
                   {cfg.label || listing.category}
                 </span>
 
-                <h1 className="mt-3 text-3xl font-bold text-gray-900 leading-tight">{listing.name}</h1>
-                
+                <h1 className="mt-3 text-3xl font-bold text-gray-900 leading-tight">
+                  {listing.name}
+                </h1>
+
                 {listing.city && (
                   <p className="mt-2 text-sm text-gray-500 flex items-center gap-1">
-                    <MapPin size={14} /> {listing.city} {listing.neighborhood ? `(${listing.neighborhood})` : ''}
+                    <MapPin size={14} /> {listing.city}{" "}
+                    {listing.neighborhood ? `(${listing.neighborhood})` : ""}
                   </p>
                 )}
 
                 <p className="mt-4 text-sm leading-relaxed text-gray-600 whitespace-pre-line">
-                  {listing.description || "Aucune description supplémentaire disponible pour ce document."}
+                  {listing.description ||
+                    "Aucune description supplémentaire disponible pour ce document."}
                 </p>
               </div>
 
@@ -354,46 +384,84 @@ const hasSocialLinks = facebookUrl || instagramUrl || websiteUrl;
           /* Place Layout: Gallery, description, coordinates */
           <div className="bg-white rounded-2xl border border-black/[0.06] p-6 shadow-xs space-y-6">
             <div className="overflow-hidden rounded-xl bg-[var(--color-primary-mint)]">
-              {images.length > 0 ? (
+              {media.length > 0 ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={() => openLightboxAt(activeImage)}
-                    className="group relative block w-full"
-                  >
-                    <CategoryImage
-                      src={images[activeImage]?.url}
-                      alt={listing.name}
-                      icon={CategoryIcon}
-                      iconSize={40}
-                      className="h-72 w-full object-cover transition duration-300 group-hover:brightness-95 sm:h-96"
-                    />
-                    {images.length > 1 && (
+                  <div className="relative w-full">
+                    {media[activeMedia].type === "video" ? (
+                      <div className="relative w-full bg-black">
+                        <video
+                          src={media[activeMedia].url}
+                          controls
+                          className="h-72 w-full object-contain sm:h-96"
+                        />
+                        <span className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white">
+                          <Play size={12} fill="white" /> Vidéo
+                        </span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openLightboxAt(
+                            images.findIndex(
+                              (img) => img.url === media[activeMedia].url,
+                            ),
+                          )
+                        }
+                        className="group relative block w-full"
+                      >
+                        <CategoryImage
+                          src={media[activeMedia].url}
+                          alt={listing.name}
+                          icon={CategoryIcon}
+                          iconSize={40}
+                          className="h-72 w-full object-cover transition duration-300 group-hover:brightness-95 sm:h-96"
+                        />
+                      </button>
+                    )}
+                    {media.length > 1 && (
                       <span className="absolute bottom-3 right-3 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white">
-                        {activeImage + 1} / {images.length}
+                        {activeMedia + 1} / {media.length}
                       </span>
                     )}
-                  </button>
+                  </div>
 
                   <div className="flex items-center gap-2 bg-white/80 p-2 border-t">
                     <div className="flex flex-1 gap-2 overflow-x-auto">
-                      {images.slice(0, DRAWER_THRESHOLD).map((img, i) => (
+                      {media.slice(0, DRAWER_THRESHOLD).map((m, i) => (
                         <button
-                          key={img.url + i}
+                          key={m.url + i}
                           type="button"
-                          onClick={() => setActiveImage(i)}
-                          className={`h-14 w-20 shrink-0 overflow-hidden rounded-md border-2 transition ${
-                            i === activeImage
+                          onClick={() => setActiveMedia(i)}
+                          className={`relative h-14 w-20 shrink-0 overflow-hidden rounded-md border-2 transition ${
+                            i === activeMedia
                               ? "border-[var(--color-primary)]"
                               : "border-transparent opacity-70 hover:opacity-100"
                           }`}
                         >
-                          <CategoryImage
-                            src={img.url}
-                            icon={CategoryIcon}
-                            iconSize={18}
-                            className="h-full w-full object-cover"
-                          />
+                          {m.type === "video" ? (
+                            <>
+                              <video
+                                src={m.url}
+                                muted
+                                className="h-full w-full object-cover"
+                              />
+                              <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                <Play
+                                  size={14}
+                                  fill="white"
+                                  className="text-white"
+                                />
+                              </span>
+                            </>
+                          ) : (
+                            <CategoryImage
+                              src={m.url}
+                              icon={CategoryIcon}
+                              iconSize={18}
+                              className="h-full w-full object-cover"
+                            />
+                          )}
                         </button>
                       ))}
                     </div>
@@ -440,11 +508,16 @@ const hasSocialLinks = facebookUrl || instagramUrl || websiteUrl;
                       : "border-black/10 text-black/50 hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
                   } ${favLoading ? "cursor-not-allowed opacity-60" : ""}`}
                 >
-                  <Heart size={16} fill={isFavorited ? "currentColor" : "none"} />
+                  <Heart
+                    size={16}
+                    fill={isFavorited ? "currentColor" : "none"}
+                  />
                 </button>
               </div>
 
-              <h1 className="mt-3 text-2xl font-bold text-black">{listing.name}</h1>
+              <h1 className="mt-3 text-2xl font-bold text-black">
+                {listing.name}
+              </h1>
 
               <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-black/60">
                 {listing.city && (
@@ -454,8 +527,34 @@ const hasSocialLinks = facebookUrl || instagramUrl || websiteUrl;
                 )}
                 {listing.neighborhood && <span>{listing.neighborhood}</span>}
                 {listing.rating != null && (
-  <StarRating value={Number(listing.rating)} size={15} />
-)}
+                  <StarRating value={Number(listing.rating)} size={15} />
+                )}
+                {listing.hours && (
+                  <span className="flex items-center gap-2">
+                    {isCurrentlyOpen(listing.hours) !== null && (
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          isCurrentlyOpen(listing.hours)
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-600"
+                        }`}
+                      >
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            isCurrentlyOpen(listing.hours)
+                              ? "bg-green-600"
+                              : "bg-red-500"
+                          }`}
+                        />
+                        {isCurrentlyOpen(listing.hours) ? "Ouvert" : "Fermé"}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <Clock size={13} className="shrink-0" />
+                      {listing.hours}
+                    </span>
+                  </span>
+                )}
               </div>
 
               {listing.description && (
@@ -568,28 +667,36 @@ const hasSocialLinks = facebookUrl || instagramUrl || websiteUrl;
 
         {/* Reviews section */}
         <div className="mt-8 border-t border-black/[0.06] pt-6 space-y-6 bg-white p-6 rounded-2xl border shadow-xs">
-          <h3 className="text-lg font-bold text-gray-900">Avis de la communauté</h3>
-          
+          <h3 className="text-lg font-bold text-gray-900">
+            Avis de la communauté
+          </h3>
+
           <div className="space-y-4">
             <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-sm text-gray-800">Sophie Dumont</span>
+                <span className="font-semibold text-sm text-gray-800">
+                  Sophie Dumont
+                </span>
                 <span className="text-xs text-gray-400">Il y a 3 jours</span>
               </div>
               <StarRating value={5} size={12} showValue={false} />
               <p className="text-sm text-gray-600 leading-relaxed">
-                Une très belle expérience ! Les informations sont claires et fiables. Je recommande.
+                Une très belle expérience ! Les informations sont claires et
+                fiables. Je recommande.
               </p>
             </div>
 
             <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-sm text-gray-800">Amine El Fassi</span>
+                <span className="font-semibold text-sm text-gray-800">
+                  Amine El Fassi
+                </span>
                 <span className="text-xs text-gray-400">Il y a 2 semaines</span>
               </div>
               <StarRating value={4} size={12} showValue={false} />
               <p className="text-sm text-gray-600 leading-relaxed">
-                Pratique et rapide à utiliser. Les guides touristiques facilitent grandement la visite.
+                Pratique et rapide à utiliser. Les guides touristiques
+                facilitent grandement la visite.
               </p>
             </div>
           </div>
@@ -726,7 +833,7 @@ const hasSocialLinks = facebookUrl || instagramUrl || websiteUrl;
           )}
         </div>
       )}
-            {showReport && (
+      {showReport && (
         <ReportModal
           isOpen={showReport}
           targetType="TOURISM"

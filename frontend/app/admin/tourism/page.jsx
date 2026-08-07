@@ -279,6 +279,7 @@ const emptyForm = () => ({
   contactPhone: "",
   contactEmail: "",
   fileUrl: "",
+  videoUrl: "",
   latitude: "",
   longitude: "",
   mapUrl: "",
@@ -323,8 +324,10 @@ export default function AdminTourismPage() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false)
   const fileInputRef = useRef(null);
   const docInputRef = useRef(null);
+  const videoInputRef = useRef(null);
   const sessionUploadsRef = useRef([]); // uploads made THIS form session, not yet saved
   const [mapUrlError, setMapUrlError] = useState("");
 
@@ -443,6 +446,39 @@ export default function AdminTourismPage() {
     setFormOpen(true);
   };
 
+  
+  const handleVideoFilePick = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("video/")) {
+      toast.error("Seuls les fichiers vidéo sont acceptés.");
+      if (videoInputRef.current) videoInputRef.current.value = "";
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("Le fichier vidéo est trop volumineux (max 50 Mo).");
+      if (videoInputRef.current) videoInputRef.current.value = "";
+      return;
+    }
+    setUploadingVideo(true);
+    try {
+      const { url, publicId } = await uploadService.uploadVideo(file, token);
+      sessionUploadsRef.current.push({ publicId, resourceType: "video" });
+      setFormData((prev) => ({ ...prev, videoUrl: url }));
+      setErrors((prev) => ({ ...prev, videoUrl: undefined }));
+    } catch (err) {
+      console.error(err);
+      toast.error("Échec de l'upload de la vidéo.");
+    } finally {
+      setUploadingVideo(false);
+      if (videoInputRef.current) videoInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveVideo = () => {
+    setFormData((prev) => ({ ...prev, videoUrl: "" }));
+  };
+
   const handleOpenEdit = (item) => {
     sessionUploadsRef.current = []; // existing images aren't "this session's" uploads
   setEditId(item.id);
@@ -465,6 +501,7 @@ export default function AdminTourismPage() {
       facebook: item.facebook || "",
       instagram: item.instagram || "",
       website: item.website || "",
+      videoUrl: item.videoUrl || "",
       isActive: item.isActive,
       isFeatured: item.isFeatured,
       images: item.images || [],
@@ -574,6 +611,7 @@ const handleDocFilePick = async (e) => {
       mapUrl: formData.mapUrl?.trim() || null,
       rating: formData.rating !== "" ? parseFloat(formData.rating) : null,
       prix: formData.prix !== "" ? parseFloat(formData.prix) : null,
+      videoUrl: formData.videoUrl?.trim() || null,
       hours: formData.hours?.trim() || null,
       facebook: formData.facebook?.trim() || null,
       instagram: formData.instagram?.trim() || null,
@@ -998,6 +1036,21 @@ setFormOpen(false);
                 )}
               </div>
 
+                              {viewItem.videoUrl && (
+                  <div className="mt-4">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      Vidéo promotionnelle
+                    </span>
+                    <div className="mt-1 overflow-hidden rounded-xl border border-gray-200 bg-black">
+                      <video
+                        src={viewItem.videoUrl}
+                        controls
+                        className="w-full h-48 object-contain"
+                      />
+                    </div>
+                  </div>
+                )}
+
               {viewItem.latitude != null && viewItem.longitude != null && (
                 <div>
                   <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -1406,6 +1459,55 @@ setFormOpen(false);
                   L'étoile marque la photo de couverture affichée dans les
                   listes.
                 </p>
+              </div>
+
+                            {/* Section 4.5: Vidéo */}
+              <div className="space-y-4">
+                <h3 className="text-xs font-semibold text-[#2D5016] uppercase tracking-wide border-b pb-1 border-gray-100">
+                  Vidéo
+                </h3>
+
+                <Field label="Vidéo promotionnelle (facultatif)" error={errors.videoUrl}>
+                  <div className="flex items-center gap-3">
+                    {formData.videoUrl && (
+                      <div className="flex items-center gap-2">
+                        <video
+                          src={formData.videoUrl}
+                          controls
+                          className="h-24 w-40 rounded-xl border border-gray-200 object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleRemoveVideo}
+                          className="rounded-full bg-white/80 p-1.5 text-gray-500 hover:text-red-600 border border-gray-200 shadow-sm"
+                          title="Supprimer la vidéo"
+                        >
+                          <IconTrash />
+                        </button>
+                      </div>
+                    )}
+                    {!formData.videoUrl && (
+                      <label
+                        className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3.5 py-2.5 text-sm font-medium transition ${
+                          errors.videoUrl
+                            ? "border-red-300 text-red-600"
+                            : "border-gray-200 text-gray-600 hover:border-[#2D5016] hover:text-[#2D5016]"
+                        }`}
+                      >
+                        <IconUpload />
+                        {uploadingVideo ? "Envoi..." : "Choisir une vidéo"}
+                        <input
+                          ref={videoInputRef}
+                          type="file"
+                          accept="video/*"
+                          className="hidden"
+                          onChange={handleVideoFilePick}
+                          disabled={uploadingVideo}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </Field>
               </div>
 
               {/* Section 5: JSON Attributes */}

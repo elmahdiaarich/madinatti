@@ -95,6 +95,7 @@ async function createListing(req, res) {
     });
   } catch (err) {
     console.error('[createListing]', err);
+    if (err.status) return res.status(err.status).json({ success: false, message: err.message });
     if (err.code === 'P2002')
       return res.status(409).json({ success: false, message: 'Slug conflict. Adjust the title.' });
     return res.status(500).json({ success: false, message: 'Internal server error' });
