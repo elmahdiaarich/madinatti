@@ -1,5 +1,4 @@
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require('../config/db');
 const { cloudinary } = require("../config/cloudinary");
 const { cities: MOROCCO_CITIES } = require("morocco-cities");
 const { isCurrentlyOpen } = require("../utils/openStatus");

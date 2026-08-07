@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MapPin } from "lucide-react";
 import { HEALTH_SUBCATEGORY_MAP } from "@/constants/healthCategories";
@@ -119,6 +119,7 @@ export default function GoogleHealthMap({
   const mapRef = useRef(null);
   const providerRef = useRef(null);
   const markersRef = useRef([]);
+  const [mapReady, setMapReady] = useState(false);
 
   const pins = useMemo(
     () => (places || []).filter((p) => p.latitude != null && p.longitude != null),
@@ -155,6 +156,7 @@ export default function GoogleHealthMap({
           });
         });
         mapRef.current = map;
+        setMapReady(true);
       });
     };
 
@@ -196,6 +198,7 @@ export default function GoogleHealthMap({
             west: sw.lng(),
           });
         });
+        setMapReady(true);
       })
       .catch(initLeaflet);
 
@@ -204,13 +207,14 @@ export default function GoogleHealthMap({
       if (providerRef.current === "leaflet" && mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
+        setMapReady(false);
       }
     };
   }, [center, onBoundsChanged]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !mapReady) return;
 
     if (providerRef.current === "google") {
       const maps = window.google?.maps;
@@ -258,7 +262,7 @@ export default function GoogleHealthMap({
         if (!bounds.length && center) map.setView([center.lat, center.lng], DEFAULT_ZOOM);
       });
     }
-  }, [pins, selectedId, onSelect, center]);
+  }, [pins, selectedId, onSelect, center, mapReady]);
 
   return (
     <div className="relative h-full min-h-[320px] w-full overflow-hidden bg-gray-50">

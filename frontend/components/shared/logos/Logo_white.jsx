@@ -1,8 +1,13 @@
+import Image from "next/image";
+
 export default function Logo() {
   return (
-    <img
+    <Image
       src="/logo-new.svg"
-      alt="Madinatti Ma Ville My Town"
+      alt="Madinatti A Ville"
+      width={512}
+      height={370}
+      priority
       className="h-16 w-auto object-contain bg-white"
     />
   );

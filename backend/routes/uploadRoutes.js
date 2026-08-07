@@ -1,15 +1,20 @@
 // backend/routes/uploadRoutes.js
 const express = require('express');
-const { upload } = require('../config/cloudinary'); // same file you pasted
+const { upload } = require('../config/cloudinary');
 const { uploadImage, uploadDocument, uploadVideo, deleteUpload } = require('../controllers/uploadController');
 const authMiddleware = require('../middlewares/authMiddleware');
+const roleMiddleware = require('../middlewares/roleMiddleware'); // Import role checks
 
 const router = express.Router();
 
-// Both routes require an authenticated admin — swap `protect` for whatever
-// your other admin routes use (e.g. `verifyToken`, `isAdmin`, etc.)
+// Accessible to citizens/businesses for attaching Event images
 router.post('/', authMiddleware, upload.single('file'), uploadImage);
-router.post('/document', authMiddleware, upload.single('file'), uploadDocument);
-router.post('/video', authMiddleware, upload.single('file'), uploadVideo);
-router.delete('/', authMiddleware, deleteUpload);
+
+// Restricted to Admins only (tourism documents and press videos)
+router.post('/document', authMiddleware, roleMiddleware('admin'), upload.single('file'), uploadDocument);
+router.post('/video', authMiddleware, roleMiddleware('admin'), upload.single('file'), uploadVideo);
+
+// RESTRICTED TO ADMINS ONLY (prevents BOLA vulnerability)
+router.delete('/', authMiddleware, roleMiddleware('admin'), deleteUpload);
+
 module.exports = router;

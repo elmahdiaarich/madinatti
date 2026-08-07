@@ -57,6 +57,8 @@ const CATEGORIES = [
   { name: 'Dentistes',                slug: 'dentist',              module: 'sante', displayType: 'PLACE' },
   { name: 'Centres de radiologie',    slug: 'radiology-center',     module: 'sante', displayType: 'PLACE' },
   { name: 'Parapharmacies',           slug: 'parapharmacy',         module: 'sante', displayType: 'PLACE' },
+  // Education
+  { name: 'Education',                slug: 'education',            module: 'education', displayType: 'PLACE' },
   // Evenements
   { name: 'Theatre et spectacle',      slug: 'theatre-spectacle',      module: 'events', displayType: 'PLACE' },
   { name: 'Concert et musique',        slug: 'concert-musique',        module: 'events', displayType: 'PLACE' },
@@ -111,7 +113,7 @@ const CATEGORIES = [
 async function seedCategories(prisma) {
   console.log('🌱 Seeding categories...');
 
-  const result = { emploi: {}, immobilier: {}, automobile: {}, tourisme: {} ,'mini-jobs': {}, 'espaces-pro': {}, sante: {}, events: {}};
+  const result = { emploi: {}, immobilier: {}, automobile: {}, tourisme: {} ,'mini-jobs': {}, 'espaces-pro': {}, sante: {}, education: {}, events: {}};
 
   for (const cat of CATEGORIES) {
     const record = await prisma.category.upsert({

@@ -219,6 +219,7 @@ export async function getSidebarCounts(token = null) {
       // TaskRequest has no PENDING concept (publishes immediately, reactive
       // moderation only) — no meaningful pending-queue badge for it.
       taskRequests: 0,
+      education:    0,
       // news retiré : plus de file de modération, plus de badge pertinent
       signalements: openReports,
       entreprises:  0,
@@ -226,7 +227,7 @@ export async function getSidebarCounts(token = null) {
       tourisme:     0,
     }
   } catch {
-    return { overview: 0, emploi: 0, immobilier: 0, vehicule: 0, miniJobs: 0, taskRequests: 0, signalements: 0, entreprises: 0, utilisateurs: 0 }
+    return { overview: 0, emploi: 0, immobilier: 0, vehicule: 0, miniJobs: 0, taskRequests: 0, education: 0, signalements: 0, entreprises: 0, utilisateurs: 0 }
   }
 }
 
