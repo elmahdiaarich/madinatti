@@ -1,7 +1,7 @@
 // prisma/seeds/realEstate.seed.js
 
-const { PrismaClient } = require('@prisma/client');
 const { cities: moroccoCities } = require('morocco-cities')
+const prisma = require('../../config/db');
 
 // ─── Build city → region lookup from morocco-cities ───────────────────────────
 // Keyed by city name for O(1) lookup when populating listings.

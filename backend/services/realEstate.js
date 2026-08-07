@@ -1,5 +1,5 @@
-const { PrismaClient, Prisma } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../config/db');
+const { Prisma } = require('@prisma/client'); // just utilities, no new client
 const { cloudinary } = require("../config/cloudinary");
 const { cities: moroccoCities } = require('morocco-cities');
 const { prepareListingOwnership } = require('./shopService');

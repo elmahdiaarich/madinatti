@@ -23,6 +23,7 @@ import {
   Newspaper,
   Compass,
   Factory,
+  GraduationCap,
   CalendarDays,
   Moon,
   Sun,
@@ -45,6 +46,7 @@ const SUB_NAV_LINKS = [
   { label: "Evenements", href: "/evenements", icon: CalendarDays },
   { label: "Tourisme", href: "/tourisme", icon: Compass },
   { label: "Industrie", href: "/industrie", icon: Factory },
+  { label: "Education", href: "/education", icon: GraduationCap },
   { label: "Santé", href: "/sante", icon: HeartPulse },
 ];
 
@@ -52,7 +54,7 @@ const SUB_NAV_LINKS = [
 const PRIMARY_SUB_NAV_LINKS = SUB_NAV_LINKS.slice(0, 5);
 // Repliés dans "Plus" en tablette (768–1023px), affichés en ligne dès le desktop (lg+)
 const SECONDARY_SUB_NAV_LINKS = SUB_NAV_LINKS.slice(5);
- /* const SUB_NAV_LINKS = [
+/* const SUB_NAV_LINKS = [
   { label: "Emploi", href: "/jobs" },
   { label: "Immobilier", href: "/real-estate" },
   { label: "Véhicules", href: "/cars" },
@@ -75,11 +77,13 @@ const NAV_SERVICES = [
     label: "Immobilier",
     href: "/real-estate",
     categories: [
-      "Vendre appartement",
-      "Acheter appartement",
-      "Louer maison",
-      "Déménagement",
-      "Artisans",
+      { label: "Appartement", href: "/real-estate?propertyType=APARTMENT" },
+      { label: "Villa", href: "/real-estate?propertyType=VILLA" },
+      { label: "Maison", href: "/real-estate?propertyType=HOUSE" },
+      { label: "Studio", href: "/real-estate?propertyType=STUDIO" },
+      { label: "Terrain", href: "/real-estate?propertyType=LAND" },
+      { label: "Bureau", href: "/real-estate?propertyType=OFFICE" },
+      { label: "Commerce", href: "/real-estate?propertyType=SHOP" },
     ],
   },
   {
@@ -289,14 +293,20 @@ function AddAccountForm({
           Ajouter un compte
         </button>
       ) : (
-        <form onSubmit={handleAddAccountSubmit} className="flex flex-col gap-2 pt-1 pb-1">
+        <form
+          onSubmit={handleAddAccountSubmit}
+          className="flex flex-col gap-2 pt-1 pb-1"
+        >
           <div className="flex items-center justify-between">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
               Nouveau Compte
             </p>
             <button
               type="button"
-              onClick={() => { setShowAddAccount(false); setAddError(""); }}
+              onClick={() => {
+                setShowAddAccount(false);
+                setAddError("");
+              }}
               className="text-gray-400 hover:text-gray-600"
             >
               <X size={12} />
@@ -309,7 +319,9 @@ function AddAccountForm({
             autoFocus
             autoComplete="username"
             value={addForm.email}
-            onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))}
+            onChange={(e) =>
+              setAddForm((f) => ({ ...f, email: e.target.value }))
+            }
             className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#A7D129] transition"
           />
           <input
@@ -318,10 +330,14 @@ function AddAccountForm({
             required
             autoComplete="current-password"
             value={addForm.password}
-            onChange={(e) => setAddForm((f) => ({ ...f, password: e.target.value }))}
+            onChange={(e) =>
+              setAddForm((f) => ({ ...f, password: e.target.value }))
+            }
             className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#A7D129] transition"
           />
-          {addError && <p className="text-[10px] text-red-500 font-medium">{addError}</p>}
+          {addError && (
+            <p className="text-[10px] text-red-500 font-medium">{addError}</p>
+          )}
           <div className="flex gap-2 mt-0.5">
             <button
               type="submit"
@@ -332,7 +348,10 @@ function AddAccountForm({
             </button>
           </div>
           <div className="scale-90 origin-top">
-            <GoogleAuth onSuccess={() => setUserMenuOpen(false)} redirect={false} />
+            <GoogleAuth
+              onSuccess={() => setUserMenuOpen(false)}
+              redirect={false}
+            />
           </div>
         </form>
       )}
@@ -441,21 +460,24 @@ function CategoriesDrawer({
                           >
                             Voir tout — {svc.label} →
                           </button>
-                          {svc.categories.map((cat) => {
-                            const isObj = typeof cat === "object" && cat !== null;
-                            const key = isObj ? cat.label : cat;
-                            const label = isObj ? cat.label : cat;
-                            return (
-                              <button
-                                key={key}
-                                onClick={() => handleGo(svc.href, cat)}
-                                className="w-full flex items-center gap-2 text-left px-8 py-2 text-sm text-gray-600 hover:bg-[#E8F5D0] hover:text-[#2D5016] transition-colors"
-                              >
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#7BA428] shrink-0" />
-                                {label}
-                              </button>
-                            );
-                          })}
+                          <div className="max-h-[280px] overflow-y-auto">
+                            {svc.categories.map((cat) => {
+                              const isObj =
+                                typeof cat === "object" && cat !== null;
+                              const key = isObj ? cat.label : cat;
+                              const label = isObj ? cat.label : cat;
+                              return (
+                                <button
+                                  key={key}
+                                  onClick={() => handleGo(svc.href, cat)}
+                                  className="w-full flex items-center gap-2 text-left px-8 py-2 text-sm text-gray-600 hover:bg-[#E8F5D0] hover:text-[#2D5016] transition-colors"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-[#7BA428] shrink-0" />
+                                  {label}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -707,21 +729,23 @@ export default function Navbar() {
                 >
                   Voir tout — {svc.label} →
                 </a>
-                {svc.categories.map((cat) => {
-                  const isObj = typeof cat === "object" && cat !== null;
-                  const label = isObj ? cat.label : cat;
-                  const href = isObj ? cat.href : svc.href;
-                  return (
-                    <a
-                      key={label}
-                      href={href}
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-[#E8F5D0] hover:text-[#2D5016] transition-colors"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#7BA428] shrink-0" />
-                      {label}
-                    </a>
-                  );
-                })}
+                <div className="max-h-[320px] overflow-y-auto">
+                  {svc.categories.map((cat) => {
+                    const isObj = typeof cat === "object" && cat !== null;
+                    const label = isObj ? cat.label : cat;
+                    const href = isObj ? cat.href : svc.href;
+                    return (
+                      <a
+                        key={label}
+                        href={href}
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-[#E8F5D0] hover:text-[#2D5016] transition-colors"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#7BA428] shrink-0" />
+                        {label}
+                      </a>
+                    );
+                  })}
+                </div>
               </div>
             </motion.div>
           )}
@@ -734,7 +758,8 @@ export default function Navbar() {
   const isModuleActive = (href) =>
     pathname === href || pathname?.startsWith(href + "/");
   const role = user?.role;
-  const hasProBoutique = role === "business" && Boolean(user?.subscription?.plan?.hasBadge);
+  const hasProBoutique =
+    role === "business" && Boolean(user?.subscription?.plan?.hasBadge);
 
   // ── Shared logout buttons ─────────────────────────────────────────────────
   const LogoutButtons = () => (
@@ -784,12 +809,17 @@ export default function Navbar() {
           onClick={() => setCategoriesOpen(true)}
           className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#2D5016] transition"
         >
-          <span className="text-base leading-none">☰</span> Sélectionner une catégorie
+          <span className="text-base leading-none">☰</span> Sélectionner une
+          catégorie
         </button>
 
         <div className="flex gap-4 text-[11px] font-medium text-gray-400">
-         <a href="/#faq" className="hover:text-black transition">Aide & FAQ</a>
-          <a href="/#contact" className="hover:text-black transition">Nous contacter</a>
+          <a href="/#faq" className="hover:text-black transition">
+            Aide & FAQ
+          </a>
+          <a href="/#contact" className="hover:text-black transition">
+            Nous contacter
+          </a>
         </div>
       </div>
 
@@ -799,7 +829,10 @@ export default function Navbar() {
         onMouseLeave={handleModuleMouseLeave}
       >
         {/* LOGO */}
-        <a href="/" className="flex min-w-0 shrink-0 items-center gap-2 [&_img]:h-12 [&_img]:w-auto sm:[&_img]:h-16">
+        <a
+          href="/"
+          className="flex min-w-0 shrink-0 items-center gap-2 [&_img]:h-12 [&_img]:w-auto sm:[&_img]:h-16"
+        >
           <Logo />
         </a>
 
@@ -861,7 +894,9 @@ export default function Navbar() {
                           {LinkIcon && (
                             <LinkIcon
                               size={15}
-                              className={active ? "text-[#2D5016]" : "text-gray-400"}
+                              className={
+                                active ? "text-[#2D5016]" : "text-gray-400"
+                              }
                             />
                           )}
                           {link.label}
@@ -919,7 +954,11 @@ export default function Navbar() {
               type="button"
               onClick={toggleTheme}
               className="hidden h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition hover:border-[#A7D129] hover:text-[#2D5016] sm:flex"
-              aria-label={theme === "dark" ? "Activer le theme clair" : "Activer le theme sombre"}
+              aria-label={
+                theme === "dark"
+                  ? "Activer le theme clair"
+                  : "Activer le theme sombre"
+              }
               title={theme === "dark" ? "Theme clair" : "Theme sombre"}
             >
               {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
@@ -1007,9 +1046,9 @@ export default function Navbar() {
                                       {notif.body}
                                     </p>
                                     <p className="text-[10px] text-gray-400 mt-1">
-                                      {new Date(notif.createdAt).toLocaleDateString(
-                                        "fr-FR",
-                                      )}
+                                      {new Date(
+                                        notif.createdAt,
+                                      ).toLocaleDateString("fr-FR")}
                                     </p>
                                   </div>
                                 </div>
@@ -1083,23 +1122,23 @@ export default function Navbar() {
                         </div>
 
                         <AccountSwitcher
-  accounts={accounts}
-  user={user}
-  switchingId={switchingId}
-  onSwitch={handleSwitch}
-/>
+                          accounts={accounts}
+                          user={user}
+                          switchingId={switchingId}
+                          onSwitch={handleSwitch}
+                        />
 
-<AddAccountForm
-  showAddAccount={showAddAccount}
-  setShowAddAccount={setShowAddAccount}
-  addForm={addForm}
-  setAddForm={setAddForm}
-  addError={addError}
-  setAddError={setAddError}
-  addLoading={addLoading}
-  handleAddAccountSubmit={handleAddAccountSubmit}
-  setUserMenuOpen={setUserMenuOpen}
-/>
+                        <AddAccountForm
+                          showAddAccount={showAddAccount}
+                          setShowAddAccount={setShowAddAccount}
+                          addForm={addForm}
+                          setAddForm={setAddForm}
+                          addError={addError}
+                          setAddError={setAddError}
+                          addLoading={addLoading}
+                          handleAddAccountSubmit={handleAddAccountSubmit}
+                          setUserMenuOpen={setUserMenuOpen}
+                        />
 
                         <div className="py-1">
                           <DropdownItem
@@ -1112,7 +1151,10 @@ export default function Navbar() {
                             }
                             icon={<User size={16} />}
                             label="Mon espace"
-                            active={pathname === "/dashboard" || pathname?.startsWith("/my-space")}
+                            active={
+                              pathname === "/dashboard" ||
+                              pathname?.startsWith("/my-space")
+                            }
                             onClick={() => setUserMenuOpen(false)}
                           />
                           {hasProBoutique && (
@@ -1129,7 +1171,9 @@ export default function Navbar() {
                               href="/my-space/real-estate"
                               icon={<Home size={16} />}
                               label="Mes annonces immo"
-                              active={pathname?.startsWith("/my-space/real-estate")}
+                              active={pathname?.startsWith(
+                                "/my-space/real-estate",
+                              )}
                               onClick={() => setUserMenuOpen(false)}
                             />
                           )}
@@ -1190,7 +1234,9 @@ export default function Navbar() {
                       : "text-gray-700"
                   }`}
                 >
-                  {ModIcon && <ModIcon size={16} className="text-gray-400 shrink-0" />}
+                  {ModIcon && (
+                    <ModIcon size={16} className="text-gray-400 shrink-0" />
+                  )}
                   {mod.label}
                 </a>
               );
@@ -1234,23 +1280,23 @@ export default function Navbar() {
                   </div>
 
                   <AccountSwitcher
-  accounts={accounts}
-  user={user}
-  switchingId={switchingId}
-  onSwitch={handleSwitch}
-/>
+                    accounts={accounts}
+                    user={user}
+                    switchingId={switchingId}
+                    onSwitch={handleSwitch}
+                  />
 
-<AddAccountForm
-  showAddAccount={showAddAccount}
-  setShowAddAccount={setShowAddAccount}
-  addForm={addForm}
-  setAddForm={setAddForm}
-  addError={addError}
-  setAddError={setAddError}
-  addLoading={addLoading}
-  handleAddAccountSubmit={handleAddAccountSubmit}
-  setUserMenuOpen={setUserMenuOpen}
-/>
+                  <AddAccountForm
+                    showAddAccount={showAddAccount}
+                    setShowAddAccount={setShowAddAccount}
+                    addForm={addForm}
+                    setAddForm={setAddForm}
+                    addError={addError}
+                    setAddError={setAddError}
+                    addLoading={addLoading}
+                    handleAddAccountSubmit={handleAddAccountSubmit}
+                    setUserMenuOpen={setUserMenuOpen}
+                  />
 
                   <a
                     href={

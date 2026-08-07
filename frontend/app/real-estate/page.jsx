@@ -306,7 +306,14 @@ function RealEstatePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const heroParams = ["region", "city", "categoryId", "listingType", "search"];
+  const heroParams = [
+    "region",
+    "city",
+    "categoryId",
+    "listingType",
+    "propertyType",
+    "search",
+  ];
   const hasHeroFilters = heroParams.some((k) => searchParams.get(k));
 
   const [filters, setFilters] = useState(() => {
@@ -317,6 +324,8 @@ function RealEstatePageContent() {
       init.categoryId = searchParams.get("categoryId");
     if (searchParams.get("listingType"))
       init.listingType = searchParams.get("listingType");
+    if (searchParams.get("propertyType"))
+      init.propertyType = searchParams.get("propertyType");
     if (searchParams.get("search")) init.search = searchParams.get("search");
     return init;
   });
@@ -326,8 +335,8 @@ function RealEstatePageContent() {
   const [listings, setListings] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeType, setActiveType] = useState(null);
-  const [activeProp, setActiveProp] = useState(null);
+  const [activeType, setActiveType] = useState(searchParams.get("listingType") || null);
+  const [activeProp, setActiveProp] = useState(searchParams.get("propertyType") || null);
   const [favoritedIds, setFavoritedIds] = useState(new Set());
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [showBusinessGate, setShowBusinessGate] = useState(false);
@@ -441,7 +450,6 @@ function RealEstatePageContent() {
       {/* TOP BAR */}
       <div className="bg-white border-b border-gray-100 static md:sticky md:top-0 z-30 shadow-sm">
         <div className="max-w-[1400px] mx-auto px-4 pt-2.5 pb-0 flex flex-col gap-0">
-
           {/* ── MOBILE ONLY: category tabs (Tous / Vente / Location) ── */}
           <div className="md:hidden flex gap-1.5 overflow-x-auto no-scrollbar pb-2 px-0.5">
             {CATEGORIES.map((cat) => (
@@ -649,145 +657,145 @@ function RealEstatePageContent() {
             <RealEstateFilter onFilter={handleFilter} />
           </aside>
 
-        {/* Mobile drawer */}
-        {showFilterDrawer && (
-          <div className="md:hidden fixed inset-0 z-40">
-            <div
-              className="absolute inset-0 bg-black/40"
-              onClick={() => setShowFilterDrawer(false)}
-            />
-            <div className="absolute top-0 left-0 h-full w-[85%] max-w-[340px] bg-gray-50 shadow-2xl overflow-y-auto animate-slide-in-left">
-              <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 sticky top-0 z-10">
-                <span className="font-bold text-gray-800 text-sm">Filtres</span>
-                <button
-                  onClick={() => setShowFilterDrawer(false)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="p-3 pb-0">
-                <RealEstateFilter
-                  isMobile
-                  onFilter={handleFilter}
-                  onClose={() => setShowFilterDrawer(false)}
-                />
+          {/* Mobile drawer */}
+          {showFilterDrawer && (
+            <div className="md:hidden fixed inset-0 z-40">
+              <div
+                className="absolute inset-0 bg-black/40"
+                onClick={() => setShowFilterDrawer(false)}
+              />
+              <div className="absolute top-0 left-0 h-full w-[85%] max-w-[340px] bg-gray-50 shadow-2xl overflow-y-auto animate-slide-in-left">
+                <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 sticky top-0 z-10">
+                  <span className="font-bold text-gray-800 text-sm">
+                    Filtres
+                  </span>
+                  <button
+                    onClick={() => setShowFilterDrawer(false)}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="p-3 pb-0">
+                  <RealEstateFilter
+                    isMobile
+                    onFilter={handleFilter}
+                    onClose={() => setShowFilterDrawer(false)}
+                  />
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* GRID */}
-        <main className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <p className="text-sm text-gray-500">
-              {pagination ? (
-                <>
-                  <span className="font-semibold text-gray-800">
-                    {pagination.total}
-                  </span>{" "}
-                  annonces trouvées
-                </>
-              ) : (
-                <span className="animate-pulse bg-gray-200 rounded w-24 h-4 inline-block" />
+          {/* GRID */}
+          <main className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <p className="text-sm text-gray-500">
+                {pagination ? (
+                  <>
+                    <span className="font-semibold text-gray-800">
+                      {pagination.total}
+                    </span>{" "}
+                    annonces trouvées
+                  </>
+                ) : (
+                  <span className="animate-pulse bg-gray-200 rounded w-24 h-4 inline-block" />
+                )}
+              </p>
+
+              {fromHero && (
+                <div className="flex items-center gap-3 bg-[#E8F5D0] border border-[#A7D129] rounded-full px-4 py-1.5">
+                  <span className="text-xs font-medium text-[#2D5016]">
+                    Filtres appliqués depuis la recherche
+                  </span>
+                  <button
+                    onClick={handleResetAll}
+                    className="text-xs font-bold text-[#2D5016] hover:text-red-600 transition-colors underline underline-offset-2"
+                  >
+                    Réinitialiser
+                  </button>
+                </div>
               )}
-            </p>
+            </div>
 
-            {fromHero && (
-              <div className="flex items-center gap-3 bg-[#E8F5D0] border border-[#A7D129] rounded-full px-4 py-1.5">
-                <span className="text-xs font-medium text-[#2D5016]">
-                  Filtres appliqués depuis la recherche
-                </span>
+            {/* Mobile banner ad */}
+            <div className="md:hidden mb-4">
+              <AdPlaceholder variant="mobile-banner" />
+            </div>
+
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...Array(6)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse"
+                  >
+                    <div className="h-[260px] bg-gray-100" />
+                    <div className="p-4 space-y-3">
+                      <div className="h-5 bg-gray-100 rounded w-1/2" />
+                      <div className="h-4 bg-gray-100 rounded w-3/4" />
+                      <div className="h-3 bg-gray-100 rounded w-1/3" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : listings.length === 0 ? (
+              <div className="text-center py-24 bg-white rounded-2xl border border-gray-100">
+                <div className="text-5xl mb-4">🏠</div>
+                <p className="text-lg font-semibold text-gray-700">
+                  Aucune annonce trouvée
+                </p>
+                <p className="text-sm text-gray-400 mt-1">
+                  Essayez de modifier vos filtres
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {listings.map((l, i) => (
+                  <Fragment key={l.id}>
+                    <RealEstateCard
+                      listing={l}
+                      initialFavorited={favoritedIds.has(l.id)}
+                    />
+                    {(i + 1) % 6 === 0 && <AdPlaceholder variant="grid" />}
+                  </Fragment>
+                ))}
+              </div>
+            )}
+
+            {/* PAGINATION */}
+            {pagination && pagination.totalPages > 1 && (
+              <div className="flex justify-center gap-1.5 mt-8">
                 <button
-                  onClick={handleResetAll}
-                  className="text-xs font-bold text-[#2D5016] hover:text-red-600 transition-colors underline underline-offset-2"
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  disabled={pagination.page === 1}
+                  className="w-9 h-9 rounded-full border border-gray-200 text-gray-500 text-sm flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
                 >
-                  Réinitialiser
+                  ‹
+                </button>
+                {[...Array(pagination.totalPages)].map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handlePageChange(i + 1)}
+                    className={`w-9 h-9 rounded-full text-sm font-medium transition ${
+                      pagination.page === i + 1
+                        ? "bg-primary-dark text-white shadow-sm"
+                        : "bg-white text-primary-dark border border-gray-200 hover:border-primary-dark hover:bg-orange-50"
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+                <button
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  disabled={pagination.page === pagination.totalPages}
+                  className="w-9 h-9 rounded-full border border-gray-200 text-gray-500 text-sm flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                >
+                  ›
                 </button>
               </div>
             )}
-          </div>
-
-          {/* Mobile banner ad */}
-          <div className="md:hidden mb-4">
-            <AdPlaceholder variant="mobile-banner" />
-          </div>
-
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...Array(6)].map((_, i) => (
-                <div
-                  key={i}
-                  className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse"
-                >
-                  <div className="h-[260px] bg-gray-100" />
-                  <div className="p-4 space-y-3">
-                    <div className="h-5 bg-gray-100 rounded w-1/2" />
-                    <div className="h-4 bg-gray-100 rounded w-3/4" />
-                    <div className="h-3 bg-gray-100 rounded w-1/3" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : listings.length === 0 ? (
-            <div className="text-center py-24 bg-white rounded-2xl border border-gray-100">
-              <div className="text-5xl mb-4">🏠</div>
-              <p className="text-lg font-semibold text-gray-700">
-                Aucune annonce trouvée
-              </p>
-              <p className="text-sm text-gray-400 mt-1">
-                Essayez de modifier vos filtres
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {listings.map((l, i) => (
-                <Fragment key={l.id}>
-                  <RealEstateCard
-                    listing={l}
-                    initialFavorited={favoritedIds.has(l.id)}
-                  />
-                  {(i + 1) % 6 === 0 && (
-                    <AdPlaceholder variant="grid" />
-                  )}
-                </Fragment>
-              ))}
-            </div>
-          )}
-
-          {/* PAGINATION */}
-          {pagination && pagination.totalPages > 1 && (
-            <div className="flex justify-center gap-1.5 mt-8">
-              <button
-                onClick={() => handlePageChange(pagination.page - 1)}
-                disabled={pagination.page === 1}
-                className="w-9 h-9 rounded-full border border-gray-200 text-gray-500 text-sm flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
-              >
-                ‹
-              </button>
-              {[...Array(pagination.totalPages)].map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => handlePageChange(i + 1)}
-                  className={`w-9 h-9 rounded-full text-sm font-medium transition ${
-                    pagination.page === i + 1
-                      ? "bg-primary-dark text-white shadow-sm"
-                      : "bg-white text-primary-dark border border-gray-200 hover:border-primary-dark hover:bg-orange-50"
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                onClick={() => handlePageChange(pagination.page + 1)}
-                disabled={pagination.page === pagination.totalPages}
-                className="w-9 h-9 rounded-full border border-gray-200 text-gray-500 text-sm flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
-              >
-                ›
-              </button>
-            </div>
-          )}
-        </main>
+          </main>
         </div>
 
         <div className="hidden 2xl:block w-[160px] shrink-0">

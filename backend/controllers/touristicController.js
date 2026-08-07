@@ -1,8 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../config/db');
 const touristicService = require('../services/touristicService');
 const { validateTouristicPayload } = require('../utils/touristicValidator');
-
-const prisma = new PrismaClient();
 
 const getAllListings = async (req, res) => {
   try {

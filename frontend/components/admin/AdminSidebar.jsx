@@ -132,6 +132,16 @@ const IconHealth = () => (
   </svg>
 )
 
+const IconEducation = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M22 10l-10 -5l-10 5l10 5l10 -5z" />
+    <path d="M6 12v5c3 2 9 2 12 0v-5" />
+    <path d="M22 10v6" />
+  </svg>
+)
+
 const IconEvents = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
     fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -197,6 +207,7 @@ const NAV_ITEMS = [
   { key: 'taskRequests', label: 'Mini-jobs · Demandes', href: '/admin/task-requests', icon: IconClipboard },
   { key: 'journalists',  label: 'Journalistes',      href: '/admin/journalists', icon: IconUserCheck },
   { key: 'shops',        label: 'Boutiques',         href: '/admin/shops',       icon: IconCompany    },
+  { key: 'education',    label: 'Education',         href: '/admin/education',   icon: IconEducation  },
   { key: 'categories',   label: 'Catégories',       href: '/admin/categories',  icon: IconCategories },
   { key: 'signalements', label: 'Signalements',     href: '/admin/reports',     icon: IconFlag       },
   { key: 'entreprises',  label: 'Entreprises',      href: '/admin/businesses',  icon: IconCompany    },

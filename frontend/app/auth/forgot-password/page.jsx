@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import axios from "axios";
 import GuestRoute from "@/components/shared/GuestRoute";
 
@@ -13,7 +14,7 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
 
     try {
-      const response = await axios.post(
+      await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/auth/forgot-password`,
         { email },
       )
@@ -33,7 +34,7 @@ export default function ForgotPasswordPage() {
       <div className="min-h-screen flex items-center justify-center bg-primary-mint px-4">
         <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md">
           <div className="flex justify-center mb-5">
-            <img src="/logo-new.svg" alt="Madinatti Ma Ville My Town" className="h-16" />
+            <Image src="/logo-new.svg" alt="Madinatti A Ville" width={512} height={370} priority className="h-16 w-auto" />
           </div>
 
           <h1 className="text-3xl font-bold text-center text-primary-dark mb-2">

@@ -1,8 +1,7 @@
 'use strict';
 
-const { PrismaClient } = require('@prisma/client');
 const cloudinary = require('cloudinary').v2;
-const prisma = new PrismaClient();
+const prisma = require('../config/db');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,

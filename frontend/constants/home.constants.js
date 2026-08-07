@@ -1,8 +1,4 @@
 import {
-  Search,
-  MapPin,
-  ChevronDown,
-  ArrowRight,
   Briefcase,
   Home as HomeIcon,
   Calendar,
@@ -14,6 +10,7 @@ import {
   BookOpen,
   Factory,
   Map,
+  GraduationCap,
 } from "lucide-react";
 
 export const SERVICES = [
@@ -67,7 +64,7 @@ export const SERVICES = [
     icon: Car,
     label: "Automobile",
     description: "Véhicules neufs & occasion",
-    href: "/voitures",
+    href: "/cars",
     color: "bg-red-50 text-red-600",
     categories: ["Voitures occasion", "Voitures neuves", "Motos", "Auto info"],
   },
@@ -94,6 +91,15 @@ export const SERVICES = [
       "Pharmacie de garde",
       "Para",
     ],
+  },
+  {
+    id: "education",
+    icon: GraduationCap,
+    label: "Education",
+    description: "Ecoles, universites & formations",
+    href: "/education",
+    color: "bg-emerald-50 text-emerald-700",
+    categories: ["Ecoles", "Universites", "Instituts", "OFPPT"],
   },
   {
     id: "annonces",
