@@ -247,7 +247,8 @@ const forgotPassword = async (req, res) => {
       },
     });
 
-    const resetLink = `http://localhost:3000/auth/reset-password?token=${resetToken}`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const resetLink = `${frontendUrl}/auth/reset-password?token=${resetToken}`;
 
     await sendResetPasswordEmail(email, resetLink);
 

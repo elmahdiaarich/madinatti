@@ -1,10 +1,9 @@
 'use strict';
 
 const Parser = require('rss-parser');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../config/db');
 const { cities: moroccoCities } = require('morocco-cities');
 
-const prisma = new PrismaClient();
 
 // ── rss-parser config ──────────────────────────────────────────────────────
 // customFields capture les balises non-standards :

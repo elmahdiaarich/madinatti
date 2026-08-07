@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../config/db');
 
 const { seedTourismListings } = require('./tourism.seed'); // 1. Import the tourism seeder
 const { seedUsers }           = require('./users.seed');
@@ -16,7 +16,6 @@ const { seedEvents } = require('./events.seed');
 const { seedEventFormTemplates } = require('./eventFormTemplates.seed');
 const { seedShopSubscriptionPlans } = require('./shopSubscriptionPlans.seed');
 
-const prisma = new PrismaClient();
 
 async function main() {
   const roles      = await seedRoles(prisma);

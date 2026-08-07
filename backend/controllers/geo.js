@@ -1,26 +1,46 @@
-// controllers/geo.js  (or wherever you keep small utility controllers)
-//
-// GET /api/geo/resolve-maps-url?url=<encoded google maps url>
-//
-// Handles two cases:
-//   1. Long URLs (already contain coordinates) — no network hop needed.
-//   2. Short links (maps.app.goo.gl / goo.gl/maps) — followed server-side
-//      to their final redirect target, since the browser can't do this
-//      itself (CORS blocks reading the Location header cross-origin).
-//
-// Then attempts reverse geocoding via Nominatim to guess region/city/quartier.
-// These are BEST-EFFORT — always let the frontend show them as suggestions
-// the user confirms, not silent auto-fill, since OSM naming won't always
-// match your fixed morocco-cities list exactly.
-
 const axios = require("axios");
+const { URL } = require("url");
+
+/**
+ * Ensures the target hostname strictly belongs to the Google Maps ecosystem.
+ */
+function isValidGoogleMapsHost(hostname) {
+  if (!hostname) return false;
+  return (
+    hostname === "goo.gl" ||
+    hostname === "maps.app.goo.gl" ||
+    hostname === "google.com" ||
+    hostname.endsWith(".google.com")
+  );
+}
+
+/**
+ * Validates protocol, blocks direct IPs, and filters hosts to prevent SSRF.
+ */
+function validateUrl(urlStr) {
+  try {
+    const parsed = new URL(urlStr);
+    
+    // Enforce protocol boundaries (no file://, gopher://, etc.)
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return false;
+    }
+    
+    // Block direct IP hostnames (e.g. 127.0.0.1, 169.254.169.254, private ranges)
+    const isIp = /^[0-9.]+$/.test(parsed.hostname);
+    if (isIp) {
+      return false;
+    }
+    
+    return isValidGoogleMapsHost(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
 
 const COORD_PATTERNS = [
-  // .../@33.589,-7.603,17z  (standard "you are viewing" pin)
   /@(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/,
-  // ...!3d33.589!4d-7.603   (embedded place coordinates)
   /!3d(-?\d{1,2}\.\d+)!4d(-?\d{1,3}\.\d+)/,
-  // ...?q=33.589,-7.603  or  &query=33.589,-7.603
   /[?&](?:q|query)=(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/,
 ];
 
@@ -32,33 +52,40 @@ function extractCoords(url) {
   return null;
 }
 
-function isShortLink(url) {
-  return /goo\.gl|maps\.app\.goo\.gl/.test(url);
-}
-
+/**
+ * Securely resolves short links by intercepting and validating every single redirect hop.
+ */
 async function resolveShortLink(url) {
-  // HEAD first (cheaper); Google generally supports it. Fall back to GET.
-  try {
-    const res = await axios.head(url, {
-      maxRedirects: 5,
-      validateStatus: () => true,
+  let currentUrl = url;
+  const maxRedirects = 5;
+
+  for (let i = 0; i < maxRedirects; i++) {
+    // Validate target domain at each hop
+    if (!validateUrl(currentUrl)) {
+      throw new Error("URL non autorisée dans la chaîne de redirection.");
+    }
+
+    // Use HEAD first (standard axios redirect bypass prevention)
+    const res = await axios.head(currentUrl, {
+      maxRedirects: 0, // Stop Axios from auto-following redirects
+      validateStatus: (status) => status >= 200 && status < 400,
     });
-    if (res.request?.res?.responseUrl) return res.request.res.responseUrl;
-  } catch {
-    // fall through to GET
+
+    if (res.status >= 300 && res.status < 400 && res.headers.location) {
+      // Resolve relative redirect locations securely
+      currentUrl = new URL(res.headers.location, currentUrl).toString();
+    } else {
+      return currentUrl;
+    }
   }
-  const res = await axios.get(url, {
-    maxRedirects: 5,
-    validateStatus: () => true,
-  });
-  return res.request?.res?.responseUrl || url;
+  throw new Error("Trop de redirections.");
 }
 
 async function reverseGeocode(lat, lng) {
   try {
     const res = await axios.get("https://nominatim.openstreetmap.org/reverse", {
       params: { format: "json", lat, lon: lng, "accept-language": "fr" },
-      headers: { "User-Agent": "town-app/1.0" }, // Nominatim requires a UA
+      headers: { "User-Agent": "town-app/1.0" },
     });
     const addr = res.data?.address || {};
     return {
@@ -78,10 +105,13 @@ async function resolveMapsUrl(req, res) {
       return res.status(400).json({ success: false, message: "URL manquante" });
     }
 
-    let finalUrl = url;
-    if (isShortLink(url)) {
-      finalUrl = await resolveShortLink(url);
+    // Validate the initial input URL
+    if (!validateUrl(url)) {
+      return res.status(400).json({ success: false, message: "URL non autorisée." });
     }
+
+    // Resolve short links securely
+    const finalUrl = await resolveShortLink(url);
 
     const coords = extractCoords(finalUrl);
     if (!coords) {
@@ -97,11 +127,10 @@ async function resolveMapsUrl(req, res) {
       success: true,
       latitude: coords.lat,
       longitude: coords.lng,
-      // best-effort — frontend should treat these as suggestions, not facts
       suggested: guessed,
     });
   } catch (err) {
-    console.error("[resolveMapsUrl]", err);
+    console.error("[resolveMapsUrl]", err.message);
     return res.status(500).json({ success: false, message: "Erreur serveur" });
   }
 }

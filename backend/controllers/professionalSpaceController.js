@@ -1,7 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../config/db');
 const professionalSpaceService = require('../services/professionalSpaceService');
 
-const prisma = new PrismaClient();
 
 const getAllListings = async (req, res) => {
   try {
