@@ -6,8 +6,7 @@
 
 'use strict';
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../config/db');
 const { cloudinary } = require('../config/cloudinary');
 const { cities: moroccoCities } = require('morocco-cities');
 const { getVehicleCatalog } = require('../data/vehicleCatalog');

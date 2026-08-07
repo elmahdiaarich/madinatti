@@ -3,6 +3,10 @@ const cors = require('cors')
 require('dotenv').config()
 
 const app = express() 
+
+// Trust proxy headers (X-Forwarded-For) from Railway/Vercel load balancers
+app.set('trust proxy', 1)
+
 const allowedOrigins = (process.env.CORS_ORIGINS || [
   'https://madinatti.ma',
   'https://www.madinatti.ma',

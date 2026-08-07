@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../config/db');
 const { cloudinary } = require('../config/cloudinary');
 const XLSX = require('xlsx');
 const { cities: MOROCCO_CITIES } = require('morocco-cities');
