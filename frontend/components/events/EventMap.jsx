@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CalendarDays } from "lucide-react";
 import { EVENT_CATEGORY_MAP, DEFAULT_EVENT_ICON } from "@/constants/eventCategories";
@@ -86,6 +86,7 @@ export default function EventMap({ events, selectedId, center, onSelect, onBound
   const mapEl = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef([]);
+  const [mapReady, setMapReady] = useState(false);
   const groups = useMemo(() => groupEvents(events || []), [events]);
 
   useEffect(() => {
@@ -115,18 +116,20 @@ export default function EventMap({ events, selectedId, center, onSelect, onBound
         });
       });
       mapRef.current = map;
+      setMapReady(true);
     });
     return () => {
       cancelled = true;
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
+        setMapReady(false);
       }
     };
   }, [center, onBoundsChanged]);
 
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !mapReady) return;
     loadLeaflet().then((L) => {
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
@@ -146,7 +149,7 @@ export default function EventMap({ events, selectedId, center, onSelect, onBound
       if (bounds.length === 1) mapRef.current.setView(bounds[0], 14);
       if (!bounds.length && center) mapRef.current.setView([center.lat, center.lng], 12);
     });
-  }, [groups, center, selectedId, onSelect]);
+  }, [groups, center, selectedId, onSelect, mapReady]);
 
   return (
     <div className="relative h-full min-h-[320px] w-full overflow-hidden bg-gray-50">

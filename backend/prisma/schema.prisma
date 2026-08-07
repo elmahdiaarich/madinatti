@@ -52,6 +52,29 @@ enum HealthPlaceStatus {
   ARCHIVED
 }
 
+enum EducationInstitutionType {
+  PRESCHOOL
+  PRIMARY_SCHOOL
+  MIDDLE_SCHOOL
+  HIGH_SCHOOL
+  UNIVERSITY
+  FACULTY
+  ENGINEERING_SCHOOL
+  BUSINESS_SCHOOL
+  INSTITUTE
+  VOCATIONAL_TRAINING
+  OFPPT
+  LANGUAGE_CENTER
+  TRAINING_CENTER
+  OTHER
+}
+
+enum EducationSector {
+  PUBLIC
+  PRIVATE
+  SEMI_PUBLIC
+}
+
 enum SellerType {
   INDIVIDUAL
   SHOP
@@ -154,6 +177,7 @@ model User {
   reviews               Review[]
   professionalSpaceListings ProfessionalSpaceListing[]
   healthPlaces         HealthPlace[]
+  educationInstitutions EducationInstitution[]
   newsArticles         NewsArticle[]
   eventsCreated        Event[]        @relation("EventsCreatedBy")
   eventsOrganized      Event[]        @relation("EventsOrganizedBy")
@@ -342,6 +366,7 @@ model Category {
   touristicListings  TouristicListing[]
   news               NewsArticle[]
   healthPlaces       HealthPlace[]
+  educationInstitutions EducationInstitution[]
   events             Event[]
   shops              Shop[]
   workerProfiles     WorkerProfile[]
@@ -932,6 +957,70 @@ model HealthPlace {
   @@index([isVerified])
   @@index([latitude, longitude])
   @@index([createdAt])
+}
+
+model EducationInstitution {
+  id              String                   @id @default(uuid())
+  name            String
+  slug            String                   @unique
+  nameAr          String?
+  nameFr          String?
+  nameEn          String?
+  categoryId      String?
+  institutionType EducationInstitutionType
+  sector          EducationSector
+  description     String?
+  descriptionAr   String?
+  descriptionFr   String?
+  descriptionEn   String?
+  address         String?
+  postalCode      String?
+  country         String                   @default("MA")
+  region          String?
+  province        String?
+  city            String?
+  latitude        Decimal?
+  longitude       Decimal?
+  phone           String?
+  secondaryPhone  String?
+  email           String?
+  website         String?
+  facebookUrl     String?
+  instagramUrl    String?
+  linkedinUrl     String?
+  logoUrl         String?
+  coverImageUrl   String?
+  openingHours    Json?
+  metadata        Json?
+  isVerified      Boolean                  @default(false)
+  isFeatured      Boolean                  @default(false)
+  isPublished     Boolean                  @default(false)
+  source          String?
+  sourceUrl       String?
+  externalId      String?
+  dataSource      String?
+  lastImportedAt  DateTime?
+  manuallyEdited  Boolean                  @default(false)
+  createdById     String?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  category  Category? @relation(fields: [categoryId], references: [id])
+  createdBy User?     @relation(fields: [createdById], references: [id])
+
+  @@unique([source, externalId])
+  @@index([categoryId])
+  @@index([institutionType])
+  @@index([sector])
+  @@index([region])
+  @@index([province])
+  @@index([city])
+  @@index([isPublished])
+  @@index([isVerified])
+  @@index([isFeatured])
+  @@index([source])
+  @@index([externalId])
+  @@index([updatedAt])
 }
 
 model Event {

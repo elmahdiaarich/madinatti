@@ -23,6 +23,7 @@ import {
   Newspaper,
   Compass,
   Factory,
+  GraduationCap,
   CalendarDays,
   Moon,
   Sun,
@@ -45,6 +46,7 @@ const SUB_NAV_LINKS = [
   { label: "Evenements", href: "/evenements", icon: CalendarDays },
   { label: "Tourisme", href: "/tourisme", icon: Compass },
   { label: "Industrie", href: "/industrie", icon: Factory },
+  { label: "Education", href: "/education", icon: GraduationCap },
   { label: "Santé", href: "/sante", icon: HeartPulse },
 ];
 

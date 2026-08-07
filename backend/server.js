@@ -15,7 +15,10 @@ const allowedOrigins = (process.env.CORS_ORIGINS || [
 
 app.use(cors({
   origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    const localDevOrigin =
+      process.env.NODE_ENV !== 'production' &&
+      /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin || '');
+    if (!origin || allowedOrigins.includes(origin) || localDevOrigin) return callback(null, true);
     return callback(new Error(`CORS origin not allowed: ${origin}`));
   },
   credentials: true,
@@ -28,6 +31,7 @@ const carsRouter = require('./routes/cars');
 const tourismRoutes = require('./routes/tourism');
 const professionalSpaceRoutes = require('./routes/professionalSpaces');
 const healthRoutes = require('./routes/health');
+const educationRoutes = require('./routes/education');
 const eventRoutes = require('./routes/events');
 const geoRoutes = require("./routes/geo");
 const subscriptionRoutes = require('./routes/subscriptions');
@@ -46,6 +50,7 @@ app.use('/api/cars', carsRouter);
 app.use('/api/tourism', tourismRoutes);
 app.use('/api/industriel-zones', professionalSpaceRoutes);
 app.use('/api/health', healthRoutes);
+app.use('/api/education', educationRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/shops', shopRoutes);

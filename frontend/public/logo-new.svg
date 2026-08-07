@@ -1,24 +1,55 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 427 212" role="img" aria-labelledby="title desc">
-  <title id="title">Madinatti Ma Ville My Town</title>
-  <desc id="desc">Green Madinatti Ma Ville My Town logo with a leaf, circular M mark, and roofline.</desc>
-  <rect width="427" height="212" fill="#fff"/>
-  <g fill="#43a51e">
-    <path d="M236.8 21.8 154.5 68.9v23.5l82.3-46.8 82 46.8V68.9L236.8 21.8Z"/>
-    <path d="M295.7 22.8v23.5l81 46.1V68.9l-81-46.1Z"/>
-    <path d="M348.3 30h14.4v23.1h-14.4z"/>
-    <path d="M119.5 47.7c-33.1-25.4-76.8-11-92.1 23.6-15.4 34.7-.4 77.7 33.4 91.5 27 11 54.1-2 66.5-23.4-15.5 15.8-39.5 22.6-62.2 13.4C37.6 141.7 24.7 105.3 37.1 76.2c12.5-29.2 46-41.5 82.4-28.5Z"/>
-    <path d="M40.4 76.2c23.9-4 38.2-24.3 83.2-28.5-11.1 10.4-27.4 30.2-52.4 31.7-12.5.7-21.4-2-30.8-3.2Z"/>
-    <path d="M44.3 84.4c16.4-.1 27.4 9.2 33.5 24.3l27.1 59.9h-9.8L63.8 99.5C59 89 50.2 85.7 44.3 84.4Z"/>
-    <path d="M53.4 150.8h17.3V91.6h-3.3l-14 59.2Z"/>
-    <path d="M80.7 150.8h13.2l21.7-62.7 12.9 62.7h18.9v-3.3c-6.8-.8-9.7-4.6-11-10.7L126.7 91h-10.9l-25.4 58.2L65.3 91.5l-7.2 31.7 12 27.6h10.6Z"/>
-  </g>
-  <g fill="#43a51e" font-family="Georgia, 'Times New Roman', serif" font-weight="700">
-    <text x="141" y="138" font-size="45" letter-spacing="1">MADINATTI</text>
-  </g>
-  <g fill="#111" font-family="Georgia, 'Times New Roman', serif" font-weight="700">
-    <text x="185" y="164" font-size="29" letter-spacing="3">MA VILLE</text>
-  </g>
-  <g fill="#8bc53f" font-family="Arial, Helvetica, sans-serif" font-weight="400">
-    <text x="197" y="188" font-size="24">My Town</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 70 512 370" role="img" aria-labelledby="title desc">
+  <title id="title">Madinatti A Ville</title>
+  <desc id="desc">Madinatti A Ville green roof and leaves logo.</desc>
+  <defs>
+    <style>
+      .roof{fill:none;stroke:#00843d;stroke-width:15;stroke-linecap:round;stroke-linejoin:round}
+      .dark{fill:#006b33}
+      .leaf{fill:#8bd23f}
+      .text{fill:#4f7f2a}
+      .block{fill:#75b82a}
+    </style>
+  </defs>
+
+  <g transform="translate(6 18)">
+    <path class="roof" d="M104 218 188 134 270 216"/>
+    <path class="roof" d="M250 218 334 134 419 219"/>
+    <path class="dark" d="M102 226h154c6 0 9-7 5-11l-73-72-82 81c-2 1-3 1-4 2z" opacity=".18"/>
+    <path class="dark" d="M253 226h154c5 0 8-6 5-10l-77-75-84 82c-1 1 0 3 2 3z" opacity=".18"/>
+
+    <g class="dark">
+      <rect x="184" y="184" width="14" height="14" rx="2"/>
+      <rect x="203" y="184" width="14" height="14" rx="2"/>
+      <rect x="184" y="203" width="14" height="14" rx="2"/>
+      <rect x="203" y="203" width="14" height="14" rx="2"/>
+      <rect x="310" y="184" width="14" height="14" rx="2"/>
+      <rect x="329" y="184" width="14" height="14" rx="2"/>
+      <rect x="310" y="203" width="14" height="14" rx="2"/>
+      <rect x="329" y="203" width="14" height="14" rx="2"/>
+    </g>
+
+    <path class="leaf" d="M111 129c-27-18-61-18-90-6 9 26 39 45 92 52-5-15-17-31-2-46z"/>
+    <path class="dark" d="M24 126c31 10 59 24 86 47-34-10-67-24-86-47z" opacity=".65"/>
+    <path class="leaf" d="M174 82c-21 22-17 49 0 70 24-22 22-49 0-70z"/>
+    <path class="dark" d="M174 88c-3 22-3 42 0 60 5-20 5-39 0-60z" opacity=".65"/>
+    <path class="leaf" d="M417 168c26-27 61-31 91-25-7 31-40 58-96 67 3-16 9-29 5-42z"/>
+    <path class="dark" d="M505 148c-35 13-64 32-91 60 36-13 69-32 91-60z" opacity=".65"/>
+    <path class="leaf" d="M403 125c-21 21-19 47-2 67 22-21 23-47 2-67z"/>
+    <path class="dark" d="M403 131c-3 19-3 37 0 56 5-20 5-38 0-56z" opacity=".65"/>
+
+    <text
+      x="257"
+      y="350"
+      class="text"
+      font-family="'Segoe Script','Brush Script MT','Lucida Handwriting',cursive"
+      font-size="70"
+      font-weight="700"
+      text-anchor="middle"
+      transform="rotate(-8 257 350)"
+    >madinatti</text>
+
+    <g class="block" font-family="Arial, Helvetica, sans-serif" font-weight="900" text-anchor="middle">
+      <text x="257" y="415" font-size="39" letter-spacing="5">A VILLE</text>
+    </g>
   </g>
 </svg>
