@@ -78,10 +78,13 @@ export default function AdminMiniJobsPage() {
       const result = await getListings({ module: 'miniJobs', status, search, page, token, userId: selectedUser?.id || '' })
       setListings(result.data)
       setPagination(result.pagination)
+    } catch (err) {
+      console.error('Erreur lors du chargement des mini-jobs:', err)
+      toast.error(err.message || 'Erreur de chargement')
     } finally {
       setTableLoading(false)
     }
-  }, [status, search, page, token, selectedUser])
+  }, [status, search, page, token, selectedUser, toast])
 
   useEffect(() => { loadListings() }, [loadListings])
   useEffect(() => { setPage(1) }, [status, search, selectedUser])

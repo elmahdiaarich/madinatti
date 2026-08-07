@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { getUsers, toggleUser } from '../../../lib/adminApi'
+import { useToast } from '@/context/ToastContext'
 import StatusBadge from '../../../components/admin/StatusBadge'
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -99,17 +100,20 @@ export default function AdminUsersPage() {
   const [role, setRole]               = useState('')
   const [page, setPage]               = useState(1)
 
-  // ── Load ──────────────────────────────────────────────────────────────────
+  const { toast } = useToast()
   const loadUsers = useCallback(async () => {
     setLoading(true)
     try {
       const result = await getUsers({ search, role, page })
       setUsers(result.data)
       setPagination(result.pagination)
+    } catch (err) {
+      console.error('Erreur lors du chargement des utilisateurs:', err)
+      toast.error(err.message || 'Erreur lors du chargement des utilisateurs')
     } finally {
       setLoading(false)
     }
-  }, [search, role, page])
+  }, [search, role, page, toast])
 
   useEffect(() => { loadUsers() }, [loadUsers])
   useEffect(() => { setPage(1) }, [search, role])

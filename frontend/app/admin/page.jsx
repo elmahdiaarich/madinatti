@@ -147,10 +147,13 @@ export default function AdminOverviewPage() {
     try {
       const data = await getOverview(token)
       setOverview(data)
+    } catch (err) {
+      console.error('Erreur lors du chargement de la vue d’ensemble:', err)
+      toast.error(err.message || 'Erreur lors du chargement des statistiques')
     } finally {
       setOverviewLoading(false)
     }
-  }, [token])
+  }, [token, toast])
 
   // ── Load listings ──────────────────────────────────────────────────────────
   const loadListings = useCallback(async () => {
@@ -167,10 +170,13 @@ export default function AdminOverviewPage() {
       })
       setListings(result.data)
       setPagination(result.pagination)
+    } catch (err) {
+      console.error('Erreur lors du chargement des annonces:', err)
+      toast.error(err.message || 'Erreur lors du chargement des annonces')
     } finally {
       setTableLoading(false)
     }
-  }, [module, status, search, selectedUser, page, token])
+  }, [module, status, search, selectedUser, page, token, toast])
 
   useEffect(() => { loadOverview() }, [loadOverview])
   useEffect(() => { loadListings() }, [loadListings])

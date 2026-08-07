@@ -323,7 +323,7 @@ const NORMALIZERS = {
     updatedAt:        w.updatedAt,
   }),
  
-  ttaskRequests: (t) => ({
+  taskRequests: (t) => ({
     id:               t.id,
     module:           'taskRequests',
     title:            t.title,

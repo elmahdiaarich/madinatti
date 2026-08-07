@@ -106,10 +106,13 @@ export default function AdminJournalistsPage() {
     try {
       const data = await getJournalists(token)
       setJournalists(data)
+    } catch (err) {
+      console.error('Erreur lors du chargement des journalistes:', err)
+      toast.error(err.message || 'Erreur de chargement')
     } finally {
       setLoading(false)
     }
-  }, [token])
+  }, [token, toast])
 
   useEffect(() => { load() }, [load])
 
@@ -148,9 +151,7 @@ export default function AdminJournalistsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Journalistes</h1>
-            <p className="text-sm text-gray-400 mt-0.5">
-              Comptes créés directement par l'admin — publication sans modération préalable
-            </p>
+           
           </div>
         </div>
         <CreateJournalistForm onCreated={load} />
@@ -168,65 +169,66 @@ export default function AdminJournalistsPage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {journalists.map((j) => (
-            <div key={j.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-full bg-teal-50 flex items-center justify-center shrink-0 overflow-hidden">
-                  {j.avatar ? (
-                    <img src={j.avatar} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-sm font-bold text-teal-700">{j.name?.charAt(0)?.toUpperCase()}</span>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold text-gray-900 text-sm truncate">{j.name}</p>
-                  <p className="text-xs text-gray-400 truncate">{j.email}</p>
-                </div>
-                <div className="flex flex-col items-end gap-1 shrink-0">
+          {journalists.map((j) => {
+            const displayName = j.name && j.name.trim() ? j.name : (j.email ? j.email.split('@')[0] : 'Journaliste');
+            return (
+              <div key={j.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-full bg-teal-50 flex items-center justify-center shrink-0 overflow-hidden">
+                    {j.avatar ? (
+                      <img src={j.avatar} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-sm font-bold text-teal-700">{displayName.charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-gray-900 text-sm truncate">{displayName}</p>
+                    <p className="text-xs text-gray-400 truncate">{j.email}</p>
+                  </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
-                    j.isActive ? 'bg-[#E8F5D0] text-[#2D5016]' : 'bg-gray-100 text-gray-500'
-                  }`}>
-                    {j.isActive ? 'Actif' : 'Désactivé'}
-                  </span>
-                  {!j.canPublish && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap bg-amber-50 text-amber-600">
-                      Publication suspendue
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                      j.isActive ? 'bg-[#E8F5D0] text-[#2D5016]' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {j.isActive ? 'Actif' : 'Désactivé'}
                     </span>
-                  )}
+                    {!j.canPublish && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap bg-amber-50 text-amber-600">
+                        Publication suspendue
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+                  {j.phone && <span className="bg-gray-100 px-2 py-1 rounded-full">{j.phone}</span>}
+                  {j.city && <span className="bg-gray-100 px-2 py-1 rounded-full">{j.city}</span>}
+                  <span className="bg-gray-100 px-2 py-1 rounded-full">{j.totalArticlesCount} article{j.totalArticlesCount > 1 ? 's' : ''}</span>
+                  <span className="bg-gray-100 px-2 py-1 rounded-full">Créé le {formatDate(j.createdAt)}</span>
+                </div>
+
+                <div className="flex items-center gap-3 flex-wrap">
+                  <button
+                    onClick={() => handleToggle(j.id)}
+                    disabled={actionLoading === j.id}
+                    className={`text-xs font-bold hover:underline disabled:opacity-50 ${
+                      j.isActive ? 'text-red-500' : 'text-[#2D5016]'
+                    }`}
+                  >
+                    {j.isActive ? 'Désactiver le compte' : 'Réactiver le compte'}
+                  </button>
+                  <button
+                    onClick={() => handleTogglePublish(j.id)}
+                    disabled={actionLoading === `publish-${j.id}`}
+                    className={`text-xs font-bold hover:underline disabled:opacity-50 ${
+                      j.canPublish ? 'text-amber-600' : 'text-[#2D5016]'
+                    }`}
+                  >
+                    {j.canPublish ? 'Suspendre la publication' : 'Restaurer la publication'}
+                  </button>
                 </div>
               </div>
-
-              <div className="flex flex-wrap gap-2 text-xs text-gray-500">
-                {j.phone && <span className="bg-gray-100 px-2 py-1 rounded-full">{j.phone}</span>}
-                {j.city && <span className="bg-gray-100 px-2 py-1 rounded-full">{j.city}</span>}
-                <span className="bg-gray-100 px-2 py-1 rounded-full">{j.totalArticlesCount} article{j.totalArticlesCount > 1 ? 's' : ''}</span>
-                <span className="bg-gray-100 px-2 py-1 rounded-full">Créé le {formatDate(j.createdAt)}</span>
-              </div>
-
-              <div className="flex items-center gap-3 flex-wrap">
-                <button
-                  onClick={() => handleToggle(j.id)}
-                  disabled={actionLoading === j.id}
-                  className={`text-xs font-bold hover:underline disabled:opacity-50 ${
-                    j.isActive ? 'text-red-500' : 'text-[#2D5016]'
-                  }`}
-                >
-                  {j.isActive ? 'Désactiver le compte' : 'Réactiver le compte'}
-                </button>
-                <button
-                  onClick={() => handleTogglePublish(j.id)}
-                  disabled={actionLoading === `publish-${j.id}`}
-                  className={`text-xs font-bold hover:underline disabled:opacity-50 ${
-                    j.canPublish ? 'text-amber-600' : 'text-[#2D5016]'
-                  }`}
-                >
-                  {j.canPublish ? 'Suspendre la publication' : 'Restaurer la publication'}
-                </button>
-              </div>
-            </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
