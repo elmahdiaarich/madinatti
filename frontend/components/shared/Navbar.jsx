@@ -67,11 +67,8 @@ const NAV_SERVICES = [
     label: "Emploi",
     href: "/jobs",
     categories: [
-      "Offres d'emploi",
-      "Formation",
+      { label: "Offres d'emploi", href: "/jobs" },
       { label: "Mini-jobs", href: "/mini-jobs" },
-      "Accompagnement",
-      "Demande d'emploi",
     ],
   },
   {

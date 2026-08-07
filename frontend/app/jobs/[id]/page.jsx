@@ -511,7 +511,7 @@ export default function JobDetailPage() {
                   </span>
                 )}
                 {job.isFeatured && (
-                  <span className="px-3 py-1 bg-yellow-400 text-yellow-900 rounded-full text-xs font-bold">
+                  <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-[#A7D129] text-[#7BA428] bg-[#E8F5D0]">
                     ⭐ Premium
                   </span>
                 )}

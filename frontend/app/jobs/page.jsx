@@ -10,6 +10,8 @@ import JobFilter from '@/components/jobs/JobFilter';
 import { cities } from 'morocco-cities';
 import InlineRegisterSection from '@/components/jobs/InlineRegisterSection';
 import BusinessAccountGate from '@/components/shared/BusinessAccountGate';
+import CompleteProfileBanner from '@/components/jobs/CompleteProfileBanner';
+import HeadhunterBanner from '@/components/jobs/HeadhunterBanner';
 
 // ─── Données ──────────────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -52,10 +54,7 @@ const ALL_REGIONS = Object.keys(citiesByRegion).sort();
 // so they render as disabled/greyed instead of dead links.
 const EMPLOI_SIBLINGS = [
   { label: "Offres d'emploi", href: '/jobs' },
-  { label: 'Formation', href: '/coming-soon?feature=Formation' },
   { label: 'Mini-jobs', href: '/mini-jobs' },
-  { label: 'Accompagnement', href: '/coming-soon?feature=Accompagnement' },
-  { label: "Demande d'emploi", href: '/coming-soon?feature=Demande d\'emploi' },
 ];
 // ─── ALERT MODAL COMPONENT ────────────────────────────────────────────────────
 function AlertModal({ token, initialFilters, onClose, apiUrl }) {
@@ -383,55 +382,65 @@ export default function JobsPage() {
     <div className="min-h-screen bg-gray-50">
 
       {/* HERO HEADER */}
-      <div className="bg-white border-b border-gray-200 py-10">
-        <div className="max-w-[1200px] mx-auto px-4">
+      <div className="bg-white border-b border-gray-100 py-7">
+        <div className="max-w-[860px] mx-auto px-4 text-center">
 
-          {/* Sibling navigation — jump to related Emploi sub-pages */}
-          <div className="flex flex-wrap justify-center gap-2 mb-6">
+          {/* Nav pills + live count — same row */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-5">
             {EMPLOI_SIBLINGS.map((s) => (
               <Link
                 key={s.label}
                 href={s.href}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
+                className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${
                   s.href === '/jobs'
-                    ? 'bg-[#2D5016] text-white'
-                    : 'bg-white border border-gray-200 text-gray-600 hover:border-[#A7D129] hover:text-[#2D5016]'
+                    ? 'bg-[#2D5016] text-white shadow-sm'
+                    : 'bg-white border border-gray-200 text-gray-500 hover:border-[#2D5016] hover:text-[#2D5016]'
                 }`}
               >
                 {s.label}
               </Link>
             ))}
+            {pagination && (
+              <span className="text-[11px] font-bold uppercase tracking-widest text-[#5A8A1A] ml-1">
+                {pagination.total} offres
+              </span>
+            )}
           </div>
 
-          <h1 className="text-3xl font-bold text-center text-[#2D5016] mb-2">
+          {/* Title */}
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#1a2e0a] mb-1.5 leading-tight">
             Trouvez votre prochain emploi
           </h1>
-          <p className="text-center text-gray-500 text-sm mb-6">
-            {pagination ? `${pagination.total} offres disponibles au Maroc` : 'Chargement...'}
+          <p className="text-gray-400 text-sm mb-5">
+            Des opportunités vérifiées, mises à jour chaque jour
           </p>
 
           {/* Search bar */}
-          <div className="flex items-center max-w-2xl mx-auto border-2 border-[#2D5016] rounded-full px-4 py-2.5 bg-white shadow-sm">
-            <svg className="w-4 h-4 text-gray-400 shrink-0 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex items-center max-w-xl mx-auto border border-gray-200 rounded-xl px-3.5 py-1 bg-white shadow-sm hover:border-[#2D5016]/40 transition-colors">
+            <svg className="w-4 h-4 text-gray-300 shrink-0 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
             </svg>
             <input
               type="text"
               placeholder="Titre, entreprise, mot-clé..."
               value={searchInput}
-              className="flex-1 outline-none text-sm text-gray-700 bg-transparent"
+              className="flex-1 outline-none text-sm text-gray-700 bg-transparent py-2"
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
             <button
               onClick={handleSearch}
-              className="ml-2 px-4 py-1.5 rounded-full bg-[#A7D129] text-white text-sm font-medium hover:bg-[#7BA428] transition"
+              className="ml-2 px-4 py-1.5 rounded-lg bg-[#2D5016] text-white text-sm font-semibold hover:bg-[#1a2e0a] transition-colors shrink-0"
             >
               Rechercher
             </button>
           </div>
         </div>
       </div>
+
+
+      <CompleteProfileBanner user={user} token={token} />
+      <HeadhunterBanner user={user} />
 
       {/* CATEGORY TABS */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">

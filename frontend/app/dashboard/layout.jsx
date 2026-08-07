@@ -246,6 +246,39 @@ const IconDashboard = () => (
   </svg>
 );
 
+const IconSearch = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" />
+  </svg>
+);
+
+const IconCoin = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v10M9.5 9.5c0-1.1 1.12-2 2.5-2s2.5.9 2.5 2c0 2.5-5 1.5-5 4 0 1.1 1.12 2 2.5 2s2.5-.9 2.5-2" />
+  </svg>
+);
+
 const IconApplications = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -600,6 +633,20 @@ export default function DashboardLayout({ children }) {
                 icon={IconStar}
                 label="Abonnement"
                 active={pathname?.startsWith("/dashboard/subscription")}
+                collapsed={!sidebarOpen}
+              />
+              <NavItem
+                href="/dashboard/headhunter"
+                icon={IconSearch}
+                label="Headhunter"
+                active={pathname?.startsWith("/dashboard/headhunter")}
+                collapsed={!sidebarOpen}
+              />
+              <NavItem
+                href="/dashboard/credits"
+                icon={IconCoin}
+                label="Crédits Headhunter"
+                active={pathname?.startsWith("/dashboard/credits")}
                 collapsed={!sidebarOpen}
               />
               <NavItem

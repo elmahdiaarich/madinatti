@@ -1,12 +1,28 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import axios from 'axios'
 import { useToast } from '@/context/ToastContext'
+import { candidateProfileService } from '@/services/candidateProfileService'
+import { ALL_REGIONS, citiesByRegion } from '@/components/shared/FilterPanel'
 
 const inputCls = "w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#A7D129]/40 focus:border-[#2D5016] transition bg-white"
 const disabledCls = "w-full border border-gray-100 rounded-xl px-3 py-2.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
+
+const EDUCATION_OPTIONS = ['BEFORE_BAC','BAC','BAC_PLUS_1','BAC_PLUS_2','BAC_PLUS_3','BAC_PLUS_4','BAC_PLUS_5_PLUS']
+const EXPERIENCE_OPTIONS = ['STUDENT_FRESH_GRAD','JUNIOR_LESS_2','MID_2_TO_5','SENIOR_5_TO_10','EXPERT_PLUS_10']
+const CONTRACT_OPTIONS = ['CDI','CDD','INTERIM','FREELANCE','STAGE','ANAPEC','TEMPS_PARTIEL','ALTERNANCE']
+const LANGUAGE_OPTIONS = ['Français', 'Arabe', 'Anglais', 'Espagnol', 'Amazigh']
+
+const EDUCATION_LABELS = {
+  BEFORE_BAC: 'Qualification avant Bac', BAC: 'Bac', BAC_PLUS_1: 'Bac+1', BAC_PLUS_2: 'Bac+2',
+  BAC_PLUS_3: 'Bac+3', BAC_PLUS_4: 'Bac+4', BAC_PLUS_5_PLUS: 'Bac+5 et plus',
+}
+const EXPERIENCE_LABELS = {
+  STUDENT_FRESH_GRAD: 'Étudiant, jeune diplômé', JUNIOR_LESS_2: 'Débutant < 2 ans',
+  MID_2_TO_5: 'Entre 2 et 5 ans', SENIOR_5_TO_10: 'Entre 5 et 10 ans', EXPERT_PLUS_10: '> 10 ans',
+}
 
 function SectionCard({ title, subtitle, children }) {
   return (
@@ -28,6 +44,56 @@ function Field({ label, hint, children }) {
       <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{label}</label>
       {children}
       {hint && <p className="text-xs text-gray-400">{hint}</p>}
+    </div>
+  )
+}
+
+function ChecklistItem({ done, label }) {
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold ${done ? 'bg-[#A7D129] text-white' : 'bg-gray-200 text-gray-400'}`}>
+        {done ? '✓' : ''}
+      </span>
+      <span className={done ? 'text-gray-700' : 'text-gray-400'}>{label}</span>
+    </div>
+  )
+}
+
+function formatUpdatedAt(dateStr) {
+  if (!dateStr) return null
+  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000)
+  if (days <= 0) return "aujourd'hui"
+  if (days === 1) return 'hier'
+  if (days < 30) return `il y a ${days} jours`
+  return `il y a ${Math.floor(days / 30)} mois`
+}
+
+function RecruiterPreview({ form, cityLabel }) {
+  const eduLabel = EDUCATION_LABELS[form.educationLevel]
+  const expLabel = EXPERIENCE_LABELS[form.experienceLevel]
+  return (
+    <div className="bg-[#E8F5D0] border border-[#A7D129]/50 rounded-2xl p-4 flex flex-col gap-2">
+      <p className="text-[10px] font-bold text-[#2D5016] uppercase tracking-wide">👁️ Aperçu recruteur (anonymisé)</p>
+      <p className="font-bold text-gray-900 text-sm">Candidat #XXXXXXXX</p>
+      {form.headline && <p className="text-sm text-gray-700 italic">{form.headline}</p>}
+      <div className="flex flex-col gap-1 text-xs text-gray-600">
+        {eduLabel && <p>🎓 {eduLabel}</p>}
+        {expLabel && <p>💼 {expLabel}</p>}
+        {cityLabel && <p>📍 {cityLabel}</p>}
+        {form.languages.length > 0 && <p>🗣️ {form.languages.join(', ')}</p>}
+      </div>
+      {form.desiredContractTypes.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {form.desiredContractTypes.map(t => (
+            <span key={t} className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-[#2D5016] border border-[#A7D129]/40">{t}</span>
+          ))}
+        </div>
+      )}
+      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block w-fit ${
+        form.isAvailableForWork ? 'text-green-700 bg-green-50 border border-green-200' : 'text-gray-500 bg-gray-50 border border-gray-200'
+      }`}>
+        {form.isAvailableForWork ? '✅ Disponible' : 'Non disponible actuellement'}
+      </span>
     </div>
   )
 }
@@ -55,32 +121,28 @@ export default function ProfilePage() {
     confirmPassword: '',
   })
 
-  const [infoStatus, setInfoStatus] = useState(null) // null | 'saving' | 'ok' | 'error'
+  const [infoStatus, setInfoStatus] = useState(null)
   const [infoErrors, setInfoErrors] = useState({})
   const [passStatus, setPassStatus] = useState(null)
   const [passError,  setPassError]  = useState('')
 
-  // Avatar state
   const fileInputRef = useRef(null)
-  const [avatarPreview, setAvatarPreview] = useState(null) // local blob URL before upload
-  const [avatarFile, setAvatarFile]       = useState(null) // File object
-  const [avatarStatus, setAvatarStatus]   = useState(null) // null | 'saving' | 'ok' | 'error'
+  const [avatarPreview, setAvatarPreview] = useState(null)
+  const [avatarFile, setAvatarFile]       = useState(null)
+  const [avatarStatus, setAvatarStatus]   = useState(null)
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
   const setPass = (k, v) => setPasswords(p => ({ ...p, [k]: v }))
 
-  // Pick a file locally — just preview, don't upload yet
   const handleAvatarPick = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
     setAvatarFile(file)
     setAvatarPreview(URL.createObjectURL(file))
     setAvatarStatus(null)
-    // reset input so picking the same file again triggers onChange
     e.target.value = ''
   }
 
-  // Upload avatar to backend → Cloudinary
   const handleAvatarUpload = async () => {
     if (!avatarFile) return
     setAvatarStatus('saving')
@@ -91,12 +153,7 @@ export default function ProfilePage() {
       const res = await axios.patch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`,
         formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data',
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } }
       )
       updateUser(res.data.user)
       setAvatarFile(null)
@@ -115,7 +172,6 @@ export default function ProfilePage() {
     setAvatarStatus(null)
   }
 
-  // Validation
   const validateInfo = () => {
     const errors = {}
     if (!form.name.trim()) {
@@ -132,7 +188,6 @@ export default function ProfilePage() {
     return errors
   }
 
-  // Save personal / business info
   const handleSaveInfo = async () => {
     const errors = validateInfo()
     if (Object.keys(errors).length > 0) {
@@ -162,7 +217,6 @@ export default function ProfilePage() {
     }
   }
 
-  // Change password
   const handleChangePassword = async () => {
     setPassError('')
     if (passwords.newPassword !== passwords.confirmPassword) {
@@ -177,10 +231,7 @@ export default function ProfilePage() {
     try {
       await axios.patch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`,
-        {
-          currentPassword: passwords.currentPassword,
-          newPassword:     passwords.newPassword,
-        },
+        { currentPassword: passwords.currentPassword, newPassword: passwords.newPassword },
         { headers: { Authorization: `Bearer ${token}` } }
       )
       setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' })
@@ -192,23 +243,114 @@ export default function ProfilePage() {
     }
   }
 
-  // The avatar src to display: local preview > saved avatar > null (show initials)
   const displayAvatar = avatarPreview || user?.avatar
+
+  // ── Candidate profile (citizen only) ─────────────────────────────────────
+  const [candidateForm, setCandidateForm] = useState({
+    headline: '',
+    isAvailableForWork: true,
+    educationLevel: '',
+    experienceLevel: '',
+    desiredContractTypes: [],
+    languages: [],
+    desiredSalaryMin: '',
+    desiredSalaryMax: '',
+    mobilityRegion: '',
+    mobilityCity: '',
+    visibleToRecruiters: false,
+  })
+  const [cvFile, setCvFile] = useState(null)
+  const [candidateStatus, setCandidateStatus] = useState(null)
+  const [existingCvUrl, setExistingCvUrl] = useState(null)
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(null)
+
+  useEffect(() => {
+    if (isBusiness || !token) return
+    candidateProfileService.getMine(token).then(({ data }) => {
+      if (data) {
+        setCandidateForm({
+          headline: data.headline || '',
+          isAvailableForWork: data.isAvailableForWork,
+          educationLevel: data.educationLevel || '',
+          experienceLevel: data.experienceLevel || '',
+          desiredContractTypes: data.desiredContractTypes || [],
+          languages: data.languages || [],
+          desiredSalaryMin: data.desiredSalaryMin || '',
+          desiredSalaryMax: data.desiredSalaryMax || '',
+          mobilityRegion: data.mobilityRegion || '',
+          mobilityCity: data.mobilityCity || '',
+          visibleToRecruiters: data.visibleToRecruiters,
+        })
+        setExistingCvUrl(data.cvUrl)
+        setLastUpdatedAt(data.updatedAt)
+      }
+    }).catch(() => {})
+  }, [isBusiness, token])
+
+  const setCand = (k, v) => setCandidateForm(p => ({ ...p, [k]: v }))
+  const toggleInArray = (key, value) => {
+    setCandidateForm(p => ({
+      ...p,
+      [key]: p[key].includes(value) ? p[key].filter(v => v !== value) : [...p[key], value],
+    }))
+  }
+
+  const handleSaveCandidateProfile = async () => {
+    if (candidateForm.desiredSalaryMin && candidateForm.desiredSalaryMax &&
+        Number(candidateForm.desiredSalaryMin) > Number(candidateForm.desiredSalaryMax)) {
+      toast.error('Le salaire minimum ne peut pas dépasser le maximum.')
+      return
+    }
+
+    setCandidateStatus('saving')
+    try {
+      const formData = new FormData()
+      formData.append('headline', candidateForm.headline)
+      formData.append('isAvailableForWork', candidateForm.isAvailableForWork)
+      formData.append('educationLevel', candidateForm.educationLevel)
+      formData.append('experienceLevel', candidateForm.experienceLevel)
+      formData.append('desiredContractTypes', JSON.stringify(candidateForm.desiredContractTypes))
+      formData.append('languages', JSON.stringify(candidateForm.languages))
+      formData.append('desiredSalaryMin', candidateForm.desiredSalaryMin)
+      formData.append('desiredSalaryMax', candidateForm.desiredSalaryMax)
+      formData.append('mobilityRegion', candidateForm.mobilityRegion)
+      formData.append('mobilityCity', candidateForm.mobilityCity)
+      formData.append('visibleToRecruiters', candidateForm.visibleToRecruiters)
+      if (cvFile) formData.append('cv', cvFile)
+
+      const { data } = await candidateProfileService.update(formData, token)
+      setExistingCvUrl(data.cvUrl)
+      setLastUpdatedAt(data.updatedAt)
+      setCvFile(null)
+      setCandidateStatus(null)
+      toast.success('Profil candidat mis à jour !')
+    } catch (err) {
+      setCandidateStatus(null)
+      toast.error(err?.response?.data?.message || "Erreur lors de l'enregistrement.")
+    }
+  }
+
+  const hasCv = !!(existingCvUrl || cvFile)
+  const completionItems = [
+    { label: "Niveau d'études", done: !!candidateForm.educationLevel },
+    { label: "Niveau d'expérience", done: !!candidateForm.experienceLevel },
+    { label: 'Type de contrat recherché', done: candidateForm.desiredContractTypes.length > 0 },
+    { label: 'CV', done: hasCv },
+  ]
+  const completionCount = completionItems.filter(i => i.done).length
+  const staleUpdate = lastUpdatedAt && (Date.now() - new Date(lastUpdatedAt).getTime()) / 86400000 > 60
+  const cityLabel = candidateForm.mobilityCity || candidateForm.mobilityRegion || user?.city || null
 
   return (
     <div className="max-w-2xl flex flex-col gap-6 p-6 lg:p-8">
 
-      {/* Page title */}
       <div>
         <h1 className="text-xl font-bold text-gray-900">Mon profil</h1>
         <p className="text-sm text-gray-400 mt-0.5">Gérez vos informations personnelles</p>
       </div>
 
-      {/* Avatar block */}
       <SectionCard title="Photo de profil">
         <div className="flex items-center gap-5">
-
-          {/* Avatar circle — clickable */}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -221,7 +363,6 @@ export default function ProfilePage() {
                 : <span className="text-xl font-bold text-[#2D5016]">{initials}</span>
               }
             </div>
-            {/* Hover overlay */}
             <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -230,7 +371,6 @@ export default function ProfilePage() {
             </div>
           </button>
 
-          {/* Info + actions */}
           <div className="flex-1 min-w-0">
             <p className="font-bold text-gray-900 text-sm truncate">{user?.name}</p>
             <p className="text-xs text-gray-400 mt-0.5 truncate">{user?.email}</p>
@@ -238,7 +378,6 @@ export default function ProfilePage() {
               {isBusiness ? 'Business' : 'Citoyen'}
             </span>
 
-            {/* Pending upload actions */}
             {avatarFile && (
               <div className="flex items-center gap-2 mt-3">
                 <button
@@ -258,7 +397,6 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* No pending file — just the change link */}
             {!avatarFile && (
               <button
                 type="button"
@@ -271,8 +409,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-
-        {/* Hidden file input */}
         <input
           ref={fileInputRef}
           type="file"
@@ -282,7 +418,6 @@ export default function ProfilePage() {
         />
       </SectionCard>
 
-      {/* Personal info */}
       <SectionCard title="Informations personnelles" subtitle="Ces informations sont visibles sur vos annonces">
         <Field label="Nom complet">
           <input
@@ -315,7 +450,6 @@ export default function ProfilePage() {
           <input value={user?.email || ''} disabled className={disabledCls} />
         </Field>
 
-
         <button
           onClick={handleSaveInfo}
           disabled={infoStatus === 'saving'}
@@ -325,7 +459,6 @@ export default function ProfilePage() {
         </button>
       </SectionCard>
 
-      {/* Business info */}
       {isBusiness && (
         <SectionCard title="Informations entreprise" subtitle="Visibles sur votre profil public et vos annonces">
           <Field label="Nom de l'entreprise">
@@ -343,7 +476,161 @@ export default function ProfilePage() {
         </SectionCard>
       )}
 
-      {/* Change password */}
+      {!isBusiness && (
+        <SectionCard
+          title="Profil candidat"
+          subtitle={
+            lastUpdatedAt
+              ? `Dernière mise à jour : ${formatUpdatedAt(lastUpdatedAt)}${staleUpdate ? ' — pensez à le rafraîchir' : ''}`
+              : "Complétez ces informations pour être visible auprès des recruteurs"
+          }
+        >
+          {/* Checklist de complétion */}
+          <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 flex flex-col gap-2">
+            <p className="text-xs font-semibold text-gray-600">
+              Complétion du profil : {completionCount}/4 {completionCount === 4 ? '✅' : ''}
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {completionItems.map(i => <ChecklistItem key={i.label} {...i} />)}
+            </div>
+          </div>
+
+          <Field label="Résumé professionnel" hint="Une phrase courte qui vous décrit — visible et cherchable par les recruteurs (150 caractères max)">
+            <input
+              value={candidateForm.headline}
+              onChange={e => setCand('headline', e.target.value.slice(0, 150))}
+              placeholder="Ex: Développeur React 3 ans, spécialisé e-commerce"
+              className={inputCls}
+            />
+          </Field>
+
+          {/* Aperçu recruteur */}
+          <RecruiterPreview form={candidateForm} cityLabel={cityLabel} />
+
+          <Field label="Disponibilité">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={candidateForm.isAvailableForWork}
+                onChange={e => setCand('isAvailableForWork', e.target.checked)} />
+              Disponible pour travailler actuellement
+            </label>
+          </Field>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Niveau d'études">
+              <select value={candidateForm.educationLevel} onChange={e => setCand('educationLevel', e.target.value)} className={inputCls}>
+                <option value="">Sélectionner...</option>
+                {EDUCATION_OPTIONS.map(o => <option key={o} value={o}>{EDUCATION_LABELS[o]}</option>)}
+              </select>
+            </Field>
+            <Field label="Niveau d'expérience">
+              <select value={candidateForm.experienceLevel} onChange={e => setCand('experienceLevel', e.target.value)} className={inputCls}>
+                <option value="">Sélectionner...</option>
+                {EXPERIENCE_OPTIONS.map(o => <option key={o} value={o}>{EXPERIENCE_LABELS[o]}</option>)}
+              </select>
+            </Field>
+          </div>
+
+          <Field label="Types de contrat recherchés">
+            <div className="flex flex-wrap gap-2">
+              {CONTRACT_OPTIONS.map(o => (
+                <button key={o} type="button" onClick={() => toggleInArray('desiredContractTypes', o)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+                    candidateForm.desiredContractTypes.includes(o)
+                      ? 'bg-[#2D5016] text-white border-[#2D5016]'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-[#A7D129]'
+                  }`}>
+                  {o}
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          <Field label="Langues parlées">
+            <div className="flex flex-wrap gap-2">
+              {LANGUAGE_OPTIONS.map(o => (
+                <button key={o} type="button" onClick={() => toggleInArray('languages', o)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+                    candidateForm.languages.includes(o)
+                      ? 'bg-[#2D5016] text-white border-[#2D5016]'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-[#A7D129]'
+                  }`}>
+                  {o}
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Région de mobilité" hint="Laissez vide pour utiliser votre ville actuelle">
+              <select
+                value={candidateForm.mobilityRegion}
+                onChange={e => setCandidateForm(p => ({ ...p, mobilityRegion: e.target.value, mobilityCity: '' }))}
+                className={inputCls}
+              >
+                <option value="">{user?.city ? `Comme ma ville (${user.city})` : 'Non renseigné'}</option>
+                {ALL_REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </Field>
+            <Field label="Ville de mobilité">
+              <select
+                value={candidateForm.mobilityCity}
+                onChange={e => setCand('mobilityCity', e.target.value)}
+                disabled={!candidateForm.mobilityRegion}
+                className={inputCls}
+              >
+                <option value="">
+                  {candidateForm.mobilityRegion ? 'Toutes les villes de la région' : "Sélectionnez une région d'abord"}
+                </option>
+                {(citiesByRegion[candidateForm.mobilityRegion] || [])
+                  .slice()
+                  .sort((a, b) => a.localeCompare(b, 'fr'))
+                  .map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Prétention salariale min (MAD)">
+              <input type="number" value={candidateForm.desiredSalaryMin} onChange={e => setCand('desiredSalaryMin', e.target.value)} className={inputCls} />
+            </Field>
+            <Field label="Prétention salariale max (MAD)">
+              <input type="number" value={candidateForm.desiredSalaryMax} onChange={e => setCand('desiredSalaryMax', e.target.value)} className={inputCls} />
+            </Field>
+          </div>
+
+          <Field label="CV (PDF, max 5 Mo)">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="cursor-pointer px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:border-[#A7D129] transition">
+                Choisir un fichier
+                <input type="file" accept="application/pdf" onChange={e => setCvFile(e.target.files?.[0] || null)} className="hidden" />
+              </label>
+              {cvFile && (
+                <span className="flex items-center gap-2 text-xs bg-[#E8F5D0] text-[#2D5016] px-2.5 py-1.5 rounded-lg font-semibold">
+                  📄 {cvFile.name} ({(cvFile.size / 1024 / 1024).toFixed(1)} Mo)
+                  <button type="button" onClick={() => setCvFile(null)} className="text-[#2D5016] hover:text-red-500">✕</button>
+                </span>
+              )}
+              {existingCvUrl && !cvFile && (
+                <a href={existingCvUrl} target="_blank" rel="noreferrer" className="text-xs text-[#2D5016] underline">Voir le CV actuel</a>
+              )}
+            </div>
+          </Field>
+
+          <Field label="Visibilité">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={candidateForm.visibleToRecruiters}
+                onChange={e => setCand('visibleToRecruiters', e.target.checked)} />
+              Rendre mon profil visible par les recruteurs (Headhunter)
+            </label>
+          </Field>
+
+          <button onClick={handleSaveCandidateProfile} disabled={candidateStatus === 'saving'}
+            className="w-full py-3 bg-[#2D5016] text-white font-bold rounded-xl hover:bg-[#3a6b1e] transition text-sm disabled:opacity-60">
+            {candidateStatus === 'saving' ? 'Enregistrement...' : 'Enregistrer mon profil candidat'}
+          </button>
+        </SectionCard>
+      )}
+
       <SectionCard title="Changer le mot de passe" subtitle="Laissez vide si vous ne souhaitez pas le modifier">
         <Field label="Mot de passe actuel">
           <input

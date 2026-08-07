@@ -159,6 +159,10 @@ model User {
   eventsOrganized      Event[]        @relation("EventsOrganizedBy")
   ownedShops           Shop[]         @relation("ShopOwner")
   shopMemberships      ShopMember[]
+  candidateProfile     CandidateProfile?
+  creditBalance        Int                 @default(0)
+  creditTransactions   CreditTransaction[]
+  candidateUnlocks     CandidateUnlock[]   @relation("UnlocksByBusiness")
 
 }
 
@@ -410,6 +414,73 @@ enum ContractType {
   TEMPS_PARTIEL
   ALTERNANCE
   STATUTAIRE
+}
+
+// ============================================================
+// HEADHUNTER MODULE
+// ============================================================
+
+model CandidateProfile {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  headline             String?          // ex: "Développeur React 3 ans, spécialisé e-commerce"
+  isAvailableForWork   Boolean          @default(true)
+  availableFrom        DateTime?
+  educationLevel       EducationLevel?
+  experienceLevel      ExperienceLevel?
+  desiredContractTypes ContractType[]   @default([])
+  languages            Json?
+  desiredSalaryMin     Decimal?
+  desiredSalaryMax     Decimal?
+  mobilityRegion       String?
+  mobilityCity         String?
+  cvUrl                String?
+  visibleToRecruiters  Boolean          @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  unlocks CandidateUnlock[]
+
+  @@index([visibleToRecruiters])
+  @@index([educationLevel])
+  @@index([experienceLevel])
+}
+
+enum CreditTransactionType {
+  PURCHASE
+  UNLOCK
+  REFUND
+}
+
+model CreditTransaction {
+  id        String                @id @default(uuid())
+  userId    String
+  user      User                  @relation(fields: [userId], references: [id])
+  type      CreditTransactionType
+  amount    Int
+  packId    String?
+  packName  String?
+  createdAt DateTime              @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model CandidateUnlock {
+  id                  String            @id @default(uuid())
+  businessUserId      String
+  businessUser        User              @relation("UnlocksByBusiness", fields: [businessUserId], references: [id])
+  candidateProfileId  String
+  candidateProfile    CandidateProfile  @relation(fields: [candidateProfileId], references: [id])
+  createdAt           DateTime          @default(now())
+
+  @@unique([businessUserId, candidateProfileId])
+  @@index([businessUserId])
+  @@index([candidateProfileId])
 }
 
 enum RemoteType {

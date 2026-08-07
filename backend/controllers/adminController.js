@@ -1796,6 +1796,128 @@ const togglePublishRight = async (req, res) => {
   }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// HEADHUNTER — Crédits (module autonome, hors MODULE_REGISTRY : pas de cycle
+// PENDING/APPROVED/REJECTED, juste des transactions et des déblocages)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// GET /api/admin/headhunter/overview
+const getHeadhunterOverview = async (req, res) => {
+  try {
+    const [purchases, unlocks, totalCandidates, visibleCandidates, totalUnlocks] = await Promise.all([
+      prisma.creditTransaction.findMany({ where: { type: 'PURCHASE' } }),
+      prisma.creditTransaction.findMany({ where: { type: 'UNLOCK' } }),
+      prisma.candidateProfile.count(),
+      prisma.candidateProfile.count({ where: { visibleToRecruiters: true } }),
+      prisma.candidateUnlock.count(),
+    ]);
+
+    const CREDIT_PACKS_PRICE = { pack_10: 299, pack_50: 1199, pack_150: 2999 };
+
+    const totalCreditsSold = purchases.reduce((sum, p) => sum + p.amount, 0);
+    const totalRevenue = purchases.reduce(
+      (sum, p) => sum + (CREDIT_PACKS_PRICE[p.packId] || 0),
+      0
+    );
+    const totalCreditsConsumed = Math.abs(unlocks.reduce((sum, u) => sum + u.amount, 0));
+
+    res.json({
+      success: true,
+      data: {
+        totalCreditsSold,
+        totalRevenue,
+        totalCreditsConsumed,
+        totalUnlocks,
+        totalCandidates,
+        visibleCandidates,
+        purchaseCount: purchases.length,
+      },
+    });
+  } catch (error) {
+    console.error('admin getHeadhunterOverview error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+// GET /api/admin/headhunter/transactions?type=&page=&limit=
+const getHeadhunterTransactions = async (req, res) => {
+  try {
+    const { type = '', page = 1, limit = 20 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const where = { ...(type && { type }) };
+
+    const [transactions, total] = await Promise.all([
+      prisma.creditTransaction.findMany({
+        where,
+        skip,
+        take: parseInt(limit),
+        orderBy: { createdAt: 'desc' },
+        include: { user: { select: { id: true, name: true, email: true, companyName: true } } },
+      }),
+      prisma.creditTransaction.count({ where }),
+    ]);
+
+    res.json({
+      success: true,
+      data: transactions,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    console.error('admin getHeadhunterTransactions error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+// GET /api/admin/headhunter/businesses
+const getHeadhunterBusinessActivity = async (req, res) => {
+  try {
+    const businesses = await prisma.user.findMany({
+      where: { role: { name: 'business' } },
+      select: {
+        id: true,
+        name: true,
+        companyName: true,
+        email: true,
+        creditBalance: true,
+        creditTransactions: { select: { type: true, amount: true } },
+        candidateUnlocks: { select: { id: true } },
+      },
+    });
+
+    const normalized = businesses
+      .map((b) => {
+        const purchased = b.creditTransactions
+          .filter((t) => t.type === 'PURCHASE')
+          .reduce((s, t) => s + t.amount, 0);
+        const consumed = Math.abs(
+          b.creditTransactions.filter((t) => t.type === 'UNLOCK').reduce((s, t) => s + t.amount, 0)
+        );
+        return {
+          id: b.id,
+          name: b.companyName || b.name,
+          email: b.email,
+          creditBalance: b.creditBalance,
+          totalPurchased: purchased,
+          totalConsumed: consumed,
+          totalUnlocks: b.candidateUnlocks.length,
+        };
+      })
+      .filter((b) => b.totalPurchased > 0 || b.totalConsumed > 0)
+      .sort((a, b) => b.totalConsumed - a.totalConsumed);
+
+    res.json({ success: true, data: normalized });
+  } catch (error) {
+    console.error('admin getHeadhunterBusinessActivity error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
 module.exports = {
   getOverview,
   getListings,
@@ -1819,4 +1941,8 @@ module.exports = {
   getJournalists,
   createJournalistAccount,
   togglePublishRight,
+  // Headhunter / Crédits
+  getHeadhunterOverview,
+  getHeadhunterTransactions,
+  getHeadhunterBusinessActivity,
 };

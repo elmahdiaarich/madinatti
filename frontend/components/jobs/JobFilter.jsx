@@ -1,7 +1,16 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { cities } from 'morocco-cities';
+import {
+  citiesByRegion,
+  buildRegionOptions,
+  buildCityOptions,
+  FilterSkeleton,
+  FilterOption,
+  FilterSection,
+  FilterHeader,
+  ToggleRow,
+} from '@/components/shared/FilterPanel';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL + '/api';
 
@@ -35,88 +44,6 @@ const EXPERIENCE_OPTIONS = [
   { value: 'EXPERT_PLUS_10',     label: '> 10 ans' },
 ];
 
-// ─── Build region → cities map once from morocco-cities ───────────────────────
-const citiesByRegion = cities.reduce((acc, city) => {
-  const region = city.region_name;
-  if (!acc[region]) acc[region] = [];
-  acc[region].push(city.name);
-  return acc;
-}, {});
-
-// Sorted list of all regions
-const ALL_REGIONS = Object.keys(citiesByRegion).sort((a, b) => a.localeCompare(b, 'fr'));
-
-function FilterSkeleton() {
-  return (
-    <div className="px-4 pb-3 space-y-1.5 animate-pulse">
-      {[80, 60, 70, 50, 65].map((w, i) => (
-        <div key={i} className="flex items-center gap-2 py-1.5">
-          <div className="w-4 h-4 rounded bg-gray-100 shrink-0" />
-          <div className="h-3 bg-gray-100 rounded" style={{ width: `${w}%` }} />
-          <div className="ml-auto h-4 w-8 bg-gray-100 rounded-full" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function FilterOption({ label, count, isChecked, onClick }) {
-  return (
-    <label
-      onClick={onClick}
-      className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer transition-all duration-150 text-sm
-        ${isChecked
-          ? 'bg-[#2D5016] text-white'
-          : 'text-gray-600 hover:bg-[#E8F5D0] hover:text-[#2D5016]'
-        }`}
-    >
-      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors
-        ${isChecked ? 'bg-[#A7D129] border-[#A7D129]' : 'border-gray-300'}`}>
-        {isChecked && (
-          <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-          </svg>
-        )}
-      </div>
-      <span className="leading-snug flex-1 truncate">{label}</span>
-      {count !== undefined && (
-        <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[22px] text-center shrink-0 transition-colors
-          ${isChecked ? 'bg-white/25 text-white' : 'bg-gray-100 text-gray-500'}`}>
-          {count.toLocaleString('fr-MA')}
-        </span>
-      )}
-    </label>
-  );
-}
-
-function FilterSection({ icon, label, badge, isOpen, onToggle, children }) {
-  return (
-    <div>
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100"
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-base">{icon}</span>
-          <span className="text-sm font-semibold text-gray-800">{label}</span>
-          {badge > 0 && (
-            <span className="text-[10px] bg-[#A7D129] text-white rounded-full w-5 h-5 flex items-center justify-center font-bold">
-              {badge}
-            </span>
-          )}
-        </div>
-        <svg
-          className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-          fill="none" stroke="currentColor" viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {isOpen && children}
-    </div>
-  );
-}
-
 export default function JobFilter({ onFilter }) {
   const [open, setOpen] = useState({
     categorySlug:    true,
@@ -132,11 +59,9 @@ export default function JobFilter({ onFilter }) {
   const [loadingCounts, setLoadingCounts] = useState(true);
   const [hideSalaryUnspecified, setHideSalaryUnspecified] = useState(false);
 
-  // Single selected region / city
   const selectedRegion = (selected.region || [])[0] || null;
   const selectedCity   = (selected.city   || [])[0] || null;
 
-  // ─── Fetch only category/contract/experience/education counts from API ────
   useEffect(() => {
     const fetchCounts = async () => {
       try {
@@ -153,44 +78,16 @@ export default function JobFilter({ onFilter }) {
     fetchCounts();
   }, []);
 
-  // ─── Region options: from morocco-cities, counts from API ─────────────────
-  const regionOptions = useMemo(() => {
-    return ALL_REGIONS.map((regionName) => ({
-      value: regionName,
-      label: regionName,
-      // Show API count if available, otherwise undefined (no badge)
-      count: counts?.region?.[regionName],
-    })).filter((r) => r.count === undefined || r.count > 0);
-  }, [counts]);
+  const regionOptions = useMemo(() => buildRegionOptions(counts?.region), [counts]);
+  const cityOptions = useMemo(
+    () => buildCityOptions(selectedRegion, counts?.city),
+    [selectedRegion, counts]
+  );
 
-  // ─── City options: from morocco-cities filtered by selected region ─────────
-  const cityOptions = useMemo(() => {
-    const regionCities = selectedRegion
-      ? (citiesByRegion[selectedRegion] || [])
-      : Object.values(citiesByRegion).flat();
-
-    return regionCities
-      .map((cityName) => ({
-        value: cityName,
-        label: cityName,
-        // Show API count if available
-        count: counts?.city?.[cityName],
-      }))
-      // Hide cities with zero jobs (only if we have count data)
-      .filter((c) => c.count === undefined || c.count > 0)
-      // Sort by count desc, then alphabetically
-      .sort((a, b) => {
-        if (a.count !== undefined && b.count !== undefined) return b.count - a.count;
-        return a.label.localeCompare(b.label, 'fr');
-      });
-  }, [selectedRegion, counts]);
-
-  // ─── Category options ─────────────────────────────────────────────────────
   const categoryOptions = counts?.categories
     ? counts.categories.map((c) => ({ value: c.slug, label: c.name, count: c.count }))
     : [];
 
-  // ─── Helpers ──────────────────────────────────────────────────────────────
   const toggleSection = (key) =>
     setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
 
@@ -202,7 +99,6 @@ export default function JobFilter({ onFilter }) {
       filters[k] = vals.length > 0 ? vals[0] : undefined;
     });
 
-    // City takes priority over region
     const city   = (newSelected.city   || [])[0];
     const region = (newSelected.region || [])[0];
     filters.city = city   || undefined;
@@ -214,13 +110,11 @@ export default function JobFilter({ onFilter }) {
     onFilter(filters);
   };
 
-  // Radio-like: one value per section
   const handleCheck = (key, value) => {
     const current = (selected[key] || [])[0];
 
     let newVal;
     if (key === 'region') {
-      // Changing region resets city
       const isSame = current === value;
       newVal = { ...selected, region: isSame ? [] : [value], city: [] };
     } else {
@@ -249,7 +143,6 @@ export default function JobFilter({ onFilter }) {
   const totalSelected =
     Object.values(selected).flat().length + (hideSalaryUnspecified ? 1 : 0);
 
-  // ─── Static sections (API-counted) ───────────────────────────────────────
   const staticSections = [
     {
       key: 'categorySlug',
@@ -283,52 +176,19 @@ export default function JobFilter({ onFilter }) {
     },
   ];
 
+  const headerIcon = (
+    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+    </svg>
+  );
+
   return (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+      <FilterHeader icon={headerIcon} title="Filtrer les offres" totalSelected={totalSelected} onReset={handleReset} />
 
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="bg-gradient-to-r from-[#2D5016] to-[#3d6b1f] px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
-          </svg>
-          <span className="text-white font-semibold text-sm">Filtrer les offres</span>
-          {totalSelected > 0 && (
-            <span className="bg-[#A7D129] text-white text-xs rounded-full px-2 py-0.5 font-bold">
-              {totalSelected}
-            </span>
-          )}
-        </div>
-        {totalSelected > 0 && (
-          <button
-            onClick={handleReset}
-            className="text-white/70 hover:text-white text-xs underline transition-colors"
-          >
-            Réinitialiser
-          </button>
-        )}
-      </div>
+      <ToggleRow icon="💰" label="Salaire affiché" checked={hideSalaryUnspecified} onToggle={handleSalaryToggle} />
 
-      {/* ── Toggle salaire ───────────────────────────────────────────────── */}
-      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="text-base">💰</span>
-          <span className="text-sm font-semibold text-gray-800">Salaire affiché</span>
-        </div>
-        <button
-          onClick={handleSalaryToggle}
-          className={`relative inline-flex w-11 h-6 rounded-full transition-colors duration-200 shrink-0 ${
-            hideSalaryUnspecified ? 'bg-[#2D5016]' : 'bg-gray-200'
-          }`}
-        >
-          <span className={`inline-block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 mt-0.5 ${
-            hideSalaryUnspecified ? 'translate-x-5' : 'translate-x-0.5'
-          }`} />
-        </button>
-      </div>
-
-      {/* ── Static sections ──────────────────────────────────────────────── */}
       {staticSections.map((section) => (
         <FilterSection
           key={section.key}
@@ -362,7 +222,6 @@ export default function JobFilter({ onFilter }) {
         </FilterSection>
       ))}
 
-      {/* ── Section Région (from morocco-cities) ─────────────────────────── */}
       <FilterSection
         icon="🗺️"
         label="Région"
@@ -387,7 +246,6 @@ export default function JobFilter({ onFilter }) {
         </div>
       </FilterSection>
 
-      {/* ── Section Ville (from morocco-cities, filtered by region) ──────── */}
       <FilterSection
         icon="📍"
         label={selectedRegion ? `Ville — ${selectedRegion}` : 'Ville'}

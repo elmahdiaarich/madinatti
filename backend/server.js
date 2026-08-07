@@ -90,7 +90,9 @@ app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/business/stats', require('./routes/stats'));
 app.use('/api/press', pressRoutes);
 app.use('/api/uploads', require('./routes/uploadRoutes'));
-
+app.use('/api/candidate-profile', require('./routes/candidateProfile'));
+app.use('/api/credits', require('./routes/credits'));
+app.use('/api/headhunter', require('./routes/headhunter'));
 startPressScheduler();
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {

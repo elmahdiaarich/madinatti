@@ -10,7 +10,7 @@ const {
   getUsers,
   toggleUser,
   getBusinesses,
-  updateListingStatus,   // ← ajouté
+  updateListingStatus,   
   deleteListing,  
   // Categories
   getCategories,
@@ -22,7 +22,11 @@ const {
   // Journalist accounts
   getJournalists,
   createJournalistAccount,
-  togglePublishRight
+  togglePublishRight,
+  // Headhunter / Crédits
+  getHeadhunterOverview,
+  getHeadhunterTransactions,
+  getHeadhunterBusinessActivity,
 } = require('../controllers/adminController')
 const { createListingLimiter } = require('../middlewares/rateLimiter')
 const {
@@ -128,6 +132,15 @@ router.patch('/categories/:id/toggle', toggleCategoryActive)
 // DELETE /api/admin/categories/:id
 router.delete('/categories/module/:module', deleteModule)
 router.delete('/categories/:id', deleteCategory)
+// ── Headhunter / Crédits ─────────────────────────────────────────────────────
+// GET /api/admin/headhunter/overview
+router.get('/headhunter/overview', getHeadhunterOverview)
+
+// GET /api/admin/headhunter/transactions?type=&page=&limit=
+router.get('/headhunter/transactions', getHeadhunterTransactions)
+
+// GET /api/admin/headhunter/businesses
+router.get('/headhunter/businesses', getHeadhunterBusinessActivity)
 
  
 module.exports = router

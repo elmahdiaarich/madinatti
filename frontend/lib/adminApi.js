@@ -291,3 +291,25 @@ export async function adminDeleteCategory(id, token = null) {
 export async function adminDeleteModule(module, token = null) {
   return apiFetch(`/api/admin/categories/module/${module}`, { method: 'DELETE' }, token)
 }
+
+// ── HEADHUNTER / CREDITS ──────────────────────────────────────────────────────
+
+export async function getHeadhunterOverview(token = null) {
+  const json = await apiFetch('/api/admin/headhunter/overview', {}, token)
+  return json.data ?? {}
+}
+
+export async function getHeadhunterTransactions({ type = '', page = 1, token = null } = {}) {
+  const params = new URLSearchParams({ page })
+  if (type) params.set('type', type)
+  const json = await apiFetch(`/api/admin/headhunter/transactions?${params}`, {}, token)
+  return {
+    data: json.data ?? [],
+    pagination: json.pagination ?? { total: 0, page: 1, limit: 20, totalPages: 0 },
+  }
+}
+
+export async function getHeadhunterBusinesses(token = null) {
+  const json = await apiFetch('/api/admin/headhunter/businesses', {}, token)
+  return json.data ?? []
+}

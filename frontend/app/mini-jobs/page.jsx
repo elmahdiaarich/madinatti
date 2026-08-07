@@ -18,10 +18,7 @@ import LoadingSpinner from "@/components/shared/LoadingSpinner";
 // from the Mini-jobs side, so navigation feels consistent in both directions.
 const EMPLOI_SIBLINGS = [
   { label: "Offres d'emploi", href: '/jobs' },
-  { label: 'Formation', href: '/coming-soon?feature=Formation' },
   { label: 'Mini-jobs', href: '/mini-jobs' },
-  { label: 'Accompagnement', href: '/coming-soon?feature=Accompagnement' },
-  { label: "Demande d'emploi", href: '/coming-soon?feature=Demande d\'emploi' },
 ];
 const PROFILE_SORT_OPTIONS = [
   { value: '', label: 'Pertinence' },
@@ -214,15 +211,15 @@ function MiniJobs() {
         <div className="max-w-[1200px] mx-auto px-4">
 
           {/* Sibling navigation — jump to related Emploi sub-pages */}
-         <div className="flex flex-wrap justify-center gap-2 mb-6">
+          <div className="flex flex-wrap justify-center gap-2 mb-8">
             {EMPLOI_SIBLINGS.map((s) => (
               <a
                 key={s.label}
                 href={s.href}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
+                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
                   s.href === '/mini-jobs'
-                    ? 'bg-primary-dark text-white'
-                    : 'bg-white border border-gray-200 text-gray-600 hover:border-primary hover:text-primary-dark'
+                    ? 'bg-primary-dark text-white shadow-sm'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:border-primary-dark hover:text-primary-dark'
                 }`}
               >
                 {s.label}
