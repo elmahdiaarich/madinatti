@@ -5,6 +5,32 @@ const { PrismaClient } = require('@prisma/client');
 const DATA_FILE = path.join(__dirname, '..', '..', 'data', 'education', 'etablissements_publics_kenitra_audit_gps.xlsx');
 const SOURCE = 'MENPS_PUBLIC_2011_KENITRA_PROVINCE';
 
+const COMMUNE_COORDINATES = {
+  'Ameur Seflia': { lat: 34.2752439, lng: -6.334433, provider: 'photon', score: 100 },
+  Arbaoua: { lat: 34.9134851, lng: -5.932567, provider: 'photon', score: 100 },
+  'Bahhara Ouled Ayad': { lat: 34.7578168, lng: -6.3014477, provider: 'photon', score: 55 },
+  'Ben Mansour': { lat: 34.5956792, lng: -6.3752273, provider: 'photon', score: 100 },
+  'Beni Malek': { lat: 34.7091004, lng: -6.0086412, provider: 'photon', score: 100 },
+  Chouafaa: { lat: 34.9429002, lng: -6.177413, provider: 'photon', score: 100 },
+  Haddada: { lat: 34.223052, lng: -6.510859, provider: 'photon', score: 100 },
+  'Kariat Ben Aouda': { lat: 34.7283614, lng: -5.9918757, provider: 'photon', score: 100 },
+  Kenitra: { lat: 34.5579171, lng: -6.355701, provider: 'photon', score: 100 },
+  'Lalla Mimouna': { lat: 34.848871, lng: -6.069173, provider: 'photon', score: 100 },
+  Mehdya: { lat: 34.2559174, lng: -6.6577278, provider: 'photon', score: 100 },
+  Mnasra: { lat: 34.3708381, lng: -6.5306524, provider: 'photon', score: 100 },
+  Mograne: { lat: 34.412485, lng: -6.427556, provider: 'photon', score: 100 },
+  'Moulay Bousselham': { lat: 34.8813125, lng: -6.2923125, provider: 'file', score: 100 },
+  'Oued EL Makhazine': { lat: 34.880914, lng: -5.831723, provider: 'photon', score: 100 },
+  'Ouled Slama': { lat: 34.3431072, lng: -6.4579908, provider: 'photon', score: 55 },
+  'Sidi Allal Tazi': { lat: 34.52185, lng: -6.323673, provider: 'photon', score: 100 },
+  'Sidi Boubker EL Haj': { lat: 34.9223479, lng: -6.0545463, provider: 'photon', score: 100 },
+  'Sidi Mohamed Benmansour': { lat: 34.728509, lng: -6.2479543, provider: 'photon', score: 55 },
+  'Sidi Mohamed Lahmar': { lat: 34.728509, lng: -6.2479543, provider: 'photon', score: 100 },
+  'Sidi Taibi': { lat: 34.1911875, lng: -6.6826875, provider: 'file', score: 100 },
+  'Souk El Arbaa': { lat: 34.6765226, lng: -5.992617, provider: 'photon', score: 100 },
+  'Souk Tlet EL Gharb': { lat: 34.601171, lng: -6.173848, provider: 'photon', score: 100 },
+};
+
 const TYPE_BY_LEVEL = {
   primaire: 'PRIMARY_SCHOOL',
   college: 'MIDDLE_SCHOOL',
@@ -93,6 +119,8 @@ function buildPayload(row, categoryId) {
   const latitude = numberOrNull(row.latitude);
   const longitude = numberOrNull(row.longitude);
   const hasCoordinates = latitude !== null && longitude !== null;
+  const communeCoordinate = COMMUNE_COORDINATES[city] || null;
+  const hasCommuneCoordinate = Boolean(communeCoordinate && !hasCoordinates);
   const sourceUrl = cleanText(row.official_source_url) || cleanText(row.gps_source_url);
 
   return {
@@ -106,8 +134,8 @@ function buildPayload(row, categoryId) {
     region: cleanText(row.region) || 'Rabat-Sale-Kenitra',
     province: cleanText(row.province) || 'Kenitra',
     city,
-    latitude,
-    longitude,
+    latitude: hasCoordinates ? latitude : communeCoordinate?.lat ?? null,
+    longitude: hasCoordinates ? longitude : communeCoordinate?.lng ?? null,
     phone: cleanText(row.phone),
     email: cleanText(row.email),
     website: cleanText(row.website),
@@ -133,6 +161,21 @@ function buildPayload(row, categoryId) {
       legacyContactField: cleanText(row.legacy_contact_field),
       nature2011: cleanText(row.nature_2011),
       notes: cleanText(row.notes),
+      geocoding: hasCoordinates
+        ? {
+            provider: 'file',
+            accuracy: 'verified_plus_code',
+            geocodedAt: new Date().toISOString(),
+          }
+        : hasCommuneCoordinate
+          ? {
+              provider: communeCoordinate.provider,
+              accuracy: 'commune',
+              score: communeCoordinate.score,
+              warning: 'Approximate point for the commune, not the exact school entrance.',
+              geocodedAt: new Date().toISOString(),
+            }
+          : null,
     },
   };
 }
@@ -202,6 +245,7 @@ if (require.main === module) {
 module.exports = {
   DATA_FILE,
   SOURCE,
+  COMMUNE_COORDINATES,
   buildPayload,
   readRows,
   seedEducationInstitutions,

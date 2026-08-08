@@ -56,16 +56,26 @@ async function seedEducationIfMissing() {
 
   try {
     const expectedCount = readEducationSeedRows().length;
-    const existingCount = await prisma.educationInstitution.count({
-      where: { source: EDUCATION_SEED_SOURCE },
-    });
+    const [existingCount, geolocatedCount] = await Promise.all([
+      prisma.educationInstitution.count({
+        where: { source: EDUCATION_SEED_SOURCE },
+      }),
+      prisma.educationInstitution.count({
+        where: {
+          source: EDUCATION_SEED_SOURCE,
+          NOT: [{ latitude: null }, { longitude: null }],
+        },
+      }),
+    ]);
 
-    if (existingCount >= expectedCount) {
-      console.log(`[educationSeed] ${existingCount}/${expectedCount} education records already present.`);
+    if (existingCount >= expectedCount && geolocatedCount >= expectedCount) {
+      console.log(`[educationSeed] ${existingCount}/${expectedCount} education records already present, ${geolocatedCount} geolocated.`);
       return;
     }
 
-    console.log(`[educationSeed] Found ${existingCount}/${expectedCount} education records. Seeding missing data...`);
+    console.log(
+      `[educationSeed] Found ${existingCount}/${expectedCount} education records, ${geolocatedCount} geolocated. Seeding missing data...`,
+    );
     await seedEducationInstitutions(prisma);
   } catch (error) {
     console.error(`[educationSeed] Failed to verify or seed education data: ${error.message}`);
