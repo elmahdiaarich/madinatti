@@ -15,6 +15,7 @@ const { seedHealthPlaces } = require('./health.seed');
 const { seedEvents } = require('./events.seed');
 const { seedEventFormTemplates } = require('./eventFormTemplates.seed');
 const { seedShopSubscriptionPlans } = require('./shopSubscriptionPlans.seed');
+const { seedEducationInstitutions } = require('./education.seed');
 
 
 async function main() {
@@ -22,6 +23,7 @@ async function main() {
 //   await seedUsers(prisma, roles);  
 //   await seedPlans(prisma);
   const categories = await seedCategories(prisma);
+  await seedEducationInstitutions(prisma);
 //   await seedEventFormTemplates(prisma);
 //   await seedShopSubscriptionPlans(prisma);
 
