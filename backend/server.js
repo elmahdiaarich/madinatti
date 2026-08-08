@@ -44,7 +44,33 @@ const shopRoutes = require('./routes/shops');
 const googleAuthRoutes = require("./routes/googleAuth")
 const pressRoutes = require('./routes/press');
 const { startPressScheduler } = require('./scheduled/scheduler');
+const prisma = require('./config/db');
+const {
+  SOURCE: EDUCATION_SEED_SOURCE,
+  readRows: readEducationSeedRows,
+  seedEducationInstitutions,
+} = require('./prisma/seeds/education.seed');
 
+async function seedEducationIfMissing() {
+  if (process.env.AUTO_SEED_EDUCATION === 'false') return;
+
+  try {
+    const expectedCount = readEducationSeedRows().length;
+    const existingCount = await prisma.educationInstitution.count({
+      where: { source: EDUCATION_SEED_SOURCE },
+    });
+
+    if (existingCount >= expectedCount) {
+      console.log(`[educationSeed] ${existingCount}/${expectedCount} education records already present.`);
+      return;
+    }
+
+    console.log(`[educationSeed] Found ${existingCount}/${expectedCount} education records. Seeding missing data...`);
+    await seedEducationInstitutions(prisma);
+  } catch (error) {
+    console.error(`[educationSeed] Failed to verify or seed education data: ${error.message}`);
+  }
+}
 
 app.use('/api/auth', authRoutes)
 app.use("/api/auth", googleAuthRoutes)
@@ -106,4 +132,5 @@ startPressScheduler();
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
+  seedEducationIfMissing()
 })
