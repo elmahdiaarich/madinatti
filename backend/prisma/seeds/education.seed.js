@@ -5,6 +5,41 @@ const { PrismaClient } = require('@prisma/client');
 const DATA_FILE = path.join(__dirname, '..', '..', 'data', 'education', 'etablissements_publics_kenitra_audit_gps.xlsx');
 const SOURCE = 'MENPS_PUBLIC_2011_KENITRA_PROVINCE';
 
+const EXACT_COORDINATES_BY_ROW_ID = {
+  38: { lat: 34.2614366, lng: -6.5565418, provider: 'openstreetmap', osmType: 'node', osmId: 5347052921, name: 'Abd Elhamid Alaoui' },
+  57: { lat: 34.2326688, lng: -6.53831, provider: 'openstreetmap', osmType: 'node', osmId: 5347032425, name: 'Brahim Roudani' },
+  60: { lat: 34.261578, lng: -6.5626399, provider: 'openstreetmap', osmType: 'way', osmId: 1094763690, name: 'Al Andalous' },
+  72: { lat: 34.2482208, lng: -6.5519668, provider: 'openstreetmap', osmType: 'node', osmId: 11923665358, name: 'Ecole Fatima al Fihriya' },
+  75: { lat: 34.2568561, lng: -6.588172, provider: 'openstreetmap', osmType: 'way', osmId: 1117440750, name: 'Ibn AlKhatib' },
+  78: { lat: 34.2306384, lng: -6.540973, provider: 'openstreetmap', osmType: 'node', osmId: 7687296585, name: 'Ecole ibn rochd ain sbea' },
+  79: { lat: 34.2638538, lng: -6.5826635, provider: 'openstreetmap', osmType: 'way', osmId: 1122494133, name: 'Jamal Eddine Al Afghani' },
+  87: { lat: 34.2529302, lng: -6.5550834, provider: 'openstreetmap', osmType: 'node', osmId: 5246202222, name: 'Oued Elmakhazen 1' },
+  95: { lat: 34.2519705, lng: -6.5438062, provider: 'openstreetmap', osmType: 'way', osmId: 1095638149, name: 'Tarik Ibn Ziad' },
+  96: { lat: 34.230394, lng: -6.6149164, provider: 'openstreetmap', osmType: 'way', osmId: 1120226842, name: 'Al Aahd Al Jadid' },
+  163: { lat: 34.2441817, lng: -6.5554022, provider: 'openstreetmap', osmType: 'node', osmId: 5347032431, name: 'Abdellah Guennoun' },
+  164: { lat: 34.2539326, lng: -6.5476767, provider: 'openstreetmap', osmType: 'way', osmId: 1095638167, name: 'Alhariri' },
+  166: { lat: 34.2557404, lng: -6.5734302, provider: 'openstreetmap', osmType: 'way', osmId: 1119959714, name: 'School Mohammed Diouri' },
+  168: { lat: 34.2565488, lng: -6.5874798, provider: 'openstreetmap', osmType: 'node', osmId: 4744073721, name: 'College Ibnou Hazm' },
+  169: { lat: 34.2684494, lng: -6.5582746, provider: 'openstreetmap', osmType: 'way', osmId: 918678139, name: 'college Ibnou Khaldoun' },
+  170: { lat: 34.2684314, lng: -6.5571051, provider: 'openstreetmap', osmType: 'way', osmId: 918678137, name: 'college elkhaouarizmi' },
+  171: { lat: 34.2307319, lng: -6.615816, provider: 'openstreetmap', osmType: 'way', osmId: 1120226841, name: 'Lalla Mariam' },
+  174: { lat: 34.2491897, lng: -6.5477479, provider: 'openstreetmap', osmType: 'way', osmId: 1095638163, name: 'College Oukba ibn Nafiaa' },
+  175: { lat: 34.2564001, lng: -6.6075673, provider: 'openstreetmap', osmType: 'way', osmId: 1117462643, name: 'Oulad Oujih' },
+  176: { lat: 34.2597663, lng: -6.5664955, provider: 'openstreetmap', osmType: 'node', osmId: 11390549579, name: 'College Oum El Banin' },
+  177: { lat: 34.230605, lng: -6.5399334, provider: 'openstreetmap', osmType: 'way', osmId: 1094766731, name: 'College 20 Aout' },
+  194: { lat: 34.2583914, lng: -6.5784988, provider: 'openstreetmap', osmType: 'way', osmId: 309375042, name: 'Lycee Abdelmalek Saadi' },
+  195: { lat: 34.2610532, lng: -6.6005476, provider: 'openstreetmap', osmType: 'way', osmId: 1117462642, name: 'College Abd Errahmane Elnasser' },
+  197: { lat: 34.2469174, lng: -6.5425379, provider: 'openstreetmap', osmType: 'way', osmId: 1095638143, name: 'Lycee Al Massira Al Khadra' },
+  198: { lat: 34.262511, lng: -6.5713978, provider: 'openstreetmap', osmType: 'way', osmId: 1094581790, name: 'Lycee Ibn Abbad' },
+  200: { lat: 34.2567661, lng: -6.6133201, provider: 'openstreetmap', osmType: 'way', osmId: 1117463285, name: 'Lycee Ibn Elhaytaham' },
+  201: { lat: 34.2744371, lng: -6.5577562, provider: 'openstreetmap', osmType: 'way', osmId: 1117461614, name: 'Idriss l' },
+  202: { lat: 34.2521504, lng: -6.5881267, provider: 'openstreetmap', osmType: 'way', osmId: 101690010, name: 'Lycee Technique Ibn Sina' },
+  203: { lat: 34.2581022, lng: -6.5637267, provider: 'openstreetmap', osmType: 'node', osmId: 5347029423, name: 'Lycee Mohamed V' },
+  204: { lat: 34.2588971, lng: -6.5963962, provider: 'openstreetmap', osmType: 'way', osmId: 1117462641, name: 'Ouad Addahab' },
+  205: { lat: 34.2518459, lng: -6.5940932, provider: 'openstreetmap', osmType: 'way', osmId: 451734618, name: 'Lycee Taha Hussain' },
+  207: { lat: 34.2514514, lng: -6.5584353, provider: 'openstreetmap', osmType: 'way', osmId: 1094911144, name: 'Lycee Ibn Batouta' },
+};
+
 const COMMUNE_COORDINATES = {
   'Ameur Seflia': { lat: 34.2752439, lng: -6.334433, provider: 'photon', score: 100 },
   Arbaoua: { lat: 34.9134851, lng: -5.932567, provider: 'photon', score: 100 },
@@ -116,11 +151,13 @@ function readRows(filePath = DATA_FILE) {
 
 function buildPayload(row, categoryId) {
   const city = cleanCommune(row.commune);
+  const exactCoordinate = EXACT_COORDINATES_BY_ROW_ID[Number(row.id)] || null;
   const latitude = numberOrNull(row.latitude);
   const longitude = numberOrNull(row.longitude);
   const hasCoordinates = latitude !== null && longitude !== null;
   const communeCoordinate = COMMUNE_COORDINATES[city] || null;
-  const hasCommuneCoordinate = Boolean(communeCoordinate && !hasCoordinates);
+  const hasExactCoordinate = Boolean(exactCoordinate);
+  const hasCommuneCoordinate = Boolean(communeCoordinate && !hasCoordinates && !hasExactCoordinate);
   const sourceUrl = cleanText(row.official_source_url) || cleanText(row.gps_source_url);
 
   return {
@@ -134,12 +171,12 @@ function buildPayload(row, categoryId) {
     region: cleanText(row.region) || 'Rabat-Sale-Kenitra',
     province: cleanText(row.province) || 'Kenitra',
     city,
-    latitude: hasCoordinates ? latitude : communeCoordinate?.lat ?? null,
-    longitude: hasCoordinates ? longitude : communeCoordinate?.lng ?? null,
+    latitude: hasExactCoordinate ? exactCoordinate.lat : hasCoordinates ? latitude : communeCoordinate?.lat ?? null,
+    longitude: hasExactCoordinate ? exactCoordinate.lng : hasCoordinates ? longitude : communeCoordinate?.lng ?? null,
     phone: cleanText(row.phone),
     email: cleanText(row.email),
     website: cleanText(row.website),
-    isVerified: hasCoordinates,
+    isVerified: hasExactCoordinate || hasCoordinates,
     isPublished: true,
     source: SOURCE,
     sourceUrl,
@@ -152,7 +189,11 @@ function buildPayload(row, categoryId) {
       originalId: row.id,
       originalCommune: cleanText(row.commune),
       level: cleanText(row.level),
-      gpsStatus: hasCoordinates ? cleanText(row.gps_status) || 'VERIFIED_FROM_FILE' : cleanText(row.gps_status) || 'NOT_VERIFIED',
+      gpsStatus: hasExactCoordinate
+        ? 'VERIFIED_OSM_POI'
+        : hasCoordinates
+          ? cleanText(row.gps_status) || 'VERIFIED_FROM_FILE'
+          : cleanText(row.gps_status) || 'NOT_VERIFIED',
       gpsPrecision: cleanText(row.gps_precision),
       gpsSourceUrl: cleanText(row.gps_source_url),
       contactSource: cleanText(row.contact_source),
@@ -161,7 +202,16 @@ function buildPayload(row, categoryId) {
       legacyContactField: cleanText(row.legacy_contact_field),
       nature2011: cleanText(row.nature_2011),
       notes: cleanText(row.notes),
-      geocoding: hasCoordinates
+      geocoding: hasExactCoordinate
+        ? {
+            provider: exactCoordinate.provider,
+            accuracy: 'poi',
+            displayName: exactCoordinate.name,
+            osmType: exactCoordinate.osmType,
+            osmId: exactCoordinate.osmId,
+            geocodedAt: new Date().toISOString(),
+          }
+        : hasCoordinates
         ? {
             provider: 'file',
             accuracy: 'verified_plus_code',
@@ -245,6 +295,7 @@ if (require.main === module) {
 module.exports = {
   DATA_FILE,
   SOURCE,
+  EXACT_COORDINATES_BY_ROW_ID,
   COMMUNE_COORDINATES,
   buildPayload,
   readRows,
