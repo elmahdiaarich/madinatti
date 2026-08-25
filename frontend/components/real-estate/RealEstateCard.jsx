@@ -5,8 +5,9 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/context/AuthContext";
 import { realEstateService } from "@/services/realEstateService";
-import ReportModal from "@/components/shared/ReportModal";
+// import ReportModal from "@/components/shared/ReportModal";
 import ShareMenu from "@/components/shared/ShareMenu";
+import { MapPin, Ruler, BedDouble, Bath } from "lucide-react";
 
 const LISTING_TYPE_LABELS = {
   SALE: { label: "Vente", color: "bg-[#2D5016] text-white" },
@@ -56,16 +57,15 @@ function PhotoFrame({ images, title }) {
     setImgErr(false);
     setCurrentIndex(i);
   };
-
   return (
-    <div className="rounded-t-2xl overflow-hidden">
+    <div className="rounded-2xl overflow-hidden">
       {/* ── Main image ── */}
-      <div className="relative w-full h-[220px] bg-gray-100">
+      <div className="relative w-full aspect-square bg-gray-100">
         {current && !imgErr ? (
           <img
             src={current.url}
             alt={title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full rounded-2xl h-full object-cover transition-transform duration-500 group-hover:scale-105"
             onError={() => setImgErr(true)}
           />
         ) : (
@@ -153,7 +153,7 @@ function PhotoFrame({ images, title }) {
       </div>
 
       {/* ── Thumbnail strip — only shown when multiple images ── */}
-      {hasMultiple && (
+      {/* {hasMultiple && (
         <div className="flex gap-1 p-1.5 bg-gray-50 border-t border-gray-100">
           {sortedImages.slice(0, 4).map((img, i) => (
             <button
@@ -178,7 +178,7 @@ function PhotoFrame({ images, title }) {
             </button>
           ))}
         </div>
-      )}
+      )} */}
     </div>
   );
 }
@@ -220,15 +220,14 @@ function FavoriteButton({ listingId, initialFavorited = false, onToggle }) {
       onClick={handleClick}
       title={favorited ? "Retirer des favoris" : "Ajouter aux favoris"}
       className={`
-        w-8 h-8 rounded-full flex items-center justify-center
-        transition-all duration-200 hover:scale-110 active:scale-95
-        ${
-          favorited
-            ? "bg-[#E8F5D0] text-[#2D5016] hover:bg-[#A7D129]"
-            : "bg-white/80 text-gray-300 hover:text-[#2D5016] hover:bg-[#E8F5D0]"
+  w-7 h-7 rounded-full flex items-center justify-center
+  transition-all duration-200 hover:scale-110 active:scale-95
+  ${favorited
+          ? "bg-[#2D5016] text-white hover:bg-[#1f3a10]"
+          : "bg-black/3 text-gray-700 hover:text-white hover:bg-[#2D5016]"
         }
-        ${loading ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
-      `}
+  ${loading ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
+`}
     >
       <svg
         viewBox="0 0 24 24"
@@ -267,7 +266,7 @@ function ShareButton({ listing }) {
   };
 
   return (
-    <div className="relative">
+    <div className="relative ">
       <button
         ref={btnRef}
         onClick={handleClick}
@@ -332,7 +331,7 @@ export default function RealEstateCard({
   onFavoriteToggle,
   showShare = false,
 }) {
-  const [reportOpen, setReportOpen] = useState(false);
+  // const [reportOpen, setReportOpen] = useState(false);
 
   const listingType = LISTING_TYPE_LABELS[listing.listingType];
   const propertyType =
@@ -360,70 +359,68 @@ export default function RealEstateCard({
 
   return (
     <>
-      <div className="relative">
+      <div className="relative mb-7 w-full">
         <Link href={`/real-estate/${listing.id}`} className="block group">
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-lg hover:border-[#A7D129] transition-all duration-300">
+          <div className="transition-all duration-300">
             {/* Photo with thumbnail strip */}
             <div className="relative">
               <PhotoFrame images={listing.images} title={listing.title} />
 
               {/* Badges overlay */}
-              <div className="absolute top-3 left-3 flex gap-2 z-10">
+              <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 z-10 max-w-[calc(100%-6rem)]">
                 {listingType && (
                   <span
-                    className={`px-2.5 py-1 rounded-full text-xs font-bold ${listingType.color}`}
+                    className={`px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap ${listingType.color}`}
                   >
                     {listingType.label}
                   </span>
                 )}
-                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-white/90 text-gray-700">
+                <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap bg-white/90 text-gray-700">
                   {propertyType}
                 </span>
+                {listing.isFeatured && (
+                  <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap border border-[#A7D129] text-[#7BA428] bg-[#E8F5D0]">
+                    ⭐ Premium
+                  </span>
+                )}
               </div>
 
               {/* Top-right action buttons */}
-              <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+              {/* <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
                 {showShare && <ShareButton listing={listing} />}
                 <FavoriteButton
                   listingId={listing.id}
                   initialFavorited={initialFavorited}
                   onToggle={onFavoriteToggle}
                 />
-              </div>
+              </div> */}
             </div>
 
             {/* Content */}
-            <div className="p-4">
+            <div className="pt-2.5 px-0.5">
+
               {/* Price + Premium badge */}
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <span className="text-xl font-extrabold text-[#2D5016]">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="text-md font-bold text-[#2D5016]">
                   {fmtPrice(listing.price)} MAD
                   {listing.listingType === "RENT" && (
-                    <span className="text-sm font-medium text-gray-500">
-                      /mois
-                    </span>
+                    <span className="text-xs font-medium text-gray-500">/mois</span>
                   )}
                 </span>
-                {listing.priceNegotiable && (
-                  <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-[#A7D129] text-[#2D5016] bg-[#E8F5D0]">
-                    Négociable
-                  </span>
-                )}
-                {listing.isFeatured && (
-                  <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-[#A7D129] text-[#7BA428] bg-[#E8F5D0]">
-                    ⭐ Premium
-                  </span>
-                )}
+                <span className="flex items-center gap-1 text-xs text-gray-400 shrink-0">
+                  <MapPin className="w-3.5 h-3.5" />
+                  {listing.city || listing.location}
+                </span>
               </div>
 
               {/* Title */}
-              <h2 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 mb-2">
+              <h2 className="font-bold text-gray-900 text-[14px] leading-snug line-clamp-1 mb-1">
                 {listing.title}
               </h2>
               <ShopBadge shop={listing.shop} />
 
               {/* Location */}
-              <div className="flex items-center gap-1 text-gray-500 text-xs mb-3">
+              {/* <div className="flex items-center gap-1 text-gray-500 text-xs mb-1.5">
                 <svg
                   className="w-3.5 h-3.5 shrink-0"
                   fill="none"
@@ -446,26 +443,14 @@ export default function RealEstateCard({
                 <span className="truncate">
                   {listing.city || listing.location}
                 </span>
-              </div>
+              </div> */}
 
               {/* Stats row */}
-              <div className="flex items-center gap-3 text-xs text-gray-500 border-t border-gray-50 pt-3 flex-wrap">
+              <div className="flex items-right gap-3 text-xs text-gray-500 flex-wrap">
                 {" "}
                 {listing.surface && (
                   <div className="flex items-center gap-1">
-                    <svg
-                      className="w-3.5 h-3.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-                      />
-                    </svg>
+                    <Ruler className="w-3.5 h-3.5" />
                     <span className="font-semibold text-gray-700">
                       {listing.surface} m²
                     </span>
@@ -473,19 +458,7 @@ export default function RealEstateCard({
                 )}
                 {listing.rooms && (
                   <div className="flex items-center gap-1">
-                    <svg
-                      className="w-3.5 h-3.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                      />
-                    </svg>
+                    <BedDouble className="w-3.5 h-3.5" />
                     <span className="font-semibold text-gray-700">
                       {listing.rooms} pièces
                     </span>
@@ -493,28 +466,24 @@ export default function RealEstateCard({
                 )}
                 {listing.bathrooms && (
                   <div className="flex items-center gap-1">
-                    <svg
-                      className="w-3.5 h-3.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"
-                      />
-                    </svg>
+                    <Bath className="w-3.5 h-3.5" />
                     <span className="font-semibold text-gray-700">
                       {listing.bathrooms} sdb
                     </span>
                   </div>
                 )}
-                <div
+                {/* <div
                   className={`ml-auto text-[14px] font-semibold ${isRecent ? "text-green-600" : "text-gray-400"}`}
                 >
                   {dateStr}
+                </div> */}
+                <div className="ml-auto right-3 z-10 flex items-center gap-1.5">
+                  {showShare && <ShareButton listing={listing} />}
+                  <FavoriteButton
+                    listingId={listing.id}
+                    initialFavorited={initialFavorited}
+                    onToggle={onFavoriteToggle}
+                  />
                 </div>
               </div>
             </div>
@@ -522,7 +491,7 @@ export default function RealEstateCard({
         </Link>
 
         {/* Bouton Signaler */}
-        <div className="flex justify-end mt-1 pr-1">
+        {/* <div className="flex justify-end mt-1 pr-1">
           <button
             onClick={() => setReportOpen(true)}
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
@@ -543,16 +512,16 @@ export default function RealEstateCard({
             </svg>
             Signaler
           </button>
-        </div>
+        </div> */}
       </div>
 
-      <ReportModal
+      {/* <ReportModal
         isOpen={reportOpen}
         onClose={() => setReportOpen(false)}
         targetType="REAL_ESTATE"
         targetId={listing.id}
         targetTitle={listing.title}
-      />
+      /> */}
     </>
   );
 }
