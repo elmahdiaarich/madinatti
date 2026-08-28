@@ -763,11 +763,14 @@ model ListingView {
   listingId   String
   listingType String // "JOB" | "REAL_ESTATE"
   userId      String? // null si visiteur anonyme/non connecté
+  ipAddress   String? // utilisé pour dédoublonner les visiteurs anonymes
   viewedAt    DateTime @default(now())
 
   @@index([listingId, listingType])
   @@index([listingType, viewedAt])
   @@index([viewedAt])
+  @@index([listingId, listingType, userId])
+  @@index([listingId, listingType, ipAddress])
 }
 
 // ── Car Enums ─────────────────────────────────────────────────────────────────
