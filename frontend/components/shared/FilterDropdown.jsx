@@ -13,6 +13,7 @@ export function FilterDropdown({
   onClose,
   width = "w-64",
   className = "",
+  align = "left", // 'left' | 'right' — 'right' opens the panel leftward, useful for the last item in a row so it doesn't overflow past the viewport edge
   children,
 }) {
   const ref = useRef(null);
@@ -48,7 +49,7 @@ export function FilterDropdown({
       {isOpen && (
         <div
           onMouseDown={(e) => e.stopPropagation()}
-          className={`absolute left-0 top-[calc(100%+6px)] ${width} bg-white rounded-xl border border-gray-200 shadow-xl z-[100] p-4`}
+          className={`absolute ${align === "right" ? "right-0" : "left-0"} top-[calc(100%+6px)] ${width} max-w-[calc(100vw-2rem)] bg-white rounded-xl border border-gray-200 shadow-xl z-[100] p-4`}
         >
           {children}
         </div>

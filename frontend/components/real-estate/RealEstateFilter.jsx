@@ -19,6 +19,17 @@ const ALL_REGIONS = Object.keys(citiesByRegion).sort((a, b) =>
   a.localeCompare(b, "fr")
 );
 
+// Reverse lookup: city name → region name, so picking a city directly
+// (without choosing a region first) can still resolve/display its region.
+const cityToRegion = cities.reduce((acc, city) => {
+  acc[city.name] = city.region_name;
+  return acc;
+}, {});
+
+const ALL_CITIES = cities
+  .map((c) => c.name)
+  .sort((a, b) => a.localeCompare(b, "fr"));
+
 const ROOM_OPTIONS = [
   { value: "1", label: "1+ pièce" },
   { value: "2", label: "2+ pièces" },
@@ -55,6 +66,19 @@ const EMPTY_FILTERS = {
   maxSurface: "",
   rooms: "",
 };
+
+// Small helper: renders a label that swaps to a shorter version as the
+// viewport narrows, instead of the field just overflowing/scrolling.
+// (Assumes SearchableDropdown/FilterDropdown just render `{label}` as-is,
+// which works fine with a JSX node, not just a string.)
+function ResponsiveLabel({ full, short }) {
+  return (
+    <>
+      <span className="hidden lg:inline">{full}</span>
+      <span className="lg:hidden">{short}</span>
+    </>
+  );
+}
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function RealEstateFilter({ onFilter, initialFilters = {}, isMobile, onClose, extraActions }) {
@@ -95,7 +119,7 @@ export default function RealEstateFilter({ onFilter, initialFilters = {}, isMobi
   }, [initialFilters]);
 
   const cityOptions = useMemo(() => {
-    if (!filters.region) return [];
+    if (!filters.region) return ALL_CITIES;
     return (citiesByRegion[filters.region] || []).sort((a, b) => a.localeCompare(b, "fr"));
   }, [filters.region]);
 
@@ -115,7 +139,18 @@ export default function RealEstateFilter({ onFilter, initialFilters = {}, isMobi
   const updateFilter = (key, value, { immediate = false } = {}) => {
     const prev = filtersRef.current;
     const next = { ...prev, [key]: value };
-    if (key === "region") next.city = ""; // reset city when region changes
+
+    if (key === "region") {
+      next.city = ""; // reset city when region changes — city list narrows to the new region
+    }
+    if (key === "city" && value) {
+      // Picking a city directly (with no region chosen yet, or a different
+      // region than the city belongs to) auto-fills the matching region so
+      // both fields stay consistent and the dropdown reflects the right context.
+      const resolvedRegion = cityToRegion[value];
+      if (resolvedRegion) next.region = resolvedRegion;
+    }
+
     filtersRef.current = next;
     setFilters(next);
     if (immediate) {
@@ -159,7 +194,12 @@ export default function RealEstateFilter({ onFilter, initialFilters = {}, isMobi
     if (filters.rooms) {
       parts.push(ROOM_OPTIONS.find((r) => r.value === filters.rooms)?.label);
     }
-    return parts.length ? parts.join(" · ") : "Filtres avancés";
+    // When nothing is active, show a label that itself shrinks on small screens.
+    return parts.length ? (
+      <span className="truncate">{parts.join(" · ")}</span>
+    ) : (
+      <ResponsiveLabel full="Filtres avancés" short="Filtres" />
+    );
   };
 
   const advancedFiltersBody = (
@@ -234,8 +274,8 @@ export default function RealEstateFilter({ onFilter, initialFilters = {}, isMobi
             type="button"
             onClick={() => updateFilter("listingType", tab.value, { immediate: true })}
             className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 ${isActive
-                ? "bg-[#2D5016] text-white shadow-sm"
-                : "bg-[#E8F5D0] text-[#2D5016] hover:bg-[#A7D129] hover:text-white"
+              ? "bg-[#2D5016] text-white shadow-sm"
+              : "bg-[#E8F5D0] text-[#2D5016] hover:bg-[#A7D129] hover:text-white"
               }`}
           >
             {tab.label}
@@ -249,24 +289,36 @@ export default function RealEstateFilter({ onFilter, initialFilters = {}, isMobi
     <div className="w-full bg-white">
       {/* ══════════════════════ DESKTOP / TABLET (md+) ══════════════════════ */}
       <div className="hidden md:block">
-        {/* Row 1: search + region + city + property type + advanced */}
-        <div className="flex flex-wrap items-stretch gap-3">
-          {/* Search — extended to ~2x a normal input's width */}
-          <div className="relative group flex-[2_2_320px] min-w-[240px]">
+        {/*
+          Row 1: search + region + city + property type + advanced.
+          FIX: previously `flex-nowrap` + `overflow-x-auto` + `shrink-0` on
+          every child forced a fixed total width, so anything that didn't
+          fit just scrolled off-screen instead of shrinking to fit.
+
+          Now every field is allowed to shrink (`min-w-0`, no `shrink-0`),
+          min-widths shrink progressively at each breakpoint, and the
+          longer labels (Région / Type de bien / Filtres avancés) swap to
+          short forms below the `lg` breakpoint via <ResponsiveLabel>.
+          Nothing scrolls — everything always fits on one row.
+        */}
+        <div className="flex flex-nowrap items-stretch gap-2 lg:gap-3">
+          {/* Search — still the widest field, but its min-width now shrinks
+              with the viewport instead of forcing a scrollbar */}
+          <div className="relative group flex-[2_2_140px] min-w-0">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#2D5016] transition-colors" />
             <input
               type="text"
               placeholder="Rechercher..."
               value={filters.search}
               onChange={(e) => updateFilter("search", e.target.value)}
-              className="w-full bg-gray-50 border border-gray-400 rounded-3xl pl-10 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#A7D129]/30 transition"
+              className="w-full bg-gray-50 border border-gray-400 rounded-3xl pl-10 pr-3 lg:pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#A7D129]/30 transition"
             />
           </div>
 
           {/* Region */}
-          <div className="flex-1 min-w-[160px]">
+          <div className="flex-1 min-w-0 basis-24 lg:basis-40">
             <SearchableDropdown
-              label="Région"
+              label={<ResponsiveLabel full="Région" short="Rég." />}
               icon={MapPin}
               value={filters.region}
               options={ALL_REGIONS}
@@ -276,22 +328,21 @@ export default function RealEstateFilter({ onFilter, initialFilters = {}, isMobi
           </div>
 
           {/* City */}
-          <div className="flex-1 min-w-[160px]">
+          <div className="flex-1 min-w-0 basis-24 lg:basis-40">
             <SearchableDropdown
               label="Ville"
               icon={MapPin}
               value={filters.city}
               options={cityOptions}
               onSelect={(val) => updateFilter("city", val, { immediate: true })}
-              disabled={!filters.region}
-              placeholder={filters.region ? "Rechercher une ville..." : "Choisissez une région"}
+              placeholder="Rechercher une ville..."
             />
           </div>
 
           {/* Property Type */}
-          <div className="flex-1 min-w-[160px]">
+          <div className="flex-1 min-w-0 basis-24 lg:basis-40">
             <SearchableDropdown
-              label="Type de bien"
+              label={<ResponsiveLabel full="Type de bien" short="Type" />}
               icon={Home}
               value={filters.propertyType}
               options={PROPERTY_TYPES}
@@ -299,7 +350,7 @@ export default function RealEstateFilter({ onFilter, initialFilters = {}, isMobi
             />
           </div>
 
-          {/* Advanced filters: price + surface + rooms grouped together — narrower, not stretched */}
+          {/* Advanced filters: price + surface + rooms grouped together */}
           <FilterDropdown
             label={advancedLabel()}
             icon={SlidersHorizontal}
@@ -308,7 +359,8 @@ export default function RealEstateFilter({ onFilter, initialFilters = {}, isMobi
             onToggle={() => setOpenMenu(openMenu === "advanced" ? null : "advanced")}
             onClose={() => setOpenMenu((c) => (c === "advanced" ? null : c))}
             width="w-80"
-            className="flex-none w-full sm:w-52"
+            align="right"
+            className="flex-none min-w-0 basis-20 lg:basis-52 max-w-[9rem] lg:max-w-[13rem]"
           >
             {advancedFiltersBody}
           </FilterDropdown>
@@ -387,8 +439,8 @@ export default function RealEstateFilter({ onFilter, initialFilters = {}, isMobi
                   updateFilter("propertyType", isActive ? "" : t.value, { immediate: true })
                 }
                 className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${isActive
-                    ? "bg-[#2D5016] text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "bg-[#2D5016] text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
               >
                 {t.label}
@@ -444,8 +496,7 @@ export default function RealEstateFilter({ onFilter, initialFilters = {}, isMobi
                   value={filters.city}
                   options={cityOptions}
                   onSelect={(val) => updateFilter("city", val, { immediate: true })}
-                  disabled={!filters.region}
-                  placeholder={filters.region ? "Rechercher une ville..." : "Choisissez une région"}
+                  placeholder="Rechercher une ville..."
                 />
               </div>
 

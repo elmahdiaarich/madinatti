@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { X } from "lucide-react";
 
 const DEFAULT_CENTER = { lat: 31.7917, lng: -7.0926 }; // Center of Morocco
 
@@ -33,41 +34,58 @@ function loadLeaflet() {
   });
 }
 
-function createCustomPinIcon(L, isSelected, isHovered) {
-  const isActive = isSelected || isHovered;
-  const scale = isActive ? "scale-125" : "scale-100";
+// Single shared highlight color for both hover and select — simpler, one style to reason about.
+function createCustomPinIcon(L, isActive) {
+  const dotSize = isActive ? "22px" : "14px";
+  const glow = isActive ? "0 0 0 6px rgba(167,209,41,0.35)" : "none";
+  const color = isActive ? "#A7D129" : "#2D5016";
 
   const html = `
-    <div class="w-4 h-4 rounded-full bg-[#2D5016] border-2 border-white shadow-md transition-transform duration-150 ${scale}"></div>
+    <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;">
+      <div style="
+        width:${dotSize};
+        height:${dotSize};
+        border-radius:9999px;
+        background:${color};
+        border:2px solid white;
+        box-shadow:${glow}, 0 1px 3px rgba(0,0,0,0.3);
+        transition: width 0.15s ease, height 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+      "></div>
+    </div>
   `;
 
   return L.divIcon({
     html,
     className: "immo-map-pin",
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
-    popupAnchor: [0, -8],
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16],
   });
 }
 
 export default function RealEstateMap({
   listings = [],
   hoveredListingId,
+  focusListingId,
   selectedListingId,
   onSelectListing,
+  onHoverListing,
 }) {
   const mapEl = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef(new Map());
   const [mapReady, setMapReady] = useState(false);
+  const [activeListing, setActiveListing] = useState(null);
 
   const validListings = useMemo(() => {
-    console.log("Filtering valid listings from:", listings);
-    return listings.filter(
-      (l) => (l.latitude || l.lat) && (l.longitude || l.lng || l.lon)
-    );
+    return listings.filter((l) => {
+      const lat = Number(l.latitude ?? l.lat);
+      const lng = Number(l.longitude ?? l.lng ?? l.lon);
+      return Number.isFinite(lat) && Number.isFinite(lng);
+    });
   }, [listings]);
 
+  // ── Create the map instance once ──────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     loadLeaflet().then((L) => {
@@ -82,10 +100,17 @@ export default function RealEstateMap({
 
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap contributors",
-        maxZoom: 19,
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: "abcd",
+        maxZoom: 20,
       }).addTo(map);
+
+      map.on("click", () => {
+        setActiveListing(null);
+        onSelectListing?.(null);
+      });
 
       mapRef.current = map;
       setMapReady(true);
@@ -100,11 +125,8 @@ export default function RealEstateMap({
       }
     };
   }, []);
-  const [activeListing, setActiveListing] = useState(null);
 
-  // Leaflet doesn't auto-detect container resizes (sidebar toggle,
-  // mobile drawer open, window resize) — force it to remeasure so it
-  // doesn't leave stale blank space on the edges.
+  // ── Keep Leaflet aware of container resizes ───────────────────────────────
   useEffect(() => {
     if (!mapRef.current || !mapReady || !mapEl.current) return;
     const ro = new ResizeObserver(() => {
@@ -114,6 +136,9 @@ export default function RealEstateMap({
     return () => ro.disconnect();
   }, [mapReady]);
 
+  // ── Build markers ONLY when the actual listing set changes ───────────────
+  // Hover/select must NOT be in this dependency array — that was causing a
+  // full marker rebuild (and re-fit/zoom) on every single hover.
   useEffect(() => {
     if (!mapRef.current || !mapReady) return;
 
@@ -124,25 +149,19 @@ export default function RealEstateMap({
       const bounds = [];
 
       validListings.forEach((item) => {
-        const lat = Number(item.latitude || item.lat);
-        const lng = Number(item.longitude || item.lng || item.lon);
-        const isHovered = hoveredListingId === item.id;
-        const isSelected = selectedListingId === item.id;
+        const lat = Number(item.latitude ?? item.lat);
+        const lng = Number(item.longitude ?? item.lng ?? item.lon);
 
-        const icon = createCustomPinIcon(L, isSelected, isHovered);
+        const icon = createCustomPinIcon(L, false);
         const marker = L.marker([lat, lng], { icon }).addTo(mapRef.current);
 
-        const isTouchDevice = window.matchMedia("(hover: none)").matches;
-        if (isTouchDevice) {
-          marker.on("click", () => {
-            onSelectListing?.(item.id);
-            setActiveListing(item);
-          });
-        } else {
-          marker.on("mouseover", () => setActiveListing(item));
-          marker.on("mouseout", () => setActiveListing(null));
-          marker.on("click", () => onSelectListing?.(item.id));
-        }
+        marker.on("click", (e) => {
+          L.DomEvent.stopPropagation(e); // don't let it bubble to map's own click-to-close
+          onSelectListing?.(item.id);
+          setActiveListing(item);
+        });
+        marker.on("mouseover", () => onHoverListing?.(item.id));
+        marker.on("mouseout", () => onHoverListing?.(null));
 
         markersRef.current.set(item.id, marker);
         bounds.push([lat, lng]);
@@ -154,8 +173,41 @@ export default function RealEstateMap({
         mapRef.current.setView(bounds[0], 13);
       }
     });
-  }, [validListings, hoveredListingId, selectedListingId, onSelectListing, mapReady]);
+  }, [validListings, mapReady, onSelectListing, onHoverListing]);
 
+  // ── Update ONLY the affected markers' icons when hover/select changes ────
+  // No rebuild, no fitBounds — just restyle the relevant pins in place.
+  useEffect(() => {
+    if (!mapReady) return;
+    loadLeaflet().then((L) => {
+      markersRef.current.forEach((marker, id) => {
+        const isActive = id === hoveredListingId || id === selectedListingId;
+        marker.setIcon(createCustomPinIcon(L, isActive));
+      });
+    });
+  }, [hoveredListingId, selectedListingId, mapReady]);
+
+  // ── Pan/zoom to a listing ONLY when focused from the card grid ───────────
+  useEffect(() => {
+    if (!mapRef.current || !mapReady || !focusListingId) return;
+    const marker = markersRef.current.get(focusListingId);
+    if (!marker) return;
+
+    const targetLatLng = marker.getLatLng();
+    if (
+      !targetLatLng ||
+      !Number.isFinite(targetLatLng.lat) ||
+      !Number.isFinite(targetLatLng.lng)
+    ) {
+      return;
+    }
+
+    // Gentle pan toward the general area — don't force a big zoom jump.
+    // Only zoom in a little if we're currently very zoomed out (wide view),
+    // and never zoom OUT, so we're not fighting the user's own zoom level.
+    mapRef.current.panTo(targetLatLng, { animate: true, duration: 0.6 });
+  }, [focusListingId, mapReady]);
+  
   return (
     <div className="absolute inset-0 bg-gray-100 rounded-2xl overflow-hidden shadow-sm border border-gray-200">
       <div ref={mapEl} className="absolute inset-0 z-0" />
@@ -170,29 +222,44 @@ export default function RealEstateMap({
 
       {activeListing && (
         <div className="absolute bottom-3 left-3 right-3 z-[500]">
-
-          <a href={`/real-estate/${activeListing.id}`}
-            className="flex items-stretch gap-3 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden hover:shadow-2xl transition-shadow"
-          >
-            {activeListing.images?.[0]?.url && (
-              <img
-                src={activeListing.images[0].url}
-                alt=""
-                className="w-24 h-24 object-cover shrink-0"
-              />
-            )}
-            <div className="flex-1 min-w-0 py-2 pr-3 flex flex-col justify-center">
-              <p className="text-sm font-bold text-gray-900 line-clamp-1">
-                {activeListing.title}
-              </p>
-              <p className="text-base font-extrabold text-[#2D5016] mt-0.5">
-                {Number(activeListing.price).toLocaleString("fr-MA")} MAD
-              </p>
-              <span className="text-xs font-semibold text-[#2D5016] underline mt-1">
-                Voir plus →
-              </span>
-            </div>
-          </a>
+          <div className="relative">
+            
+            <a href={`/real-estate/${activeListing.id}`}
+              className="flex items-stretch gap-3 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden hover:shadow-2xl transition-shadow"
+            >
+              {activeListing.images?.[0]?.url && (
+                <img
+                  src={activeListing.images[0].url}
+                  alt=""
+                  className="w-24 h-24 object-cover shrink-0"
+                />
+              )}
+              <div className="flex-1 min-w-0 py-2 pr-8 flex flex-col justify-center">
+                <p className="text-sm font-bold text-gray-900 line-clamp-1">
+                  {activeListing.title}
+                </p>
+                <p className="text-base font-extrabold text-[#2D5016] mt-0.5">
+                  {Number(activeListing.price).toLocaleString("fr-MA")} MAD
+                </p>
+                <span className="text-xs font-semibold text-[#2D5016] underline mt-1">
+                  Voir plus →
+                </span>
+              </div>
+            </a>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setActiveListing(null);
+                onSelectListing?.(null);
+              }}
+              aria-label="Fermer"
+              className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/90 border border-gray-200 shadow-sm flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition"
+            >
+              <X size={12} />
+            </button>
+          </div>
         </div>
       )}
     </div>

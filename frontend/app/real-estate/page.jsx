@@ -15,10 +15,10 @@ import AdPlaceholder from "@/components/shared/AdPlaceholder";
 import { Suspense } from "react";
 import { ChevronDown, Bell } from "lucide-react";
 import SplitMapLayout from "@/components/shared/SplitMapLayout";
-import RealEstateMap from "@/components/real-estate/RealEstateMap";
 import StickyFilterBar from "@/components/shared/StickyFilterBar";
 import SortSelect from "@/components/shared/SortSelect";
 import Pagination from "@/components/shared/Pagination";
+import MultiPinMap from "@/components/shared/maps/MultiPinMap";
 // import AlertModalShell from "@/components/shared/AlertModalShell";
 
 const LISTING_TYPES = [
@@ -304,12 +304,15 @@ function RealEstatePageContent() {
   const [fromHero, setFromHero] = useState(hasHeroFilters);
   const [listings, setListings] = useState([]);
   const [pagination, setPagination] = useState(null);
+  const [mapPins, setMapPins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [favoritedIds, setFavoritedIds] = useState(new Set());
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [showBusinessGate, setShowBusinessGate] = useState(false);
-  const [hoveredListingId, setHoveredListingId] = useState(null);
+  const [hoveredCardId, setHoveredCardId] = useState(null);
+  const [hoveredPinId, setHoveredPinId] = useState(null);
   const [selectedListingId, setSelectedListingId] = useState(null);
+  const hoveredListingId = hoveredCardId || hoveredPinId;
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -331,6 +334,20 @@ function RealEstatePageContent() {
     };
     load();
   }, [filters, token]);
+
+  // Map pins are fetched independently from the paginated grid — same
+  // filters (minus page/limit), but returns every matching listing so the
+  // map always shows the full filtered result set, not just the current page.
+  useEffect(() => {
+    const { page, limit, sort, ...mapFilters } = filters;
+    realEstateService
+      .getMapPins(mapFilters)
+      .then((res) => setMapPins(res.pins || []))
+      .catch((err) => {
+        console.error(err);
+        setMapPins([]);
+      });
+  }, [filters]);
 
   const handleResetAll = () => {
     setFilters({ page: 1, limit: 12 });
@@ -394,7 +411,7 @@ function RealEstatePageContent() {
             Sticky (not fixed) so they scroll along with the page and settle
             near the top instead of floating over unrelated content lower down. */}
 
-        <div className="w-full pl-5 flex gap-4">
+        <div className="w-full flex gap-4">
           {/* SIDEBAR (desktop) */}
           {/* <aside className="hidden md:block w-[260px] shrink-0"> */}
           {/* Not sticky for now — the outer nav is already sticky, so a sticky
@@ -422,7 +439,7 @@ function RealEstatePageContent() {
                     ✕
                   </button>
                 </div>
-                <div className="p-3 pb-0">
+                <div className="px-5 md:px-6 pb-0">
                   <RealEstateFilter
                     isMobile
                     onFilter={handleFilter}
@@ -437,17 +454,20 @@ function RealEstatePageContent() {
           <main className="flex-1 min-w-0">
             <SplitMapLayout
               map={
-                <RealEstateMap
-                  listings={listings}
-                  hoveredListingId={hoveredListingId}
-                  selectedListingId={selectedListingId}
-                  onSelectListing={setSelectedListingId}
+                <MultiPinMap
+                  items={mapPins}
+                  hoveredItemId={hoveredListingId}
+                  focusItemId={hoveredCardId}
+                  selectedItemId={selectedListingId}
+                  onSelectItem={setSelectedListingId}
+                  onHoverItem={setHoveredPinId}
+                  getHref={(item) => `/real-estate/${item.id}`}
                 />
               }
             >
 
               <>
-                <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                <div className="flex items-center justify-between mb-2 flex-wrap gap-2 px-5 md:px-6">
                   <p className="text-sm text-gray-500">
                     {pagination ? (
                       <>
@@ -512,7 +532,7 @@ function RealEstatePageContent() {
                 </div>
 
                 {loading ? (
-                  <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-x-6 gap-y-4">
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-x-6 gap-y-4 px-5 md:px-6">
                     {[...Array(6)].map((_, i) => (
                       <div
                         key={i}
@@ -538,13 +558,18 @@ function RealEstatePageContent() {
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-x-6 gap-y-4">
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-x-6 gap-y-4 px-5 md:px-6">
                     {listings.map((l) => (
                       <Fragment key={l.id}>
-                        <RealEstateCard
-                          listing={l}
-                          initialFavorited={favoritedIds.has(l.id)}
-                        />
+                        <div
+                          onMouseEnter={() => setHoveredCardId(l.id)}
+                          onMouseLeave={() => setHoveredCardId(null)}
+                        >
+                          <RealEstateCard
+                            listing={l}
+                            initialFavorited={favoritedIds.has(l.id)}
+                          />
+                        </div>
                       </Fragment>
                     ))}
                   </div>

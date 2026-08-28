@@ -305,6 +305,96 @@ async function getListings(query) {
   };
 }
 
+// ─── MAP PINS (public) — all filtered listings, lightweight payload ──────────
+// Ignores pagination entirely: the map needs every matching listing's
+// coordinates + price, not just the current page's 12. Kept deliberately
+// thin (no images, no joins) so this stays cheap even at high listing counts.
+async function getMapPins(query) {
+  const {
+    city,
+    region,
+    listingType,
+    propertyType,
+    categoryId,
+    minPrice,
+    maxPrice,
+    rooms,
+    search,
+    minSurface,
+    maxSurface,
+  } = query;
+
+  // ── Same filter fragments as getListings, kept in sync manually for now ──
+  let locationFragment = Prisma.empty;
+  if (city) {
+    locationFragment = Prisma.sql`AND l.city ILIKE ${'%' + city + '%'}`;
+  } else if (region) {
+    const citiesInRegion = citiesByRegion[region] || [];
+    if (citiesInRegion.length > 0) {
+      locationFragment = Prisma.sql`AND l.city = ANY(${citiesInRegion})`;
+    }
+  }
+
+  const listingTypeFragment = listingType
+    ? Prisma.sql`AND l."listingType" = ${listingType}::"ListingType"`
+    : Prisma.empty;
+
+  const propertyTypeFragment = propertyType
+    ? Prisma.sql`AND l."propertyType" = ${propertyType}::"PropertyType"`
+    : Prisma.empty;
+
+  const categoryFragment = categoryId
+    ? Prisma.sql`AND l."categoryId" = ${categoryId}`
+    : Prisma.empty;
+
+  const roomsFragment = rooms
+    ? Prisma.sql`AND l.rooms >= ${parseInt(rooms, 10)}`
+    : Prisma.empty;
+
+  let priceFragment = Prisma.empty;
+  if (minPrice && maxPrice) {
+    priceFragment = Prisma.sql`AND l.price BETWEEN ${parseFloat(minPrice)} AND ${parseFloat(maxPrice)}`;
+  } else if (minPrice) {
+    priceFragment = Prisma.sql`AND l.price >= ${parseFloat(minPrice)}`;
+  } else if (maxPrice) {
+    priceFragment = Prisma.sql`AND l.price <= ${parseFloat(maxPrice)}`;
+  }
+
+  let surfaceFragment = Prisma.empty;
+  if (minSurface && maxSurface) {
+    surfaceFragment = Prisma.sql`AND l.surface BETWEEN ${parseFloat(minSurface)} AND ${parseFloat(maxSurface)}`;
+  } else if (minSurface) {
+    surfaceFragment = Prisma.sql`AND l.surface >= ${parseFloat(minSurface)}`;
+  } else if (maxSurface) {
+    surfaceFragment = Prisma.sql`AND l.surface <= ${parseFloat(maxSurface)}`;
+  }
+
+  const searchFragment = search
+    ? Prisma.sql`AND (l.title ILIKE ${'%' + search + '%'} OR l.description ILIKE ${'%' + search + '%'})`
+    : Prisma.empty;
+
+  const pins = await prisma.$queryRaw`
+    SELECT
+      l.id, l.title, l.price, l.latitude, l.longitude, l.images
+    FROM "RealEstateListing" l
+    WHERE l.status = 'APPROVED'
+      AND l."isActive" = true
+      AND l.latitude IS NOT NULL
+      AND l.longitude IS NOT NULL
+      ${locationFragment}
+      ${listingTypeFragment}
+      ${propertyTypeFragment}
+      ${categoryFragment}
+      ${roomsFragment}
+      ${priceFragment}
+      ${surfaceFragment}
+      ${searchFragment}
+    LIMIT 2000
+  `;
+
+  return { pins };
+}
+
 // ─── 3. GET LISTING DETAIL (public) ─────────────────────────────────────────
 async function getListingById(id) {
   return prisma.realEstateListing.findUnique({
@@ -946,6 +1036,7 @@ module.exports = {
   createListing,
   getListings,
   getListingById,
+  getMapPins,
   // authenticated
   toggleFavorite,
   getUserFavorites,

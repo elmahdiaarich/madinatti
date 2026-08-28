@@ -7,6 +7,7 @@ const { createListingLimiter, inquiryLimiter } = require('../middlewares/rateLim
 
 // ── PUBLIC ───────────────────────────────────────────────────────────────────
 router.get('/categories', ctrl.getCategories);
+router.get('/map-pins', ctrl.getMapPins);
 router.get('/', ctrl.getListings);
 
 // ── AUTHENTICATED ────────────────────────────────────────────────────────────

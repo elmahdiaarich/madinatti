@@ -7,6 +7,16 @@ export default function SplitMapLayout({ children, map }) {
   const [mapWidth, setMapWidth] = useState("quarter"); // 'quarter' | 'half'
   const [mobileMapOpen, setMobileMapOpen] = useState(false);
 
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const handle = (e) => {
+      if (!e.matches) setMapWidth("half");
+    };
+    handle(mq);
+    mq.addEventListener("change", handle);
+    return () => mq.removeEventListener("change", handle);
+  }, []);
+  
   // Measure the sticky filter bar's height so the map panel sticks right
   // below it instead of overlapping it.
   useEffect(() => {
@@ -15,6 +25,7 @@ export default function SplitMapLayout({ children, map }) {
 
     const setVar = () => {
       document.documentElement.style.setProperty("--filterbar-h", `${el.offsetHeight}px`);
+      requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
     };
     setVar();
 
@@ -26,7 +37,7 @@ export default function SplitMapLayout({ children, map }) {
   const widthClass = mapWidth === "half" ? "md:w-1/2" : "md:w-1/3";
 
   return (
-    <div className="relative flex gap-7 items-start">
+    <div className="relative flex items-start">
       {/* Listings column — cards size themselves via CSS grid auto-fill.
           min-w-0 is required so this flex child can shrink below its
           content's natural width instead of overflowing the row. */}
@@ -58,7 +69,7 @@ export default function SplitMapLayout({ children, map }) {
       <button
         type="button"
         onClick={() => setMobileMapOpen(true)}
-        className="md:hidden fixed bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-[#2D5016] text-white font-bold text-sm shadow-lg"
+        className="md:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-[#2D5016] text-white font-bold text-sm shadow-lg"
       >
         <MapIcon size={16} />
         Carte

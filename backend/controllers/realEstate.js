@@ -113,6 +113,17 @@ async function getListings(req, res) {
   }
 }
 
+// ─── MAP PINS (public) ───────────────────────────────────────────────────────
+async function getMapPins(req, res) {
+  try {
+    const result = await service.getMapPins(req.query);
+    return res.json({ success: true, ...result });
+  } catch (err) {
+    console.error('[getMapPins]', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
 // ─── 3. GET LISTING DETAIL (public) ─────────────────────────────────────────
 async function getListingById(req, res) {
   try {
@@ -431,6 +442,7 @@ module.exports = {
   createInquiry,
   // business
   getMyListings,
+  getMapPins,
   getMyListingById,
   updateMyListing,
   deleteMyListing,
