@@ -36,10 +36,11 @@ const EXPERIENCE_OPTIONS = [
 
 export default function CandidateFilter({ onFilter }) {
   const { token } = useAuth();
-  const [open, setOpen] = useState({ educationLevel: true, experienceLevel: false, contractType: false, region: false, city: false });
+  const [open, setOpen] = useState({ categorySlug: true, educationLevel: false, experienceLevel: false, contractType: false, region: false, city: false });
   const [selected, setSelected] = useState({});
   const [availableOnly, setAvailableOnly] = useState(true);
   const [counts, setCounts] = useState(null);
+  const [categories, setCategories] = useState([]);
 
   const selectedRegion = (selected.region || [])[0] || null;
   const selectedCity = (selected.city || [])[0] || null;
@@ -49,6 +50,12 @@ export default function CandidateFilter({ onFilter }) {
     headhunterService.getFiltersCount(token).then((json) => { if (json.success) setCounts(json.data); }).catch(() => {});
   }, [token]);
 
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs/categories`)
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setCategories(d.data); })
+      .catch(() => {});
+  }, []);
   const regionOptions = useMemo(() => buildRegionOptions(), []);
   const cityOptions = useMemo(() => buildCityOptions(selectedRegion), [selectedRegion]);
 
@@ -56,7 +63,7 @@ export default function CandidateFilter({ onFilter }) {
 
   const emit = (newSelected, newAvailableOnly) => {
     const filters = {};
-    ['educationLevel', 'experienceLevel', 'contractType'].forEach((k) => {
+    ['categorySlug', 'educationLevel', 'experienceLevel', 'contractType'].forEach((k) => {
       const vals = newSelected[k] || [];
       filters[k] = vals.length > 0 ? vals[0] : undefined;
     });
@@ -94,7 +101,10 @@ export default function CandidateFilter({ onFilter }) {
 
   const totalSelected = Object.values(selected).flat().length;
 
+  const categoryOptions = categories.map((c) => ({ value: c.slug, label: c.name }));
+
   const staticSections = [
+    { key: 'categorySlug', label: 'Métier', icon: '🏢', options: categoryOptions, countsMap: {} },
     { key: 'educationLevel', label: "Niveau d'études", icon: '🎓', options: EDUCATION_OPTIONS, countsMap: counts?.educationLevel || {} },
     { key: 'experienceLevel', label: "Niveau d'expérience", icon: '💼', options: EXPERIENCE_OPTIONS, countsMap: counts?.experienceLevel || {} },
     { key: 'contractType', label: 'Contrat recherché', icon: '📄', options: CONTRACT_OPTIONS, countsMap: counts?.contractType || {} },

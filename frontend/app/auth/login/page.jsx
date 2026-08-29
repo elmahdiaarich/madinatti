@@ -31,10 +31,10 @@ export default function LoginPage() {
           router.push("/");
         }
       } else {
-        setError(res.message);
+        setError(res.message || "Email ou mot de passe incorrect");
       }
-    } catch {
-      setError("Erreur serveur");
+    } catch (err) {
+      setError(err.response?.data?.message || "Email ou mot de passe incorrect");
     } finally {
       setLoading(false);
     }

@@ -512,15 +512,17 @@ const WHERE_BUILDERS = {
 // ALERT NOTIFIERS  (match and notify subscribers when a listing is approved)
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function notifyJobAlertSubscribers(approvedJob, createNotification) {
+async function notifyJobAlertSubscribers(approvedJob) {
   try {
     const alerts = await prisma.alert.findMany({
       where: { module: 'emploi', isActive: true, NOT: [{ userId: approvedJob.userId }] },
     });
 
-    const notified = new Set([approvedJob.userId]);
+    // Un seul match mis en file par utilisateur pour cette offre, même s'il a
+    // plusieurs alertes correspondantes — évite les doublons dans le digest.
+    const queued = new Set([approvedJob.userId]);
     for (const alert of alerts) {
-      if (notified.has(alert.userId)) continue;
+      if (queued.has(alert.userId)) continue;
       const f = alert.filters || {};
       const matches =
         (!f.categorySlug  || f.categorySlug  === approvedJob.category?.slug) &&
@@ -531,13 +533,10 @@ async function notifyJobAlertSubscribers(approvedJob, createNotification) {
         (!f.keyword       || approvedJob.title.toLowerCase().includes(f.keyword.toLowerCase()));
 
       if (matches) {
-        await createNotification(
-          alert.userId, 'JOB_ALERT',
-          'Nouvelle offre qui vous correspond 🔔',
-          `Une nouvelle offre "${approvedJob.title}" correspond à votre alerte.`,
-          `/jobs/${approvedJob.id}`,
-        );
-        notified.add(alert.userId);
+        await prisma.alertMatch.create({
+          data: { alertId: alert.id, targetTitle: approvedJob.title, targetLink: `/jobs/${approvedJob.id}` },
+        });
+        queued.add(alert.userId);
       }
     }
   } catch (err) {
@@ -545,15 +544,15 @@ async function notifyJobAlertSubscribers(approvedJob, createNotification) {
   }
 }
 
-async function notifyRealEstateAlertSubscribers(approvedRe, createNotification) {
+async function notifyRealEstateAlertSubscribers(approvedRe) {
   try {
     const alerts = await prisma.alert.findMany({
       where: { module: 'immobilier', isActive: true },
     });
 
-    const notified = new Set([approvedRe.userId]);
+    const queued = new Set([approvedRe.userId]);
     for (const alert of alerts) {
-      if (notified.has(alert.userId)) continue;
+      if (queued.has(alert.userId)) continue;
       const f = alert.filters || {};
       const matches =
         (!f.categoryId  || f.categoryId  === approvedRe.categoryId) &&
@@ -564,13 +563,10 @@ async function notifyRealEstateAlertSubscribers(approvedRe, createNotification) 
         (!f.maxPrice    || Number(approvedRe.price) <= Number(f.maxPrice));
 
       if (matches) {
-        await createNotification(
-          alert.userId, 'REALESTATE_ALERT_MATCH',
-          'Nouvelle annonce correspond à votre alerte 🔔',
-          `Une nouvelle annonce "${approvedRe.title}" correspond à votre alerte immobilière.`,
-          `/real-estate/${approvedRe.id}`,
-        );
-        notified.add(alert.userId);
+        await prisma.alertMatch.create({
+          data: { alertId: alert.id, targetTitle: approvedRe.title, targetLink: `/real-estate/${approvedRe.id}` },
+        });
+        queued.add(alert.userId);
       }
     }
   } catch (err) {
@@ -578,15 +574,15 @@ async function notifyRealEstateAlertSubscribers(approvedRe, createNotification) 
   }
 }
 
-async function notifyCarAlertSubscribers(approvedCar, createNotification) {
+async function notifyCarAlertSubscribers(approvedCar) {
   try {
     const alerts = await prisma.alert.findMany({
       where: { module: 'automobile', isActive: true },
     });
 
-    const notified = new Set([approvedCar.userId]);
+    const queued = new Set([approvedCar.userId]);
     for (const alert of alerts) {
-      if (notified.has(alert.userId)) continue;
+      if (queued.has(alert.userId)) continue;
       const f = alert.filters || {};
       const matches =
         (!f.make         || f.make         === approvedCar.make) &&
@@ -604,13 +600,10 @@ async function notifyCarAlertSubscribers(approvedCar, createNotification) {
         (!f.maxYear      || approvedCar.year <= Number(f.maxYear));
 
       if (matches) {
-        await createNotification(
-          alert.userId, 'CAR_ALERT_MATCH',
-          'Nouvelle annonce correspond à votre alerte 🔔',
-          `Une nouvelle annonce "${approvedCar.title}" correspond à votre alerte véhicule.`,
-          `/cars/${approvedCar.id}`,
-        );
-        notified.add(alert.userId);
+        await prisma.alertMatch.create({
+          data: { alertId: alert.id, targetTitle: approvedCar.title, targetLink: `/cars/${approvedCar.id}` },
+        });
+        queued.add(alert.userId);
       }
     }
   } catch (err) {
@@ -1821,8 +1814,7 @@ const getHeadhunterOverview = async (req, res) => {
       prisma.candidateUnlock.count(),
     ]);
 
-    const CREDIT_PACKS_PRICE = { pack_10: 299, pack_50: 1199, pack_150: 2999 };
-
+    const CREDIT_PACKS_PRICE = { pack_20: 3000, pack_30: 4400, pack_50: 7000 };
     const totalCreditsSold = purchases.reduce((sum, p) => sum + p.amount, 0);
     const totalRevenue = purchases.reduce(
       (sum, p) => sum + (CREDIT_PACKS_PRICE[p.packId] || 0),

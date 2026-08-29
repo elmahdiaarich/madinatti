@@ -1,318 +1,270 @@
 'use client';
-import { useState } from 'react';
 
-// ─── Labels ───────────────────────────────────────────────────────────────────
+import { useState, useEffect } from 'react';
+import { GraduationCap, Briefcase, MapPin, Languages, Heart, Clock, Lock, FileText, CheckCircle2, X } from 'lucide-react';
+
 const EDUCATION_LABELS = {
-  BEFORE_BAC: 'Avant Bac', BAC: 'Bac', BAC_PLUS_1: 'Bac+1',
-  BAC_PLUS_2: 'Bac+2', BAC_PLUS_3: 'Bac+3', BAC_PLUS_4: 'Bac+4',
-  BAC_PLUS_5_PLUS: 'Bac+5',
+  BEFORE_BAC: 'Qualification avant Bac', BAC: 'Bac', BAC_PLUS_1: 'Bac+1', BAC_PLUS_2: 'Bac+2',
+  BAC_PLUS_3: 'Bac+3', BAC_PLUS_4: 'Bac+4', BAC_PLUS_5_PLUS: 'Bac+5 et plus',
 };
 const EXPERIENCE_LABELS = {
-  STUDENT_FRESH_GRAD: 'Jeune diplômé', JUNIOR_LESS_2: '< 2 ans',
-  MID_2_TO_5: '2–5 ans', SENIOR_5_TO_10: '5–10 ans', EXPERT_PLUS_10: '+10 ans',
-};
-const CONTRACT_COLORS = {
-  CDI: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  CDD: 'bg-blue-50 text-blue-700 border-blue-200',
-  STAGE: 'bg-violet-50 text-violet-700 border-violet-200',
-  FREELANCE: 'bg-amber-50 text-amber-700 border-amber-200',
-  INTERIM: 'bg-orange-50 text-orange-700 border-orange-200',
-  ALTERNANCE: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-  ANAPEC: 'bg-teal-50 text-teal-700 border-teal-200',
-  TEMPS_PARTIEL: 'bg-pink-50 text-pink-700 border-pink-200',
+  STUDENT_FRESH_GRAD: 'Étudiant, jeune diplômé', JUNIOR_LESS_2: 'Débutant < 2 ans',
+  MID_2_TO_5: 'Entre 2 et 5 ans', SENIOR_5_TO_10: 'Entre 5 et 10 ans', EXPERT_PLUS_10: '> 10 ans',
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function formatSalary(min, max) {
-  const hasMin = min != null && Number(min) > 0;
-  const hasMax = max != null && Number(max) > 0;
-  if (!hasMin && !hasMax) return null;
-  const fmt = (v) => Number(v).toLocaleString('fr-MA');
-  if (hasMin && hasMax) return `${fmt(min)} – ${fmt(max)} MAD/mois`;
-  if (hasMin) return `À partir de ${fmt(min)} MAD/mois`;
-  return `Jusqu'à ${fmt(max)} MAD/mois`;
+function formatRelative(dateStr) {
+  if (!dateStr) return null;
+  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  if (days <= 0) return "aujourd'hui";
+  if (days === 1) return 'hier';
+  if (days < 30) return `il y a ${days} j`;
+  return `il y a ${Math.floor(days / 30)} mois`;
 }
 
-function formatAge(date) {
-  if (!date) return null;
-  const diff = Math.floor((Date.now() - new Date(date)) / 86400000);
-  if (diff === 0) return "Mis à jour aujourd'hui";
-  if (diff === 1) return 'Mis à jour hier';
-  if (diff < 7) return `Mis à jour il y a ${diff} j`;
-  if (diff < 30) return `Il y a ${Math.floor(diff / 7)} sem.`;
-  return `Il y a ${Math.floor(diff / 30)} mois`;
-}
-
-// ─── Anonymous avatar (locked) ────────────────────────────────────────────────
-function AnonAvatar() {
+function MetaRow({ icon: Icon, children }) {
+  if (!children) return null;
   return (
-    <div className="w-11 h-11 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
-      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-      </svg>
+    <div className="flex items-center gap-2 text-sm text-gray-600">
+      <Icon size={14} className="text-gray-400 shrink-0" />
+      <span className="truncate">{children}</span>
     </div>
   );
 }
 
-// ─── Real avatar (unlocked) ───────────────────────────────────────────────────
-const GRADIENTS = [
-  ['#1e3a5f', '#2563eb'], ['#7f1d1d', '#dc2626'], ['#14532d', '#16a34a'],
-  ['#3b0764', '#7c3aed'], ['#1c1917', '#57534e'], ['#7c2d12', '#ea580c'],
-];
-function getGradient(str = '') {
-  const n = (str.charCodeAt(0) || 0) + (str.charCodeAt(1) || 0);
-  return GRADIENTS[n % GRADIENTS.length];
-}
-function RealAvatar({ name, avatar }) {
-  const [from, to] = getGradient(name);
-  const initials = (name || '?').split(' ').slice(0, 2).map(w => w[0]?.toUpperCase()).join('');
-  if (avatar) {
-    return (
-      <div className="w-11 h-11 rounded-full overflow-hidden shrink-0 border-2 border-[#A7D129]/60">
-        <img src={avatar} alt={name} className="w-full h-full object-cover" />
-      </div>
-    );
-  }
-  return (
-    <div className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white text-sm shrink-0 border-2 border-[#A7D129]/60"
-      style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}>
-      {initials}
-    </div>
-  );
-}
-
-// ─── Availability badge ───────────────────────────────────────────────────────
-function AvailBadge({ isAvailable, availableFrom }) {
-  if (isAvailable) {
-    return (
-      <span className="shrink-0 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-        ✅ Disponible
-      </span>
-    );
-  }
-  const dateStr = availableFrom
-    ? new Date(availableFrom).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
-    : null;
-  return (
-    <span className="shrink-0 text-[10px] font-semibold text-gray-500 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-full">
-      {dateStr ? `Dispo. le ${dateStr}` : 'Prochainement'}
-    </span>
-  );
-}
-
-// ─── Salary box ───────────────────────────────────────────────────────────────
-function SalaryBox({ salary }) {
-  if (!salary) return null;
-  return (
-    <div className="flex items-center gap-2 bg-[#f0faf0] rounded-xl px-3 py-2 border border-[#A7D129]/30">
-      <svg className="w-3.5 h-3.5 text-[#2D5016] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-      <p className="font-bold text-[#2D5016] text-sm">{salary}</p>
-    </div>
-  );
-}
-
-// ─── Contract pills ───────────────────────────────────────────────────────────
-function ContractPills({ types = [] }) {
-  if (!types.length) return null;
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {types.map(t => (
-        <span key={t} className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${CONTRACT_COLORS[t] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
-          {t}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-// ─── Language pills ───────────────────────────────────────────────────────────
-function LanguagePills({ languages = [] }) {
-  if (!languages.length) return null;
-  return (
-    <div className="flex flex-wrap gap-1 items-center">
-      <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-      </svg>
-      {languages.map(l => (
-        <span key={l} className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">
-          {l}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-// ─── Inline unlock confirmation ────────────────────────────────────────────────
-function UnlockConfirm({ balance, unlocking, onConfirm, onCancel }) {
-  return (
-    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex flex-col gap-2.5 animate-fade-in">
-      <p className="text-sm font-semibold text-amber-800 text-center">Confirmer le déblocage ?</p>
-      <p className="text-xs text-amber-600 text-center">
-        1 crédit sera consommé
-        {balance !== null && ` · Solde : ${balance} → ${balance - 1}`}
-      </p>
-      <div className="flex gap-2">
-        <button onClick={onCancel}
-          className="flex-1 py-2 border border-amber-200 rounded-lg text-amber-700 text-xs font-semibold hover:bg-amber-100 transition">
-          Annuler
-        </button>
-        <button onClick={onConfirm} disabled={unlocking}
-          className="flex-1 py-2 bg-[#2D5016] text-white rounded-lg text-xs font-bold hover:bg-[#3a6b1e] transition disabled:opacity-60">
-          {unlocking ? '⏳ ...' : '✓ Confirmer'}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── CandidateCard ────────────────────────────────────────────────────────────
-export default function CandidateCard({ candidate, onUnlock, unlocking, balance }) {
-  const [confirming, setConfirming] = useState(false);
+export default function CandidateCard({ candidate, onUnlock, unlocking, onSaveNotes, savingNotes, onToggleFavorite, togglingFavorite }) {
   const isUnlocked = candidate.isUnlocked;
+  const [notesDraft, setNotesDraft] = useState(candidate.notes || '');
+  const [notesDirty, setNotesDirty] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
 
-  const salary = formatSalary(candidate.desiredSalaryMin, candidate.desiredSalaryMax);
-  const age = formatAge(candidate.updatedAt);
-  const education = EDUCATION_LABELS[candidate.educationLevel];
-  const experience = EXPERIENCE_LABELS[candidate.experienceLevel];
+  useEffect(() => {
+    setNotesDraft(candidate.notes || '');
+    setNotesDirty(false);
+  }, [candidate.notes, candidate.id]);
 
-  const handleConfirm = () => { setConfirming(false); onUnlock(candidate); };
+  const freshness = formatRelative(candidate.updatedAt);
 
-  // ── UNLOCKED STATE ────────────────────────────────────────────────────────
-  if (isUnlocked) {
-    return (
-      <div className="bg-white border-2 border-[#A7D129] rounded-2xl p-5 flex flex-col gap-3.5 shadow-sm shadow-[#A7D129]/10">
+  return (
+    <div
+      className={`bg-white rounded-2xl border overflow-hidden flex flex-col transition-shadow hover:shadow-md ${
+        isUnlocked ? 'border-gray-100' : 'border-gray-100'
+      }`}
+    >
+      {/* Top accent bar — signale le statut débloqué/non débloqué en un coup d'œil */}
+      <div className={`h-1 ${isUnlocked ? 'bg-[#A7D129]' : 'bg-gray-200'}`} />
 
+      <div className="p-5 flex flex-col gap-3 flex-1">
         {/* Header */}
         <div className="flex items-start gap-3">
-          <RealAvatar name={candidate.name} avatar={candidate.avatar} />
+                  <button
+            type="button"
+            onClick={() => isUnlocked && candidate.avatar && setPhotoOpen(true)}
+            className={`relative w-14 h-14 rounded-full flex items-center justify-center shrink-0 overflow-hidden transition ${
+              isUnlocked ? 'bg-[#E8F5D0] border-2 border-[#A7D129]/50' : 'border border-gray-200'
+            } ${isUnlocked && candidate.avatar ? 'cursor-pointer hover:opacity-90' : 'cursor-default'}`}
+            style={
+              !isUnlocked
+                ? {
+                    backgroundImage:
+                      'repeating-linear-gradient(-45deg, #F1F0EC, #F1F0EC 3px, #E4E2DB 3px, #E4E2DB 6px)',
+                  }
+                : undefined
+            }
+            title={!isUnlocked ? 'Identité masquée avant déblocage' : candidate.avatar ? 'Voir la photo en grand' : undefined}
+          >
+            {isUnlocked ? (
+              candidate.avatar ? (
+                <img src={candidate.avatar} alt={candidate.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-base font-bold text-[#2D5016]">{candidate.name?.charAt(0)?.toUpperCase() || '?'}</span>
+              )
+            ) : (
+              <span className="w-6 h-6 rounded-full bg-white/80 border border-gray-300 flex items-center justify-center">
+                <Lock size={11} className="text-gray-500" />
+              </span>
+            )}
+          </button>
+
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-bold text-gray-900 text-[15px] leading-tight">{candidate.name}</p>
-              <AvailBadge isAvailable={candidate.isAvailableForWork} availableFrom={candidate.availableFrom} />
-            </div>
-            <div className="flex flex-col gap-0.5 mt-1">
-              <a href={`mailto:${candidate.email}`}
-                className="text-xs text-blue-600 hover:underline truncate" onClick={e => e.stopPropagation()}>
-                ✉️ {candidate.email}
-              </a>
-              {candidate.phone && (
-                <a href={`tel:${candidate.phone}`}
-                  className="text-xs text-gray-500 hover:underline" onClick={e => e.stopPropagation()}>
-                  📞 {candidate.phone}
-                </a>
+            <div className="flex items-start justify-between gap-2">
+              <p className="font-bold text-gray-900 text-[15px] leading-snug truncate">
+                {isUnlocked ? candidate.name : candidate.reference}
+              </p>
+              {onToggleFavorite && (
+                <button
+                  onClick={() => onToggleFavorite(candidate)}
+                  disabled={togglingFavorite}
+                  title={candidate.isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                  className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-50 transition disabled:opacity-50"
+                >
+                  <Heart
+                    size={16}
+                    className={candidate.isFavorited ? 'text-red-500' : 'text-gray-300'}
+                    fill={candidate.isFavorited ? 'currentColor' : 'none'}
+                  />
+                </button>
               )}
             </div>
+            {isUnlocked && (
+              <p className="text-xs text-gray-400 truncate mt-0.5">{candidate.email}{candidate.phone ? ` · ${candidate.phone}` : ''}</p>
+            )}
           </div>
         </div>
 
-        {/* Headline */}
-        {candidate.headline && (
-          <p className="text-sm text-gray-600 italic leading-relaxed border-l-2 border-[#A7D129]/40 pl-3">
-            {candidate.headline}
+        {(candidate.category || candidate.currentPosition) && (
+          <p className="text-sm font-semibold text-[#2D5016] -mt-1">
+            {candidate.currentPosition || candidate.category?.name}
+            {candidate.currentPosition && candidate.category ? <span className="text-gray-400 font-normal"> · {candidate.category.name}</span> : null}
           </p>
         )}
 
-        {/* Education + Experience + City */}
-        {(education || experience || candidate.city) && (
-          <div className="flex flex-wrap gap-1.5">
-            {education && <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700">🎓 {education}</span>}
-            {experience && <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700">💼 {experience}</span>}
-            {candidate.city && <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700">📍 {candidate.city}</span>}
-          </div>
+        {candidate.headline && (
+          <p className="text-sm text-gray-700 italic line-clamp-2 -mt-1">{candidate.headline}</p>
         )}
 
-        <ContractPills types={candidate.desiredContractTypes} />
-        <LanguagePills languages={candidate.languages} />
-        <SalaryBox salary={salary} />
-
-        {/* CV CTA */}
-        {candidate.cvUrl ? (
-          <a href={candidate.cvUrl} target="_blank" rel="noreferrer"
-            className="mt-auto w-full text-center py-2.5 bg-[#2D5016] text-white font-bold rounded-xl
-              hover:bg-[#3a6b1e] transition text-sm flex items-center justify-center gap-2">
-            📄 Voir le CV complet
-          </a>
-        ) : (
-          <p className="text-xs text-gray-400 text-center italic mt-auto">CV non fourni par le candidat</p>
-        )}
-      </div>
-    );
-  }
-
-  // ── LOCKED STATE ──────────────────────────────────────────────────────────
-  return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col gap-3.5
-      hover:border-gray-300 transition-colors">
-
-      {/* Header */}
-      <div className="flex items-start gap-3">
-        <AnonAvatar />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-mono font-bold text-gray-500 text-xs tracking-wide">{candidate.reference}</p>
-            <AvailBadge isAvailable={candidate.isAvailableForWork} availableFrom={candidate.availableFrom} />
-          </div>
-          {age && <p className="text-[11px] text-gray-400 mt-0.5">{age}</p>}
-        </div>
-      </div>
-
-      {/* Headline — main visible info, entices unlock */}
-      {candidate.headline && (
-        <p className="text-sm text-gray-700 italic leading-snug line-clamp-2">
-          "{candidate.headline}"
-        </p>
-      )}
-
-      {/* Education + Experience + City chips */}
-      {(education || experience || candidate.city) && (
-        <div className="flex flex-wrap gap-1.5">
-          {education && <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-gray-50 border border-gray-100 text-gray-600">🎓 {education}</span>}
-          {experience && <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-gray-50 border border-gray-100 text-gray-600">💼 {experience}</span>}
-          {candidate.city && <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-gray-50 border border-gray-100 text-gray-600">📍 {candidate.city}</span>}
-        </div>
-      )}
-
-      <ContractPills types={candidate.desiredContractTypes} />
-      <LanguagePills languages={candidate.languages} />
-
-      {/* Salary — key unlock trigger, highlighted */}
-      <SalaryBox salary={salary} />
-
-      {/* Unlock CTA / Inline confirmation */}
-      <div className="mt-auto">
-        {!confirming ? (
-          <button
-            onClick={() => setConfirming(true)}
-            disabled={unlocking}
-            className="w-full py-2.5 bg-[#2D5016] text-white font-bold rounded-xl
-              hover:bg-[#3a6b1e] active:scale-[.98] transition text-sm disabled:opacity-60
-              flex items-center justify-center gap-2">
-            {unlocking ? (
-              <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Déblocage...
+        {/* Status row */}
+        <div className="flex items-center justify-between gap-2">
+          <span
+            className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full ${
+              candidate.isAvailableForWork
+                ? 'text-green-700 bg-green-50 border border-green-200'
+                : 'text-gray-500 bg-gray-50 border border-gray-200'
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${candidate.isAvailableForWork ? 'bg-green-500' : 'bg-gray-400'}`} />
+            {candidate.isAvailableForWork
+              ? 'Disponible'
+              : candidate.availableFrom
+              ? `Dès le ${new Date(candidate.availableFrom).toLocaleDateString('fr-FR')}`
+              : 'Non disponible'}
+          </span>
+          <div className="flex items-center gap-1.5">
+            {candidate.updatedAt && (Date.now() - new Date(candidate.updatedAt).getTime()) / 86400000 <= 2 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#A7D129]/20 text-[#2D5016]">
+                Nouveau
               </span>
-            ) : (
-              <>
-                🔓 Débloquer le profil
-                <span className="opacity-75 text-xs font-normal">· 1 crédit</span>
-              </>
             )}
-          </button>
-        ) : (
-          <UnlockConfirm
-            balance={balance}
-            unlocking={unlocking}
-            onConfirm={handleConfirm}
-            onCancel={() => setConfirming(false)}
-          />
+            {freshness && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-gray-400" title="Dernière mise à jour du profil">
+                <Clock size={11} /> {freshness}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Meta */}
+        <div className="flex flex-col gap-1.5 pt-1">
+          <MetaRow icon={GraduationCap}>{EDUCATION_LABELS[candidate.educationLevel]}</MetaRow>
+          <MetaRow icon={Briefcase}>{EXPERIENCE_LABELS[candidate.experienceLevel]}</MetaRow>
+          <MetaRow icon={MapPin}>{candidate.city}</MetaRow>
+          <MetaRow icon={Languages}>{Array.isArray(candidate.languages) && candidate.languages.length > 0 ? candidate.languages.join(', ') : null}</MetaRow>
+        </div>
+
+        {Array.isArray(candidate.skills) && candidate.skills.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {candidate.skills.slice(0, 6).map((s) => (
+              <span key={s} className="text-[10px] font-bold px-2 py-1 rounded-full bg-[#E8F5D0] text-[#2D5016] border border-[#A7D129]/40">
+                {s}
+              </span>
+            ))}
+          </div>
         )}
+
+        {Array.isArray(candidate.desiredContractTypes) && candidate.desiredContractTypes.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {candidate.desiredContractTypes.map((t) => (
+              <span key={t} className="text-[10px] font-bold px-2 py-1 rounded-full bg-gray-50 text-gray-600 border border-gray-200">
+                {t}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Footer — pousse en bas de carte pour aligner les hauteurs dans la grille */}
+        <div className="mt-auto pt-2 flex flex-col gap-3">
+          {isUnlocked ? (
+            <>
+             {candidate.cvUrl ? (
+                <a
+                  href={candidate.cvUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#2D5016] text-white font-bold rounded-xl hover:bg-[#3a6b1e] transition text-sm"
+                >
+                  <FileText size={15} /> Voir le CV
+                </a>
+              ) : (
+                <p className="text-xs text-gray-400 text-center italic">CV non fourni</p>
+              )}
+              {candidate.portfolioUrl && (
+                <a
+                  href={candidate.portfolioUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full text-center text-xs font-semibold text-[#2D5016] hover:underline"
+                >
+                  🔗 Voir le portfolio / LinkedIn
+                </a>
+              )}
+
+              {onSaveNotes && (
+                <div className="flex flex-col gap-1.5 pt-2 border-t border-gray-100">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Note privée</label>
+                  <textarea
+                    value={notesDraft}
+                    onChange={(e) => { setNotesDraft(e.target.value); setNotesDirty(true); }}
+                    placeholder="Ex: contacté le 12/08, dispo dans 2 mois..."
+                    rows={2}
+                    maxLength={1000}
+                    className="w-full border border-gray-200 rounded-lg px-2.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#A7D129]/40 focus:border-[#2D5016] transition resize-none"
+                  />
+                  {notesDirty && (
+                    <button
+                      onClick={() => { onSaveNotes(candidate.id, notesDraft); setNotesDirty(false); }}
+                      disabled={savingNotes}
+                      className="self-end inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-lg bg-[#2D5016] text-white hover:bg-[#3a6b1e] transition disabled:opacity-60"
+                    >
+                      <CheckCircle2 size={12} /> {savingNotes ? 'Enregistrement...' : 'Enregistrer'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <button
+              onClick={() => onUnlock(candidate)}
+              disabled={unlocking}
+              className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#2D5016] text-white font-bold rounded-xl hover:bg-[#3a6b1e] transition text-sm disabled:opacity-60"
+            >
+              <Lock size={14} />
+              {unlocking ? 'Déblocage...' : 'Débloquer le profil'}
+              {!unlocking && <span className="text-[10px] font-normal opacity-80 ml-0.5">· 1 crédit</span>}
+            </button>
+          )}
+        </div>
       </div>
+
+      {photoOpen && candidate.avatar && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+          onClick={() => setPhotoOpen(false)}
+        >
+          <div className="relative max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setPhotoOpen(false)}
+              className="absolute -top-10 right-0 text-white/80 hover:text-white"
+            >
+              <X size={22} />
+            </button>
+            <img
+              src={candidate.avatar}
+              alt={candidate.name}
+              className="w-full aspect-square object-cover rounded-2xl border-4 border-white"
+            />
+            <p className="text-center text-white font-semibold mt-3">{candidate.name}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

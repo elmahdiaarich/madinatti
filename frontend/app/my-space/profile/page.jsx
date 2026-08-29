@@ -68,13 +68,15 @@ function formatUpdatedAt(dateStr) {
   return `il y a ${Math.floor(days / 30)} mois`
 }
 
-function RecruiterPreview({ form, cityLabel }) {
+function RecruiterPreview({ form, cityLabel, categoryLabel }) {
   const eduLabel = EDUCATION_LABELS[form.educationLevel]
   const expLabel = EXPERIENCE_LABELS[form.experienceLevel]
   return (
     <div className="bg-[#E8F5D0] border border-[#A7D129]/50 rounded-2xl p-4 flex flex-col gap-2">
       <p className="text-[10px] font-bold text-[#2D5016] uppercase tracking-wide">👁️ Aperçu recruteur (anonymisé)</p>
       <p className="font-bold text-gray-900 text-sm">Candidat #XXXXXXXX</p>
+      {categoryLabel && <p className="text-xs font-semibold text-[#2D5016]">{categoryLabel}</p>}
+      {form.currentPosition && <p className="text-xs text-gray-600">Poste actuel : {form.currentPosition}</p>}
       {form.headline && <p className="text-sm text-gray-700 italic">{form.headline}</p>}
       <div className="flex flex-col gap-1 text-xs text-gray-600">
         {eduLabel && <p>🎓 {eduLabel}</p>}
@@ -82,6 +84,13 @@ function RecruiterPreview({ form, cityLabel }) {
         {cityLabel && <p>📍 {cityLabel}</p>}
         {form.languages.length > 0 && <p>🗣️ {form.languages.join(', ')}</p>}
       </div>
+      {form.skills.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {form.skills.map(s => (
+            <span key={s} className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-[#2D5016] border border-[#A7D129]/40">{s}</span>
+          ))}
+        </div>
+      )}
       {form.desiredContractTypes.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {form.desiredContractTypes.map(t => (
@@ -248,21 +257,32 @@ export default function ProfilePage() {
   // ── Candidate profile (citizen only) ─────────────────────────────────────
   const [candidateForm, setCandidateForm] = useState({
     headline: '',
+    categorySlug: '',
+    currentPosition: '',
+    skills: [],
+    portfolioUrl: '',
     isAvailableForWork: true,
     educationLevel: '',
     experienceLevel: '',
     desiredContractTypes: [],
     languages: [],
-    desiredSalaryMin: '',
-    desiredSalaryMax: '',
     mobilityRegion: '',
     mobilityCity: '',
     visibleToRecruiters: false,
   })
+  const [skillInput, setSkillInput] = useState('')
+  const [jobCategories, setJobCategories] = useState([])
   const [cvFile, setCvFile] = useState(null)
   const [candidateStatus, setCandidateStatus] = useState(null)
   const [existingCvUrl, setExistingCvUrl] = useState(null)
   const [lastUpdatedAt, setLastUpdatedAt] = useState(null)
+
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs/categories`)
+      .then(r => r.json())
+      .then(d => { if (d.success) setJobCategories(d.data) })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (isBusiness || !token) return
@@ -270,13 +290,15 @@ export default function ProfilePage() {
       if (data) {
         setCandidateForm({
           headline: data.headline || '',
+          categorySlug: data.category?.slug || '',
+          currentPosition: data.currentPosition || '',
+          skills: data.skills || [],
+          portfolioUrl: data.portfolioUrl || '',
           isAvailableForWork: data.isAvailableForWork,
           educationLevel: data.educationLevel || '',
           experienceLevel: data.experienceLevel || '',
           desiredContractTypes: data.desiredContractTypes || [],
           languages: data.languages || [],
-          desiredSalaryMin: data.desiredSalaryMin || '',
-          desiredSalaryMax: data.desiredSalaryMax || '',
           mobilityRegion: data.mobilityRegion || '',
           mobilityCity: data.mobilityCity || '',
           visibleToRecruiters: data.visibleToRecruiters,
@@ -288,6 +310,15 @@ export default function ProfilePage() {
   }, [isBusiness, token])
 
   const setCand = (k, v) => setCandidateForm(p => ({ ...p, [k]: v }))
+  const addSkill = () => {
+    const val = skillInput.trim()
+    if (!val || candidateForm.skills.includes(val)) { setSkillInput(''); return }
+    setCandidateForm(p => ({ ...p, skills: [...p.skills, val] }))
+    setSkillInput('')
+  }
+  const removeSkill = (skill) => {
+    setCandidateForm(p => ({ ...p, skills: p.skills.filter(s => s !== skill) }))
+  }
   const toggleInArray = (key, value) => {
     setCandidateForm(p => ({
       ...p,
@@ -296,23 +327,19 @@ export default function ProfilePage() {
   }
 
   const handleSaveCandidateProfile = async () => {
-    if (candidateForm.desiredSalaryMin && candidateForm.desiredSalaryMax &&
-        Number(candidateForm.desiredSalaryMin) > Number(candidateForm.desiredSalaryMax)) {
-      toast.error('Le salaire minimum ne peut pas dépasser le maximum.')
-      return
-    }
-
     setCandidateStatus('saving')
     try {
       const formData = new FormData()
       formData.append('headline', candidateForm.headline)
+      formData.append('categorySlug', candidateForm.categorySlug)
+      formData.append('currentPosition', candidateForm.currentPosition)
+      formData.append('skills', JSON.stringify(candidateForm.skills))
+      formData.append('portfolioUrl', candidateForm.portfolioUrl)
       formData.append('isAvailableForWork', candidateForm.isAvailableForWork)
       formData.append('educationLevel', candidateForm.educationLevel)
       formData.append('experienceLevel', candidateForm.experienceLevel)
       formData.append('desiredContractTypes', JSON.stringify(candidateForm.desiredContractTypes))
       formData.append('languages', JSON.stringify(candidateForm.languages))
-      formData.append('desiredSalaryMin', candidateForm.desiredSalaryMin)
-      formData.append('desiredSalaryMax', candidateForm.desiredSalaryMax)
       formData.append('mobilityRegion', candidateForm.mobilityRegion)
       formData.append('mobilityCity', candidateForm.mobilityCity)
       formData.append('visibleToRecruiters', candidateForm.visibleToRecruiters)
@@ -495,6 +522,41 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Métier recherché">
+              <select value={candidateForm.categorySlug} onChange={e => setCand('categorySlug', e.target.value)} className={inputCls}>
+                <option value="">Sélectionner...</option>
+                {jobCategories.map(c => <option key={c.slug} value={c.slug}>{c.name}</option>)}
+              </select>
+            </Field>
+            <Field label="Poste actuel" hint="Optionnel">
+              <input
+                value={candidateForm.currentPosition}
+                onChange={e => setCand('currentPosition', e.target.value.slice(0, 100))}
+                placeholder="Ex: Développeur Frontend"
+                className={inputCls}
+              />
+            </Field>
+          </div>
+
+          <Field label="Compétences clés" hint="Tapez une compétence puis Entrée">
+            <div className="flex flex-wrap gap-2 mb-2">
+              {candidateForm.skills.map(s => (
+                <span key={s} className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#E8F5D0] text-[#2D5016] border border-[#A7D129]/40">
+                  {s}
+                  <button type="button" onClick={() => removeSkill(s)} className="text-[#2D5016] hover:text-red-500">✕</button>
+                </span>
+              ))}
+            </div>
+            <input
+              value={skillInput}
+              onChange={e => setSkillInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addSkill() } }}
+              placeholder="Ex: React, Node.js, Excel..."
+              className={inputCls}
+            />
+          </Field>
+
           <Field label="Résumé professionnel" hint="Une phrase courte qui vous décrit — visible et cherchable par les recruteurs (150 caractères max)">
             <input
               value={candidateForm.headline}
@@ -505,8 +567,11 @@ export default function ProfilePage() {
           </Field>
 
           {/* Aperçu recruteur */}
-          <RecruiterPreview form={candidateForm} cityLabel={cityLabel} />
-
+          <RecruiterPreview
+            form={candidateForm}
+            cityLabel={cityLabel}
+            categoryLabel={jobCategories.find(c => c.slug === candidateForm.categorySlug)?.name}
+          />
           <Field label="Disponibilité">
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={candidateForm.isAvailableForWork}
@@ -589,14 +654,14 @@ export default function ProfilePage() {
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Prétention salariale min (MAD)">
-              <input type="number" value={candidateForm.desiredSalaryMin} onChange={e => setCand('desiredSalaryMin', e.target.value)} className={inputCls} />
-            </Field>
-            <Field label="Prétention salariale max (MAD)">
-              <input type="number" value={candidateForm.desiredSalaryMax} onChange={e => setCand('desiredSalaryMax', e.target.value)} className={inputCls} />
-            </Field>
-          </div>
+          <Field label="Lien portfolio / LinkedIn" hint="Optionnel — visible uniquement après déblocage par un recruteur">
+            <input
+              value={candidateForm.portfolioUrl}
+              onChange={e => setCand('portfolioUrl', e.target.value)}
+              placeholder="https://linkedin.com/in/..."
+              className={inputCls}
+            />
+          </Field>
 
           <Field label="CV (PDF, max 5 Mo)">
             <div className="flex flex-wrap items-center gap-3">

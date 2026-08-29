@@ -376,6 +376,7 @@ model Category {
   workerProfiles     WorkerProfile[]
   taskRequests       TaskRequest[]
   professionalSpaceListings ProfessionalSpaceListing[]
+  candidateProfiles  CandidateProfile[]
   formTemplate       FormTemplate?       @relation(fields: [formTemplateId], references: [id])
 
   @@index([formTemplateId])
@@ -450,7 +451,12 @@ model CandidateProfile {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id])
 
-  headline             String?          // ex: "Développeur React 3 ans, spécialisé e-commerce"
+  headline             String?
+  categoryId           String?
+  category             Category?        @relation(fields: [categoryId], references: [id])
+  currentPosition      String?
+  skills               Json?
+  portfolioUrl         String?
   isAvailableForWork   Boolean          @default(true)
   availableFrom        DateTime?
   educationLevel       EducationLevel?
@@ -472,6 +478,7 @@ model CandidateProfile {
   @@index([visibleToRecruiters])
   @@index([educationLevel])
   @@index([experienceLevel])
+  @@index([categoryId])
 }
 
 enum CreditTransactionType {
@@ -501,6 +508,7 @@ model CandidateUnlock {
   businessUser        User              @relation("UnlocksByBusiness", fields: [businessUserId], references: [id])
   candidateProfileId  String
   candidateProfile    CandidateProfile  @relation(fields: [candidateProfileId], references: [id])
+  notes               String?
   createdAt           DateTime          @default(now())
 
   @@unique([businessUserId, candidateProfileId])
@@ -590,7 +598,21 @@ model Alert {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  user User @relation("JobAlerts", fields: [userId], references: [id])
+  user    User         @relation("JobAlerts", fields: [userId], references: [id])
+  matches AlertMatch[]
+}
+
+// File d'attente des correspondances — vidée quotidiennement par le digest
+// (voir backend/services/alertDigestService.js) au lieu de notifier immédiatement.
+model AlertMatch {
+  id          String   @id @default(uuid())
+  alertId     String
+  alert       Alert    @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  targetTitle String
+  targetLink  String
+  createdAt   DateTime @default(now())
+
+  @@index([alertId])
 }
 
 model RealEstateListing {

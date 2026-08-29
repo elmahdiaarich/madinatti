@@ -2,11 +2,10 @@ const prisma = require("../config/db");
 
 // Catalogue codé en dur pour l'instant — pas de vrai paiement, pas de gestion admin.
 const CREDIT_PACKS = [
-  { id: "pack_10",  name: "Pack Découverte", credits: 10,  price: 299  },
-  { id: "pack_50",  name: "Pack Pro",        credits: 50,  price: 1199 },
-  { id: "pack_150", name: "Pack Entreprise", credits: 150, price: 2999 },
+  { id: "pack_20", name: "Pack Découverte", credits: 20, price: 3000 },
+  { id: "pack_30", name: "Pack Pro",        credits: 30, price: 4400 },
+  { id: "pack_50", name: "Pack Entreprise", credits: 50, price: 7000 },
 ];
-
 const getPacks = async (req, res) => {
   res.json({ success: true, data: CREDIT_PACKS });
 };

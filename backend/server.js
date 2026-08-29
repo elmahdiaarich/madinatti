@@ -102,6 +102,8 @@ app.use('/api/uploads', require('./routes/uploadRoutes'));
 app.use('/api/candidate-profile', require('./routes/candidateProfile'));
 app.use('/api/credits', require('./routes/credits'));
 app.use('/api/headhunter', require('./routes/headhunter'));
+const { startAlertDigestScheduler } = require('./services/alertDigestService');
+startAlertDigestScheduler();
 startPressScheduler();
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {

@@ -9,7 +9,8 @@ import { creditService } from "@/services/creditService";
 import CandidateFilter from "@/components/headhunter/CandidateFilter";
 import CandidateCard from "@/components/headhunter/CandidateCard";
 import Link from "next/link";
-import { Coins, SlidersHorizontal, X, ChevronDown } from "lucide-react";
+import { Coins, SlidersHorizontal, X, ChevronDown, Bell } from "lucide-react";
+import HeadhunterAlertModal from "@/components/headhunter/HeadhunterAlertModal";
 
 export default function HeadhunterPage() {
   return (
@@ -213,11 +214,13 @@ function HeadhunterContent() {
   const [pagination, setPagination]     = useState(null);
   const [loading, setLoading]           = useState(true);
   const [filters, setFilters]           = useState({ page: 1, limit: 9, availableOnly: "true" });
-  const [unlockingId, setUnlockingId]   = useState(null);
-  const [balance, setBalance]           = useState(null);
-  const [searchInput, setSearchInput]   = useState("");
+  const [unlockingId, setUnlockingId] = useState(null);
+  const [balance, setBalance] = useState(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [togglingFavoriteId, setTogglingFavoriteId] = useState(null);
   const [sortBy, setSortBy]             = useState("recent");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [alertModalOpen, setAlertModalOpen] = useState(false);
 
   // ── Load candidates ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -271,8 +274,19 @@ function HeadhunterContent() {
   const handlePageChange = (p) =>
     setFilters((prev) => ({ ...prev, page: p }));
 
-  const handleSearch = () =>
-    setFilters((prev) => ({ ...prev, search: searchInput || undefined, page: 1 }));
+  const handleSearch = () => setFilters((prev) => ({ ...prev, search: searchInput || undefined, page: 1 }));
+
+  const handleToggleFavorite = async (candidate) => {
+    setTogglingFavoriteId(candidate.id);
+    try {
+      const res = await headhunterService.toggleFavorite(candidate.id, token);
+      setCandidates((prev) => prev.map((c) => (c.id === candidate.id ? { ...c, isFavorited: res.favorited } : c)));
+    } catch {
+      alert("Erreur lors de la mise à jour des favoris.");
+    } finally {
+      setTogglingFavoriteId(null);
+    }
+  };
 
   const handleUnlock = async (candidate) => {
     if (balance !== null && balance < 1) {
@@ -324,22 +338,21 @@ function HeadhunterContent() {
           </div>
 
           {/* Top-right actions */}
-          <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-            <Link href="/dashboard/headhunter/unlocked"
-              className="flex items-center gap-2 px-3.5 py-2 bg-white border border-gray-200
-                text-gray-700 rounded-xl text-sm font-bold hover:border-[#A7D129] transition">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setAlertModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:border-[#A7D129] transition">
+              <Bell size={16} /> Alerte
+            </button>
+            <Link href="/dashboard/headhunter/alerts" className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:border-[#A7D129] transition">
+              🔔 Mes alertes
+            </Link>
+            <Link href="/dashboard/headhunter/favorites" className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:border-[#A7D129] transition">
+              ❤️ Favoris
+            </Link>
+            <Link href="/dashboard/headhunter/unlocked" className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:border-[#A7D129] transition">
               🔓 Débloqués
             </Link>
-            <Link href="/dashboard/credits"
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-bold transition
-                ${getCreditLevel(balance) === "empty"
-                  ? "bg-red-600 text-white hover:bg-red-700"
-                  : getCreditLevel(balance) === "low"
-                  ? "bg-amber-500 text-white hover:bg-amber-600"
-                  : "bg-[#2D5016] text-white hover:bg-[#3a6b1e]"
-                }`}>
-              <Coins size={15} />
-              {balance !== null ? `${balance} crédit${balance > 1 ? "s" : ""}` : "Mes crédits"}
+            <Link href="/dashboard/credits" className="flex items-center gap-2 px-4 py-2 bg-[#2D5016] text-white rounded-xl text-sm font-bold hover:bg-[#3a6b1e] transition">
+              <Coins size={16} /> {balance !== null ? `${balance} crédits` : 'Mes crédits'}
             </Link>
           </div>
         </div>
@@ -430,7 +443,8 @@ function HeadhunterContent() {
                     candidate={c}
                     onUnlock={handleUnlock}
                     unlocking={unlockingId === c.id}
-                    balance={balance}
+                    onToggleFavorite={handleToggleFavorite}
+                    togglingFavorite={togglingFavoriteId === c.id}
                   />
                 ))}
               </div>
@@ -461,6 +475,14 @@ function HeadhunterContent() {
         onClose={() => setMobileFilterOpen(false)}
         onFilter={handleFilter}
       />
+
+      {alertModalOpen && (
+        <HeadhunterAlertModal
+          token={token}
+          initialFilters={filters}
+          onClose={() => setAlertModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
