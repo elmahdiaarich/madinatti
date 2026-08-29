@@ -25,10 +25,9 @@ export function FilterDropdown({
         type="button"
         onClick={onToggle}
         className={`flex w-full items-center gap-2 border border-gray-400 rounded-3xl px-3 py-3 text-left text-sm transition-colors
-          ${
-            active
-              ? "bg-[#E8F5D0] text-[#2D5016] font-medium"
-              : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+          ${active
+            ? "bg-[#E8F5D0] text-[#2D5016] font-medium"
+            : "bg-gray-50 text-gray-700 hover:bg-gray-100"
           }`}
       >
         {Icon && (
@@ -40,16 +39,15 @@ export function FilterDropdown({
         <span className="flex-1 truncate">{label}</span>
         <ChevronDown
           size={13}
-          className={`flex-shrink-0 text-gray-400 transition-transform ${
-            isOpen ? "rotate-180" : ""
-          }`}
+          className={`flex-shrink-0 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""
+            }`}
         />
       </button>
 
       {isOpen && (
         <div
           onMouseDown={(e) => e.stopPropagation()}
-          className={`absolute ${align === "right" ? "right-0" : "left-0"} top-[calc(100%+6px)] ${width} max-w-[calc(100vw-2rem)] bg-white rounded-xl border border-gray-200 shadow-xl z-[100] p-4`}
+          className={`absolute ${align === "right" ? "right-0" : "left-0"} top-[calc(100%+6px)] ${width} max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto bg-white rounded-xl border border-gray-200 shadow-xl z-[100] p-4`}
         >
           {children}
         </div>

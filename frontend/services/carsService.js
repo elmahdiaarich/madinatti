@@ -14,6 +14,13 @@ export const carsService = {
     return res.json();
   },
 
+  getMapPins: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_URL}/cars/map-pins?${query}`);
+    if (!res.ok) throw new Error("Erreur lors de la récupération des pins");
+    return res.json();
+  },
+
   getCategories: async () => {
     const res = await fetch(`${API_URL}/cars/categories`);
     if (!res.ok) throw new Error("Erreur lors de la récupération des catégories");

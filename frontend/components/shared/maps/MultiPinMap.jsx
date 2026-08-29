@@ -56,6 +56,7 @@ export default function MultiPinMap({
   getHref = (item) => "#",
   emptyLabel = "Aucun élément géolocalisé sur la carte.",
 }) {
+  console.log("MultiPinMap rendered with items:", items);
   const mapRef = useRef(null);
   const leafletRef = useRef(null);
   const markersRef = useRef(new Map());

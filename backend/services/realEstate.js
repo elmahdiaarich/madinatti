@@ -167,7 +167,6 @@ async function createListing(data, userId) {
 }
 
 // ─── 2. GET LISTINGS (public, APPROVED only) ─────────────────────────────────
-
 async function getListings(query) {
   const {
     page = 1,
@@ -190,109 +189,72 @@ async function getListings(query) {
   const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 12));
   const skip = (pageNum - 1) * limitNum;
 
-  // ── Build each optional filter fragment once ──────────────────────
-  // Prisma.empty = "insert nothing" when the filter wasn't provided.
-  // Every column is prefixed with l. (the RealEstateListing alias) to
-  // avoid ambiguous-column errors against joined tables (User, Category).
-  let locationFragment = Prisma.empty;
+  let locationFilter = {};
   if (city) {
-    locationFragment = Prisma.sql`AND l.city ILIKE ${'%' + city + '%'}`;
+    locationFilter = { city: { contains: city, mode: 'insensitive' } };
   } else if (region) {
     const citiesInRegion = citiesByRegion[region] || [];
-    if (citiesInRegion.length > 0) {
-      locationFragment = Prisma.sql`AND l.city = ANY(${citiesInRegion})`;
-    }
+    if (citiesInRegion.length > 0) locationFilter = { city: { in: citiesInRegion } };
   }
 
-  const listingTypeFragment = listingType
-    ? Prisma.sql`AND l."listingType" = ${listingType}::"ListingType"`
-    : Prisma.empty;
+  const SORT_MAP = {
+    price_asc: { price: 'asc' },
+    price_desc: { price: 'desc' },
+  };
+  const userSort = SORT_MAP[sort] || { createdAt: 'desc' };
 
-  const propertyTypeFragment = propertyType
-    ? Prisma.sql`AND l."propertyType" = ${propertyType}::"PropertyType"`
-    : Prisma.empty;
+  const where = {
+    status: 'APPROVED',
+    isActive: true,
+    ...locationFilter,
+    ...(listingType && { listingType }),
+    ...(propertyType && { propertyType }),
+    ...(categoryId && { categoryId }),
+    ...(rooms && { rooms: { gte: parseInt(rooms, 10) } }),
+    ...((minPrice || maxPrice) && {
+      price: {
+        ...(minPrice && { gte: parseFloat(minPrice) }),
+        ...(maxPrice && { lte: parseFloat(maxPrice) }),
+      },
+    }),
+    ...((minSurface || maxSurface) && {
+      surface: {
+        ...(minSurface && { gte: parseFloat(minSurface) }),
+        ...(maxSurface && { lte: parseFloat(maxSurface) }),
+      },
+    }),
+    ...(search && {
+      OR: [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ],
+    }),
+  };
 
-  const categoryFragment = categoryId
-    ? Prisma.sql`AND l."categoryId" = ${categoryId}`
-    : Prisma.empty;
-
-  const roomsFragment = rooms
-    ? Prisma.sql`AND l.rooms >= ${parseInt(rooms, 10)}`
-    : Prisma.empty;
-
-  let priceFragment = Prisma.empty;
-  if (minPrice && maxPrice) {
-    priceFragment = Prisma.sql`AND l.price BETWEEN ${parseFloat(minPrice)} AND ${parseFloat(maxPrice)}`;
-  } else if (minPrice) {
-    priceFragment = Prisma.sql`AND l.price >= ${parseFloat(minPrice)}`;
-  } else if (maxPrice) {
-    priceFragment = Prisma.sql`AND l.price <= ${parseFloat(maxPrice)}`;
-  }
-
-  let surfaceFragment = Prisma.empty;
-  if (minSurface && maxSurface) {
-    surfaceFragment = Prisma.sql`AND l.surface BETWEEN ${parseFloat(minSurface)} AND ${parseFloat(maxSurface)}`;
-  } else if (minSurface) {
-    surfaceFragment = Prisma.sql`AND l.surface >= ${parseFloat(minSurface)}`;
-  } else if (maxSurface) {
-    surfaceFragment = Prisma.sql`AND l.surface <= ${parseFloat(maxSurface)}`;
-  }
-
-  const searchFragment = search
-    ? Prisma.sql`AND (l.title ILIKE ${'%' + search + '%'} OR l.description ILIKE ${'%' + search + '%'})`
-    : Prisma.empty;
-
-  // ── One shared WHERE clause, reused in both queries ───────────────
-  const whereClause = Prisma.sql`
-    WHERE l.status = 'APPROVED'
-      AND l."isActive" = true
-      ${locationFragment}
-      ${listingTypeFragment}
-      ${propertyTypeFragment}
-      ${categoryFragment}
-      ${roomsFragment}
-      ${priceFragment}
-      ${surfaceFragment}
-      ${searchFragment}
-  `;
-
-  const [listings, countResult] = await Promise.all([
-    prisma.$queryRaw`
-      SELECT
-        l.id, l.slug, l.title, l."listingType", l."propertyType", l.price,
-        l."priceNegotiable",
-        l.city, l.surface, l.rooms, l.bathrooms, l.images, l."isActive",
-        l.latitude, l.longitude,
-        l."isFeatured", l."isSponsored", l."boostExpiresAt", l."createdAt",
-        json_build_object('id', u.id, 'name', u.name, 'avatar', u.avatar) AS user,
-        json_build_object('id', c.id, 'name', c.name) AS category
-      FROM "RealEstateListing" l
-      JOIN "User" u ON u.id = l."userId"
-      JOIN "Category" c ON c.id = l."categoryId"
-      ${whereClause}
-      ORDER BY
-        CASE
-          WHEN l."isSponsored" = true AND l."boostExpiresAt" > NOW() THEN 0
-          WHEN l."isSponsored" = true THEN 1
-          WHEN l."isFeatured" = true THEN 2
-          ELSE 3
-        END,
-        ${sort === 'price_asc'
-        ? Prisma.sql`l.price ASC`
-        : sort === 'price_desc'
-          ? Prisma.sql`l.price DESC`
-          : Prisma.sql`l."createdAt" DESC`
-      }
-      LIMIT ${limitNum} OFFSET ${skip}
-    `,
-    prisma.$queryRaw`
-      SELECT COUNT(*)::int AS count
-      FROM "RealEstateListing" l
-      ${whereClause}
-    `,
+  const [listings, total] = await prisma.$transaction([
+    prisma.realEstateListing.findMany({
+      where,
+      skip,
+      take: limitNum,
+      orderBy: [
+        { isSponsored: 'desc' },
+        { isFeatured: 'desc' },
+        userSort,
+      ],
+      select: {
+        id: true, slug: true, title: true,
+        listingType: true, propertyType: true,
+        price: true, priceNegotiable: true,
+        city: true, surface: true, rooms: true, bathrooms: true,
+        images: true, isActive: true,
+        latitude: true, longitude: true,
+        isFeatured: true, isSponsored: true, boostExpiresAt: true, createdAt: true,
+        user: { select: { id: true, name: true, avatar: true } },
+        category: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.realEstateListing.count({ where }),
   ]);
-
-  const total = countResult[0]?.count ?? 0;
 
   return {
     listings,

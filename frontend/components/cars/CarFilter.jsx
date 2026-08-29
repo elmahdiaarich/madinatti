@@ -1,396 +1,496 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { cities } from 'morocco-cities';
-import { carsService } from '@/services/carsService';
+import { useState, useEffect, useMemo, useRef } from "react";
+import { cities } from "morocco-cities";
+import { Search, MapPin, Car as CarIcon, X, SlidersHorizontal } from "lucide-react";
+import SearchableDropdown from "@/components/real-estate/SearchableDropdown";
+import { FilterDropdown, OptionRow } from "@/components/shared/FilterDropdown";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+import { carsService } from "@/services/carsService";
 
 const citiesByRegion = cities.reduce((acc, city) => {
-  if (!acc[city.region_name]) acc[city.region_name] = [];
-  acc[city.region_name].push(city.name);
+  const region = city.region_name;
+  if (!acc[region]) acc[region] = [];
+  acc[region].push(city.name);
   return acc;
 }, {});
 
-const ALL_REGIONS = Object.keys(citiesByRegion).sort((a, b) => a.localeCompare(b, 'fr'));
+const ALL_REGIONS = Object.keys(citiesByRegion).sort((a, b) => a.localeCompare(b, "fr"));
 
-const LISTING_TYPES = [
-  { value: 'SALE', label: 'Vente' },
-  { value: 'RENT', label: 'Location' },
-];
+const cityToRegion = cities.reduce((acc, city) => {
+  acc[city.name] = city.region_name;
+  return acc;
+}, {});
+
+const ALL_CITIES = cities.map((c) => c.name).sort((a, b) => a.localeCompare(b, "fr"));
 
 const CONDITIONS = [
-  { value: 'NEW',     label: 'Neuf' },
-  { value: 'USED',    label: 'Occasion' },
-  { value: 'DAMAGED', label: 'Accidenté' },
+  { label: "Neuf", value: "NEW" },
+  { label: "Occasion", value: "USED" },
+  { label: "Accidenté", value: "DAMAGED" },
 ];
 
 const FUEL_TYPES = [
-  { value: 'PETROL',   label: 'Essence' },
-  { value: 'DIESEL',   label: 'Diesel' },
-  { value: 'ELECTRIC', label: 'Électrique' },
-  { value: 'HYBRID',   label: 'Hybride' },
-  { value: 'LPG',      label: 'GPL' },
+  { label: "Essence", value: "PETROL" },
+  { label: "Diesel", value: "DIESEL" },
+  { label: "Électrique", value: "ELECTRIC" },
+  { label: "Hybride", value: "HYBRID" },
+  { label: "GPL", value: "LPG" },
 ];
 
 const TRANSMISSIONS = [
-  { value: 'MANUAL',         label: 'Manuelle' },
-  { value: 'AUTOMATIC',      label: 'Automatique' },
-  { value: 'SEMI_AUTOMATIC', label: 'Semi-auto' },
+  { label: "Manuelle", value: "MANUAL" },
+  { label: "Automatique", value: "AUTOMATIC" },
+  { label: "Semi-auto", value: "SEMI_AUTOMATIC" },
 ];
 
-const BODY_TYPES = [
-  { value: 'SEDAN',       label: 'Berline' },
-  { value: 'SUV',         label: 'SUV' },
-  { value: 'HATCHBACK',   label: 'Citadine' },
-  { value: 'COUPE',       label: 'Coupé' },
-  { value: 'CONVERTIBLE', label: 'Cabriolet' },
-  { value: 'WAGON',       label: 'Break' },
-  { value: 'VAN',         label: 'Van' },
-  { value: 'PICKUP',      label: 'Pickup' },
-  { value: 'MINIVAN',     label: 'Minivan' },
+const LISTING_TYPE_TABS = [
+  { value: "", label: "Tous" },
+  { value: "SALE", label: "Vente" },
+  { value: "RENT", label: "Location" },
 ];
 
-// ── Sub-components (same pattern as RealEstateFilter) ─────────────────────────
+const EMPTY_FILTERS = {
+  search: "",
+  region: "",
+  city: "",
+  listingType: "",
+  condition: "",
+  make: "",
+  model: "",
+  fuelType: "",
+  transmission: "",
+  minPrice: "",
+  maxPrice: "",
+  minYear: "",
+  maxYear: "",
+  maxMileage: "",
+};
 
-function FilterSkeleton() {
+function ResponsiveLabel({ full, short }) {
   return (
-    <div className="px-4 pb-3 space-y-1.5 animate-pulse">
-      {[80, 60, 70, 50, 65].map((w, i) => (
-        <div key={i} className="flex items-center gap-2 py-1.5">
-          <div className="w-4 h-4 rounded bg-gray-100 shrink-0" />
-          <div className="h-3 bg-gray-100 rounded" style={{ width: `${w}%` }} />
-        </div>
-      ))}
-    </div>
+    <>
+      <span className="hidden lg:inline">{full}</span>
+      <span className="lg:hidden">{short}</span>
+    </>
   );
 }
 
-function FilterOption({ label, isChecked, onClick }) {
-  return (
-    <label onClick={onClick}
-      className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer transition-all duration-150 text-sm ${
-        isChecked ? 'bg-[#2D5016] text-white' : 'text-gray-600 hover:bg-[#E8F5D0] hover:text-[#2D5016]'
-      }`}
-    >
-      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isChecked ? 'bg-[#A7D129] border-[#A7D129]' : 'border-gray-300'}`}>
-        {isChecked && (
-          <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-          </svg>
-        )}
-      </div>
-      <span className="leading-snug flex-1 truncate">{label}</span>
-    </label>
-  );
-}
+export default function CarFilter({ onFilter, initialFilters = {}, isMobile, onClose, extraActions }) {
+  const [openMenu, setOpenMenu] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [catalog, setCatalog] = useState([]);
 
-function FilterSection({ icon, label, badge, isOpen, onToggle, children }) {
-  return (
-    <div>
-      <button onClick={onToggle} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100">
-        <div className="flex items-center gap-2">
-          <span className="text-base">{icon}</span>
-          <span className="text-sm font-semibold text-gray-800">{label}</span>
-          {badge > 0 && (
-            <span className="text-[10px] bg-[#A7D129] text-white rounded-full w-5 h-5 flex items-center justify-center font-bold">{badge}</span>
-          )}
-        </div>
-        <svg className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {isOpen && children}
-    </div>
-  );
-}
-
-// ── Main component ────────────────────────────────────────────────────────────
-
-export default function CarFilter({ onFilter }) {
-  const [open, setOpen] = useState({
-    listingType:  true,
-    condition:    true,
-    category:     false,
-    make:         false,
-    model:        false,
-    fuelType:     false,
-    transmission: false,
-    bodyType:     false,
-    price:        false,
-    year:         false,
-    mileage:      false,
-    region:       false,
-    city:         false,
+  const [filters, setFilters] = useState({
+    ...EMPTY_FILTERS,
+    ...Object.fromEntries(Object.keys(EMPTY_FILTERS).map((k) => [k, initialFilters[k] || ""])),
   });
 
-  const [selected, setSelected] = useState({
-    listingType:  [],
-    condition:    [],
-    category:     [],
-    make:         [],
-    model:        [],
-    fuelType:     [],
-    transmission: [],
-    bodyType:     [],
-    region:       [],
-    city:         [],
-  });
-
-  const [priceRange,   setPriceRange]   = useState({ min: '', max: '' });
-  const [yearRange,    setYearRange]    = useState({ min: '', max: '' });
-  const [maxMileage,   setMaxMileage]   = useState('');
-  const [categories,   setCategories]   = useState([]);
-  const [catalog,      setCatalog]      = useState([]);
-  const [loadingCats,  setLoadingCats]  = useState(true);
-
-  const selectedRegion = selected.region[0] || null;
-  const selectedCity   = selected.city[0]   || null;
+  const filtersRef = useRef(filters);
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
 
   useEffect(() => {
-    carsService.getCategories()
-      .then((res) => setCategories(res.data || []))
-      .catch(() => {})
-      .finally(() => setLoadingCats(false));
+    const next = {
+      ...EMPTY_FILTERS,
+      ...Object.fromEntries(Object.keys(EMPTY_FILTERS).map((k) => [k, initialFilters[k] || ""])),
+    };
+    const isDifferent = Object.keys(next).some((k) => next[k] !== filtersRef.current[k]);
+    if (isDifferent) {
+      filtersRef.current = next;
+      setFilters(next);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFilters]);
 
-    carsService.getCatalog()
-      .then((res) => setCatalog(res.data || []))
-      .catch(() => setCatalog([]));
+  useEffect(() => {
+    carsService.getCatalog().then((d) => setCatalog(d.data || [])).catch(() => setCatalog([]));
   }, []);
 
-  const regionOptions = useMemo(() => ALL_REGIONS.map((r) => ({ value: r, label: r })), []);
-
   const cityOptions = useMemo(() => {
-    const pool = selectedRegion ? citiesByRegion[selectedRegion] || [] : Object.values(citiesByRegion).flat();
-    return [...pool].sort((a, b) => a.localeCompare(b, 'fr')).map((c) => ({ value: c, label: c }));
-  }, [selectedRegion]);
+    if (!filters.region) return ALL_CITIES;
+    return (citiesByRegion[filters.region] || []).sort((a, b) => a.localeCompare(b, "fr"));
+  }, [filters.region]);
 
-  const selectedMake = selected.make[0] || '';
-  const selectedModel = selected.model[0] || '';
+  const makeOptions = useMemo(() => catalog.map((item) => item.make), [catalog]);
   const modelOptions = useMemo(() => {
-    const found = catalog.find((item) => item.make === selectedMake);
+    const found = catalog.find((item) => item.make === filters.make);
     return found?.models || [];
-  }, [catalog, selectedMake]);
+  }, [catalog, filters.make]);
 
-  const emitFilters = (newSelected, newPrice, newYear, newMileage) => {
-    const f = {};
-    if (newSelected.listingType[0])  f.listingType  = newSelected.listingType[0];
-    if (newSelected.condition[0])    f.condition     = newSelected.condition[0];
-    if (newSelected.category[0])     f.categoryId    = newSelected.category[0];
-    if (newSelected.make[0])         f.make          = newSelected.make[0];
-    if (newSelected.model[0])        f.model         = newSelected.model[0];
-    if (newSelected.fuelType[0])     f.fuelType      = newSelected.fuelType[0];
-    if (newSelected.transmission[0]) f.transmission  = newSelected.transmission[0];
-    if (newSelected.bodyType[0])     f.bodyType      = newSelected.bodyType[0];
-    if (newSelected.city[0])         f.city          = newSelected.city[0];
-    else if (newSelected.region[0])  f.region        = newSelected.region[0];
-    if (newPrice.min)   f.minPrice   = newPrice.min;
-    if (newPrice.max)   f.maxPrice   = newPrice.max;
-    if (newYear.min)    f.minYear    = newYear.min;
-    if (newYear.max)    f.maxYear    = newYear.max;
-    if (newMileage)     f.maxMileage = newMileage;
-    onFilter(f);
+  const emitClean = (obj) => {
+    const clean = {};
+    Object.keys(obj).forEach((k) => {
+      if (obj[k]) clean[k] = obj[k];
+    });
+    onFilter(clean);
   };
 
-  const toggleSection = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
+  const debouncedEmit = useDebouncedCallback(emitClean, 400);
 
-  const handleCheck = (key, value) => {
-    let newSelected;
-    if (!value) {
-      newSelected = key === 'make'
-        ? { ...selected, make: [], model: [] }
-        : { ...selected, [key]: [] };
-    } else if (key === 'region') {
-      newSelected = { ...selected, region: selected.region[0] === value ? [] : [value], city: [] };
-    } else if (key === 'make') {
-      newSelected = { ...selected, make: selected.make[0] === value ? [] : [value], model: [] };
-    } else {
-      newSelected = { ...selected, [key]: selected[key][0] === value ? [] : [value] };
+  const updateFilter = (key, value, { immediate = false } = {}) => {
+    const prev = filtersRef.current;
+    const next = { ...prev, [key]: value };
+
+    if (key === "region") next.city = "";
+    if (key === "city" && value) {
+      const resolvedRegion = cityToRegion[value];
+      if (resolvedRegion) next.region = resolvedRegion;
     }
-    setSelected(newSelected);
-    emitFilters(newSelected, priceRange, yearRange, maxMileage);
+    if (key === "make") next.model = "";
+
+    filtersRef.current = next;
+    setFilters(next);
+    if (immediate) {
+      emitClean(next);
+    } else {
+      debouncedEmit(next);
+    }
   };
 
-  const handlePriceChange = (field, val) => {
-    const newPrice = { ...priceRange, [field]: val };
-    setPriceRange(newPrice);
-    emitFilters(selected, newPrice, yearRange, maxMileage);
-  };
-
-  const handleYearChange = (field, val) => {
-    const newYear = { ...yearRange, [field]: val };
-    setYearRange(newYear);
-    emitFilters(selected, priceRange, newYear, maxMileage);
-  };
-
-  const handleMileageChange = (val) => {
-    setMaxMileage(val);
-    emitFilters(selected, priceRange, yearRange, val);
-  };
-
-  const handleReset = () => {
-    const empty = { listingType: [], condition: [], category: [], make: [], model: [], fuelType: [], transmission: [], bodyType: [], region: [], city: [] };
-    setSelected(empty);
-    setPriceRange({ min: '', max: '' });
-    setYearRange({ min: '', max: '' });
-    setMaxMileage('');
+  const handleResetAll = () => {
+    filtersRef.current = EMPTY_FILTERS;
+    setFilters(EMPTY_FILTERS);
+    setOpenMenu(null);
     onFilter({});
   };
 
-  const totalSelected =
-    Object.values(selected).flat().length +
-    (priceRange.min || priceRange.max ? 1 : 0) +
-    (yearRange.min  || yearRange.max  ? 1 : 0) +
-    (maxMileage ? 1 : 0);
+  const anyActive = Object.values(filters).some((v) => v !== "");
+  const advancedActive = !!(
+    filters.minPrice || filters.maxPrice ||
+    filters.minYear || filters.maxYear ||
+    filters.maxMileage || filters.fuelType || filters.transmission
+  );
 
-  const inp = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#A7D129] focus:border-transparent transition';
+  const formatRange = (min, max, unit) => {
+    if (min && max) return `${min}-${max} ${unit}`;
+    if (min) return `Dès ${min} ${unit}`;
+    if (max) return `Jusqu'à ${max} ${unit}`;
+    return null;
+  };
 
-  return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+  const advancedLabel = () => {
+    const parts = [];
+    const priceLabel = formatRange(filters.minPrice, filters.maxPrice, "MAD");
+    if (priceLabel) parts.push(priceLabel);
+    const yearLabel = formatRange(filters.minYear, filters.maxYear, "");
+    if (yearLabel) parts.push(yearLabel.trim());
+    if (filters.maxMileage) parts.push(`≤${filters.maxMileage}km`);
+    if (filters.fuelType) parts.push(FUEL_TYPES.find((f) => f.value === filters.fuelType)?.label);
+    if (filters.transmission) parts.push(TRANSMISSIONS.find((t) => t.value === filters.transmission)?.label);
+    return parts.length ? (
+      <span className="truncate">{parts.join(" · ")}</span>
+    ) : (
+      <ResponsiveLabel full="Filtres avancés" short="Filtres" />
+    );
+  };
 
-      {/* Header */}
-      <div className="bg-gradient-to-r from-[#2D5016] to-[#3d6b1f] px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
-          </svg>
-          <span className="text-white font-semibold text-sm">Filtrer les annonces</span>
-          {totalSelected > 0 && (
-            <span className="bg-[#A7D129] text-white text-xs rounded-full px-2 py-0.5 font-bold">{totalSelected}</span>
-          )}
+  const advancedFiltersBody = (
+    <div className="space-y-4">
+      <div>
+        <p className="text-xs font-bold text-gray-400 uppercase mb-2">Prix (MAD)</p>
+        <div className="flex gap-2">
+          <input type="number" placeholder="Min" value={filters.minPrice} onChange={(e) => updateFilter("minPrice", e.target.value)} className="w-full border border-gray-100 bg-gray-50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#A7D129]/30" />
+          <input type="number" placeholder="Max" value={filters.maxPrice} onChange={(e) => updateFilter("maxPrice", e.target.value)} className="w-full border border-gray-100 bg-gray-50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#A7D129]/30" />
         </div>
-        {totalSelected > 0 && (
-          <button onClick={handleReset} className="text-white/70 hover:text-white text-xs underline transition-colors">Réinitialiser</button>
-        )}
       </div>
 
-      {/* Type d'annonce */}
-      <FilterSection icon="🏷️" label="Type d'annonce" badge={selected.listingType.length} isOpen={open.listingType} onToggle={() => toggleSection('listingType')}>
-        <div className="px-3 pb-3 space-y-0.5">
-          {LISTING_TYPES.map((t) => (
-            <FilterOption key={t.value} label={t.label} isChecked={selected.listingType[0] === t.value} onClick={() => handleCheck('listingType', t.value)} />
-          ))}
+      <div>
+        <p className="text-xs font-bold text-gray-400 uppercase mb-2">Année</p>
+        <div className="flex gap-2">
+          <input type="number" placeholder="De" value={filters.minYear} onChange={(e) => updateFilter("minYear", e.target.value)} className="w-full border border-gray-100 bg-gray-50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#A7D129]/30" />
+          <input type="number" placeholder="À" value={filters.maxYear} onChange={(e) => updateFilter("maxYear", e.target.value)} className="w-full border border-gray-100 bg-gray-50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#A7D129]/30" />
         </div>
-      </FilterSection>
+      </div>
 
-      {/* État */}
-      <FilterSection icon="🔍" label="État du véhicule" badge={selected.condition.length} isOpen={open.condition} onToggle={() => toggleSection('condition')}>
-        <div className="px-3 pb-3 space-y-0.5">
-          {CONDITIONS.map((c) => (
-            <FilterOption key={c.value} label={c.label} isChecked={selected.condition[0] === c.value} onClick={() => handleCheck('condition', c.value)} />
-          ))}
-        </div>
-      </FilterSection>
+      <div>
+        <p className="text-xs font-bold text-gray-400 uppercase mb-2">Kilométrage max</p>
+        <input type="number" placeholder="Ex: 100000" value={filters.maxMileage} onChange={(e) => updateFilter("maxMileage", e.target.value)} className="w-full border border-gray-100 bg-gray-50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#A7D129]/30" />
+      </div>
 
-      {/* Catégorie */}
-      <FilterSection icon="🚗" label="Catégorie" badge={selected.category.length} isOpen={open.category} onToggle={() => toggleSection('category')}>
-        {loadingCats ? <FilterSkeleton /> : categories.length === 0 ? (
-          <p className="px-4 pb-3 text-xs text-gray-400 italic">Aucune catégorie disponible</p>
-        ) : (
-          <div className="px-3 pb-3 space-y-0.5">
-            {categories.map((cat) => (
-              <FilterOption key={cat.id} label={cat.name} isChecked={selected.category[0] === cat.id} onClick={() => handleCheck('category', cat.id)} />
-            ))}
-          </div>
-        )}
-      </FilterSection>
-
-      <FilterSection icon="🏷" label="Marque" badge={selectedMake ? 1 : 0} isOpen={open.make} onToggle={() => toggleSection('make')}>
-        <div className="px-3 pb-3">
-          <select value={selectedMake} onChange={(e) => handleCheck('make', e.target.value)} className={inp}>
-            <option value="">Toutes les marques</option>
-            {catalog.map((item) => (
-              <option key={item.make} value={item.make}>{item.make}</option>
-            ))}
-          </select>
-        </div>
-      </FilterSection>
-
-      <FilterSection icon="🔎" label="Modèle" badge={selectedModel ? 1 : 0} isOpen={open.model} onToggle={() => toggleSection('model')}>
-        <div className="px-3 pb-3">
-          <select
-            value={selectedModel}
-            onChange={(e) => handleCheck('model', e.target.value)}
-            disabled={!selectedMake}
-            className={`${inp} disabled:bg-gray-50 disabled:text-gray-400`}
-          >
-            <option value="">{selectedMake ? 'Tous les modèles' : 'Choisissez une marque'}</option>
-            {modelOptions.map((model) => (
-              <option key={model} value={model}>{model}</option>
-            ))}
-          </select>
-        </div>
-      </FilterSection>
-
-      {/* Carburant */}
-      <FilterSection icon="⛽" label="Carburant" badge={selected.fuelType.length} isOpen={open.fuelType} onToggle={() => toggleSection('fuelType')}>
-        <div className="px-3 pb-3 space-y-0.5">
+      <div>
+        <p className="text-xs font-bold text-gray-400 uppercase mb-2">Carburant</p>
+        <div className="space-y-1">
           {FUEL_TYPES.map((f) => (
-            <FilterOption key={f.value} label={f.label} isChecked={selected.fuelType[0] === f.value} onClick={() => handleCheck('fuelType', f.value)} />
+            <OptionRow
+              key={f.value}
+              label={f.label}
+              isChecked={filters.fuelType === f.value}
+              onClick={() => updateFilter("fuelType", filters.fuelType === f.value ? "" : f.value, { immediate: true })}
+            />
           ))}
         </div>
-      </FilterSection>
+      </div>
 
-      {/* Boîte de vitesse */}
-      <FilterSection icon="⚙️" label="Boîte de vitesse" badge={selected.transmission.length} isOpen={open.transmission} onToggle={() => toggleSection('transmission')}>
-        <div className="px-3 pb-3 space-y-0.5">
+      <div>
+        <p className="text-xs font-bold text-gray-400 uppercase mb-2">Boîte de vitesse</p>
+        <div className="space-y-1">
           {TRANSMISSIONS.map((t) => (
-            <FilterOption key={t.value} label={t.label} isChecked={selected.transmission[0] === t.value} onClick={() => handleCheck('transmission', t.value)} />
+            <OptionRow
+              key={t.value}
+              label={t.label}
+              isChecked={filters.transmission === t.value}
+              onClick={() => updateFilter("transmission", filters.transmission === t.value ? "" : t.value, { immediate: true })}
+            />
           ))}
         </div>
-      </FilterSection>
+      </div>
+    </div>
+  );
 
-      {/* Carrosserie */}
-      <FilterSection icon="🚙" label="Carrosserie" badge={selected.bodyType.length} isOpen={open.bodyType} onToggle={() => toggleSection('bodyType')}>
-        <div className="px-3 pb-3 space-y-0.5">
-          {BODY_TYPES.map((b) => (
-            <FilterOption key={b.value} label={b.label} isChecked={selected.bodyType[0] === b.value} onClick={() => handleCheck('bodyType', b.value)} />
-          ))}
+  const listingTypePills = (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {LISTING_TYPE_TABS.map((tab) => {
+        const isActive = filters.listingType === tab.value;
+        return (
+          <button
+            key={tab.label}
+            type="button"
+            onClick={() => updateFilter("listingType", tab.value, { immediate: true })}
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 ${isActive ? "bg-[#2D5016] text-white shadow-sm" : "bg-[#E8F5D0] text-[#2D5016] hover:bg-[#A7D129] hover:text-white"}`}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <div className="w-full bg-white">
+      {/* ══════════════════════ DESKTOP / TABLET (md+) ══════════════════════ */}
+      <div className="hidden md:block">
+        <div className="flex flex-nowrap items-stretch gap-2 lg:gap-3">
+          <div className="relative group flex-[2_2_140px] min-w-0">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#2D5016] transition-colors" />
+            <input
+              type="text"
+              placeholder="Rechercher..."
+              value={filters.search}
+              onChange={(e) => updateFilter("search", e.target.value)}
+              className="w-full bg-gray-50 border border-gray-400 rounded-3xl pl-10 pr-3 lg:pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#A7D129]/30 transition"
+            />
+          </div>
+
+          <div className="flex-1 min-w-0 basis-24 lg:basis-40">
+            <SearchableDropdown
+              label={<ResponsiveLabel full="Région" short="Rég." />}
+              icon={MapPin}
+              value={filters.region}
+              options={ALL_REGIONS}
+              onSelect={(val) => updateFilter("region", val, { immediate: true })}
+              placeholder="Rechercher une région..."
+            />
+          </div>
+
+          <div className="flex-1 min-w-0 basis-24 lg:basis-40">
+            <SearchableDropdown
+              label="Ville"
+              icon={MapPin}
+              value={filters.city}
+              options={cityOptions}
+              onSelect={(val) => updateFilter("city", val, { immediate: true })}
+              placeholder="Rechercher une ville..."
+            />
+          </div>
+
+          <div className="flex-1 min-w-0 basis-24 lg:basis-40">
+            <SearchableDropdown
+              label={<ResponsiveLabel full="Marque" short="Marque" />}
+              icon={CarIcon}
+              value={filters.make}
+              options={makeOptions}
+              onSelect={(val) => updateFilter("make", val, { immediate: true })}
+              placeholder="Rechercher une marque..."
+            />
+          </div>
+
+          <div className={`flex-1 min-w-0 basis-24 lg:basis-40 ${!filters.make ? "opacity-50 pointer-events-none" : ""}`}>
+            <SearchableDropdown
+              label="Modèle"
+              icon={CarIcon}
+              value={filters.model}
+              options={modelOptions}
+              onSelect={(val) => updateFilter("model", val, { immediate: true })}
+              placeholder={filters.make ? "Rechercher un modèle..." : "Choisir une marque"}
+            />
+          </div>
+
+          <FilterDropdown
+            label={advancedLabel()}
+            icon={SlidersHorizontal}
+            active={advancedActive}
+            isOpen={openMenu === "advanced"}
+            onToggle={() => setOpenMenu(openMenu === "advanced" ? null : "advanced")}
+            onClose={() => setOpenMenu((c) => (c === "advanced" ? null : c))}
+            width="w-80"
+            align="right"
+            className="shrink-0 min-w-0 basis-20 lg:basis-52 max-w-[9rem] lg:max-w-[13rem]"
+          >
+            {advancedFiltersBody}
+          </FilterDropdown>
+
+          {extraActions && <div className="flex-none">{extraActions}</div>}
         </div>
-      </FilterSection>
 
-      {/* Prix */}
-      <FilterSection icon="💰" label="Prix (MAD)" badge={priceRange.min || priceRange.max ? 1 : 0} isOpen={open.price} onToggle={() => toggleSection('price')}>
-        <div className="px-3 pb-3 flex gap-2">
-          <input type="number" placeholder="Min" value={priceRange.min} onChange={(e) => handlePriceChange('min', e.target.value)} className={inp} />
-          <input type="number" placeholder="Max" value={priceRange.max} onChange={(e) => handlePriceChange('max', e.target.value)} className={inp} />
-        </div>
-      </FilterSection>
+        <div className="flex items-center justify-between flex-wrap gap-2 mt-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            {listingTypePills}
+            {CONDITIONS.map((c) => {
+              const isActive = filters.condition === c.value;
+              return (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => updateFilter("condition", isActive ? "" : c.value, { immediate: true })}
+                  className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all ${isActive ? "bg-gray-800 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                >
+                  {c.label}
+                </button>
+              );
+            })}
+          </div>
 
-      {/* Année */}
-      <FilterSection icon="📅" label="Année" badge={yearRange.min || yearRange.max ? 1 : 0} isOpen={open.year} onToggle={() => toggleSection('year')}>
-        <div className="px-3 pb-3 flex gap-2">
-          <input type="number" placeholder="De" value={yearRange.min} onChange={(e) => handleYearChange('min', e.target.value)} className={inp} />
-          <input type="number" placeholder="À"  value={yearRange.max} onChange={(e) => handleYearChange('max', e.target.value)} className={inp} />
-        </div>
-      </FilterSection>
-
-      {/* Kilométrage */}
-      <FilterSection icon="🛣️" label="Kilométrage max" badge={maxMileage ? 1 : 0} isOpen={open.mileage} onToggle={() => toggleSection('mileage')}>
-        <div className="px-3 pb-3">
-          <input type="number" placeholder="Ex: 100000" value={maxMileage} onChange={(e) => handleMileageChange(e.target.value)} className={inp} />
-        </div>
-      </FilterSection>
-
-      {/* Région */}
-      <FilterSection icon="🗺️" label="Région" badge={selectedRegion ? 1 : 0} isOpen={open.region} onToggle={() => toggleSection('region')}>
-        <div className="px-3 pb-3 space-y-0.5 max-h-52 overflow-y-auto">
-          {regionOptions.map((opt) => (
-            <FilterOption key={opt.value} label={opt.label} isChecked={selectedRegion === opt.value} onClick={() => handleCheck('region', opt.value)} />
-          ))}
-        </div>
-      </FilterSection>
-
-      {/* Ville */}
-      <FilterSection icon="📍" label={selectedRegion ? `Ville — ${selectedRegion}` : 'Ville'} badge={selectedCity ? 1 : 0} isOpen={open.city} onToggle={() => toggleSection('city')}>
-        <div className="px-3 pb-3 space-y-0.5 max-h-52 overflow-y-auto">
-          {cityOptions.length === 0 ? (
-            <p className="px-1 py-2 text-xs text-gray-400 italic">{selectedRegion ? 'Aucune ville dans cette région' : 'Aucune ville disponible'}</p>
-          ) : (
-            cityOptions.map((opt) => (
-              <FilterOption key={opt.value} label={opt.label} isChecked={selectedCity === opt.value} onClick={() => handleCheck('city', opt.value)} />
-            ))
+          {anyActive && (
+            <button
+              type="button"
+              onClick={handleResetAll}
+              className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-red-500 transition-colors px-2"
+            >
+              <X size={16} />
+              Réinitialiser
+            </button>
           )}
         </div>
-      </FilterSection>
+      </div>
+
+      {/* ══════════════════════ MOBILE / SMALL TABLET (below md) ══════════════════════ */}
+      <div className="md:hidden">
+        <div className="flex items-center gap-2">
+          <div className="relative group flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#2D5016] transition-colors" />
+            <input
+              type="text"
+              placeholder="Rechercher..."
+              value={filters.search}
+              onChange={(e) => updateFilter("search", e.target.value)}
+              className="w-full bg-gray-50 border border-gray-400 rounded-3xl pl-10 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#A7D129]/30 transition"
+            />
+          </div>
+
+          {extraActions}
+
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Filtres"
+            className={`relative shrink-0 w-11 h-11 rounded-full border flex items-center justify-center transition-colors ${anyActive ? "border-[#2D5016] bg-[#E8F5D0] text-[#2D5016]" : "border-gray-400 bg-gray-50 text-gray-600"}`}
+          >
+            <SlidersHorizontal size={16} />
+            {anyActive && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#A7D129] border-2 border-white" />}
+          </button>
+        </div>
+
+        <div
+          className="flex gap-1.5 overflow-x-auto no-scrollbar mt-2.5 -mx-4 px-4"
+          style={{
+            maskImage: "linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent)",
+            WebkitMaskImage: "linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent)",
+          }}
+        >
+          {CONDITIONS.map((c) => {
+            const isActive = filters.condition === c.value;
+            return (
+              <button
+                key={c.value}
+                type="button"
+                onClick={() => updateFilter("condition", isActive ? "" : c.value, { immediate: true })}
+                className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${isActive ? "bg-[#2D5016] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              >
+                {c.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Mobile filter drawer */}
+      {drawerOpen && (
+        <div className="md:hidden fixed inset-0 z-[200]">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setDrawerOpen(false)} />
+          <div className="absolute top-0 left-0 h-full w-[85%] max-w-[360px] bg-white shadow-2xl overflow-y-auto animate-slide-in-left">
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100 sticky top-0 bg-white z-10">
+              <span className="font-bold text-gray-800 text-sm">Filtres</span>
+              <button type="button" onClick={() => setDrawerOpen(false)} className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition" aria-label="Fermer">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-5">
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase mb-2">Transaction</p>
+                {listingTypePills}
+              </div>
+
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase mb-2">État</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {CONDITIONS.map((c) => {
+                    const isActive = filters.condition === c.value;
+                    return (
+                      <button
+                        key={c.value}
+                        type="button"
+                        onClick={() => updateFilter("condition", isActive ? "" : c.value, { immediate: true })}
+                        className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${isActive ? "bg-gray-800 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                      >
+                        {c.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase mb-2">Région</p>
+                <SearchableDropdown label="Région" icon={MapPin} value={filters.region} options={ALL_REGIONS} onSelect={(val) => updateFilter("region", val, { immediate: true })} placeholder="Rechercher une région..." />
+              </div>
+
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase mb-2">Ville</p>
+                <SearchableDropdown label="Ville" icon={MapPin} value={filters.city} options={cityOptions} onSelect={(val) => updateFilter("city", val, { immediate: true })} placeholder="Rechercher une ville..." />
+              </div>
+
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase mb-2">Marque</p>
+                <SearchableDropdown label="Marque" icon={CarIcon} value={filters.make} options={makeOptions} onSelect={(val) => updateFilter("make", val, { immediate: true })} placeholder="Rechercher une marque..." />
+              </div>
+
+              <div className={!filters.make ? "opacity-50 pointer-events-none" : ""}>
+                <p className="text-xs font-bold text-gray-400 uppercase mb-2">Modèle</p>
+                <SearchableDropdown label="Modèle" icon={CarIcon} value={filters.model} options={modelOptions} onSelect={(val) => updateFilter("model", val, { immediate: true })} placeholder={filters.make ? "Rechercher un modèle..." : "Choisir une marque"} />
+              </div>
+
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase mb-2">Filtres avancés</p>
+                {advancedFiltersBody}
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 flex gap-3">
+              {anyActive && (
+                <button type="button" onClick={handleResetAll} className="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-gray-600 font-semibold text-sm hover:bg-gray-50 transition">
+                  Réinitialiser
+                </button>
+              )}
+              <button type="button" onClick={() => setDrawerOpen(false)} className="flex-1 py-2.5 bg-[#2D5016] text-white rounded-xl font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition">
+                Voir les résultats
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
