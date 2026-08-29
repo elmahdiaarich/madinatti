@@ -1,5 +1,6 @@
 require('dotenv').config();
 
+const path = require('path');
 const axios = require('axios');
 const XLSX = require('xlsx');
 const prisma = require('../config/db');
@@ -7,7 +8,7 @@ const { uniqueSlug } = require('../services/educationInstitutions');
 
 const FILE_PATH =
   process.argv.find((arg) => arg.endsWith('.xlsx')) ||
-  'C:/Users/USER/Downloads/etablissements_publics_kenitra_audit_gps.xlsx';
+  path.join(__dirname, '..', 'data', 'education', 'etablissements_publics_kenitra_audit_gps.xlsx');
 const DRY_RUN = process.argv.includes('--dry-run');
 const SKIP_GEOCODE = process.argv.includes('--skip-geocode');
 const COMMUNE_FALLBACK = process.argv.includes('--commune-fallback');

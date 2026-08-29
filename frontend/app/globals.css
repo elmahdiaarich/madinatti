@@ -1,6 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
+:root {
+  --navbar-h: 0px;
+}
+
 @theme {
   --color-primary: #A7D129;
   --color-primary-dark: #2D5016;
@@ -13,6 +17,7 @@
   
   --font-sans: 'Inter', sans-serif;
 }
+
 
 html, body {
   font-family: var(--font-sans);
@@ -84,6 +89,10 @@ html.dark .shadow-xl {
   z-index: 10 !important;
 }
 
+.leaflet-container {
+  height: 100% !important;
+  width: 100% !important;
+}
 
 /*for realestate buissness listing*/
 @keyframes slide-in {

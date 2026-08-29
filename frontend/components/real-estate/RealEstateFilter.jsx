@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { cities } from "morocco-cities";
-import { realEstateService } from "@/services/realEstateService";
+import { Search, ChevronDown, X, MapPin, Home, Tag, SlidersHorizontal } from "lucide-react";
+import SearchableDropdown from "@/components/real-estate/SearchableDropdown";
+import { FilterDropdown, OptionRow } from "@/components/shared/FilterDropdown";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 
 // ─── Build region → cities map once ──────────────────────────────────────────
 const citiesByRegion = cities.reduce((acc, city) => {
@@ -16,10 +19,16 @@ const ALL_REGIONS = Object.keys(citiesByRegion).sort((a, b) =>
   a.localeCompare(b, "fr")
 );
 
-const LISTING_TYPES = [
-  { value: "SALE", label: "Vente" },
-  { value: "RENT", label: "Location" },
-];
+// Reverse lookup: city name → region name, so picking a city directly
+// (without choosing a region first) can still resolve/display its region.
+const cityToRegion = cities.reduce((acc, city) => {
+  acc[city.name] = city.region_name;
+  return acc;
+}, {});
+
+const ALL_CITIES = cities
+  .map((c) => c.name)
+  .sort((a, b) => a.localeCompare(b, "fr"));
 
 const ROOM_OPTIONS = [
   { value: "1", label: "1+ pièce" },
@@ -29,425 +38,504 @@ const ROOM_OPTIONS = [
   { value: "5", label: "5+ pièces" },
 ];
 
-// ─── Sub-components (same pattern as JobFilter) ───────────────────────────────
+const PROPERTY_TYPES = [
+  { label: "Appartements", value: "APARTMENT" },
+  { label: "Villas", value: "VILLA" },
+  { label: "Maisons", value: "HOUSE" },
+  { label: "Studios", value: "STUDIO" },
+  { label: "Terrains", value: "LAND" },
+  { label: "Bureaux", value: "OFFICE" },
+];
 
-function FilterSkeleton() {
-  return (
-    <div className="px-4 pb-3 space-y-1.5 animate-pulse">
-      {[80, 60, 70, 50, 65].map((w, i) => (
-        <div key={i} className="flex items-center gap-2 py-1.5">
-          <div className="w-4 h-4 rounded bg-gray-100 shrink-0" />
-          <div className="h-3 bg-gray-100 rounded" style={{ width: `${w}%` }} />
-        </div>
-      ))}
-    </div>
-  );
-}
+// Now rendered as a pill row (Tous / Vente / Location), not a dropdown.
+const LISTING_TYPE_TABS = [
+  { value: "", label: "Tous" },
+  { value: "SALE", label: "Vente" },
+  { value: "RENT", label: "Location" },
+];
 
-function FilterOption({ label, count, isChecked, onClick }) {
-  return (
-    <label
-      onClick={onClick}
-      className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer transition-all duration-150 text-sm
-        ${
-          isChecked
-            ? "bg-[#2D5016] text-white"
-            : "text-gray-600 hover:bg-[#E8F5D0] hover:text-[#2D5016]"
-        }`}
-    >
-      <div
-        className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors
-        ${isChecked ? "bg-[#A7D129] border-[#A7D129]" : "border-gray-300"}`}
-      >
-        {isChecked && (
-          <svg
-            className="w-2.5 h-2.5 text-white"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={3}
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-        )}
-      </div>
-      <span className="leading-snug flex-1 truncate">{label}</span>
-      {count !== undefined && (
-        <span
-          className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[22px] text-center shrink-0 transition-colors
-          ${
-            isChecked
-              ? "bg-white/25 text-white"
-              : "bg-gray-100 text-gray-500"
-          }`}
-        >
-          {count.toLocaleString("fr-MA")}
-        </span>
-      )}
-    </label>
-  );
-}
+const EMPTY_FILTERS = {
+  search: "",
+  region: "",
+  city: "",
+  listingType: "",
+  propertyType: "",
+  minPrice: "",
+  maxPrice: "",
+  minSurface: "",
+  maxSurface: "",
+  rooms: "",
+};
 
-function FilterSection({ icon, label, badge, isOpen, onToggle, children }) {
+// Small helper: renders a label that swaps to a shorter version as the
+// viewport narrows, instead of the field just overflowing/scrolling.
+// (Assumes SearchableDropdown/FilterDropdown just render `{label}` as-is,
+// which works fine with a JSX node, not just a string.)
+function ResponsiveLabel({ full, short }) {
   return (
-    <div>
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100"
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-base">{icon}</span>
-          <span className="text-sm font-semibold text-gray-800">{label}</span>
-          {badge > 0 && (
-            <span className="text-[10px] bg-[#A7D129] text-white rounded-full w-5 h-5 flex items-center justify-center font-bold">
-              {badge}
-            </span>
-          )}
-        </div>
-        <svg
-          className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
-          }`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
-      </button>
-      {isOpen && children}
-    </div>
+    <>
+      <span className="hidden lg:inline">{full}</span>
+      <span className="lg:hidden">{short}</span>
+    </>
   );
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
+export default function RealEstateFilter({ onFilter, initialFilters = {}, isMobile, onClose, extraActions }) {
+  const [openMenu, setOpenMenu] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-export default function RealEstateFilter({ onFilter, isMobile = false, onClose }) {
-  const [open, setOpen] = useState({
-    listingType: true,
-    propertyType: true,
-    price: false,
-    rooms: false,
-    region: false,
-    city: false,
+  const [filters, setFilters] = useState({
+    ...EMPTY_FILTERS,
+    ...Object.fromEntries(
+      Object.keys(EMPTY_FILTERS).map((k) => [k, initialFilters[k] || ""])
+    ),
   });
 
-  const [selected, setSelected] = useState({
-    listingType: [],
-    propertyType: [],
-    rooms: [],
-    region: [],
-    city: [],
-  });
-
-  const [priceRange, setPriceRange] = useState({ min: "", max: "" });
-  const [categories, setCategories] = useState([]);
-  const [loadingCats, setLoadingCats] = useState(true);
-
-  // Derived single-selected values
-  const selectedRegion = selected.region[0] || null;
-  const selectedCity = selected.city[0] || null;
-
-  // ─── Fetch real estate categories from API ─────────────────────────────
+  // Always-current mirror of `filters`. updateFilter reads/writes through this
+  // ref (not the `filters` closure) so that two selections landing in the same
+  // tick — e.g. picking a region then immediately a city, or an "immediate"
+  // pick racing a pending debounced text/number change — never build their
+  // `next` object from a stale snapshot and silently clobber each other.
+  const filtersRef = useRef(filters);
   useEffect(() => {
-    realEstateService
-      .getCategories()
-      .then((res) => setCategories(res.data || []))
-      .catch(() => {})
-      .finally(() => setLoadingCats(false));
-  }, []);
+    filtersRef.current = filters;
+  }, [filters]);
 
-  // ─── Region / city options from morocco-cities ─────────────────────────
-  const regionOptions = useMemo(
-    () =>
-      ALL_REGIONS.map((r) => ({ value: r, label: r })),
-    []
-  );
+  // Sync internal state with external initialFilters (e.g. reset / URL change)
+  useEffect(() => {
+    const next = {
+      ...EMPTY_FILTERS,
+      ...Object.fromEntries(
+        Object.keys(EMPTY_FILTERS).map((k) => [k, initialFilters[k] || ""])
+      ),
+    };
+    const isDifferent = Object.keys(next).some((k) => next[k] !== filtersRef.current[k]);
+    if (isDifferent) {
+      filtersRef.current = next;
+      setFilters(next);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFilters]);
 
   const cityOptions = useMemo(() => {
-    const pool = selectedRegion
-      ? citiesByRegion[selectedRegion] || []
-      : Object.values(citiesByRegion).flat();
-    return [...pool]
-      .sort((a, b) => a.localeCompare(b, "fr"))
-      .map((c) => ({ value: c, label: c }));
-  }, [selectedRegion]);
+    if (!filters.region) return ALL_CITIES;
+    return (citiesByRegion[filters.region] || []).sort((a, b) => a.localeCompare(b, "fr"));
+  }, [filters.region]);
 
-  // ─── Emit filters upward ───────────────────────────────────────────────
-  const emitFilters = (newSelected, newPrice) => {
-    const f = {};
-
-    const listingType = newSelected.listingType[0];
-    const propertyType = newSelected.propertyType[0];
-    const rooms = newSelected.rooms[0];
-    const city = newSelected.city[0];
-    const region = newSelected.region[0];
-
-    if (listingType) f.listingType = listingType;
-    if (propertyType) f.categoryId = propertyType;
-    if (rooms) f.rooms = rooms;
-    if (city) f.city = city;
-    else if (region) f.city = region; // fallback: filter by region name as city
-
-    if (newPrice.min) f.minPrice = newPrice.min;
-    if (newPrice.max) f.maxPrice = newPrice.max;
-
-    onFilter(f);
+  const emitClean = (obj) => {
+    const clean = {};
+    Object.keys(obj).forEach((k) => {
+      if (obj[k]) clean[k] = obj[k];
+    });
+    onFilter(clean);
   };
 
-  // ─── Toggle helpers ────────────────────────────────────────────────────
-  const toggleSection = (key) =>
-    setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
+  const debouncedEmit = useDebouncedCallback(emitClean, 400);
 
-  const handleCheck = (key, value) => {
-    const current = selected[key][0];
-    let newSelected;
+  // Text/number inputs debounce; discrete selects (dropdown/pill picks) emit instantly.
+  // Both branches build `next` from filtersRef.current, which is always fresh —
+  // this is what actually fixes filters overriding each other instead of combining.
+  const updateFilter = (key, value, { immediate = false } = {}) => {
+    const prev = filtersRef.current;
+    const next = { ...prev, [key]: value };
 
     if (key === "region") {
-      const isSame = current === value;
-      newSelected = {
-        ...selected,
-        region: isSame ? [] : [value],
-        city: [],
-      };
-    } else {
-      newSelected = {
-        ...selected,
-        [key]: current === value ? [] : [value],
-      };
+      next.city = ""; // reset city when region changes — city list narrows to the new region
+    }
+    if (key === "city" && value) {
+      // Picking a city directly (with no region chosen yet, or a different
+      // region than the city belongs to) auto-fills the matching region so
+      // both fields stay consistent and the dropdown reflects the right context.
+      const resolvedRegion = cityToRegion[value];
+      if (resolvedRegion) next.region = resolvedRegion;
     }
 
-    setSelected(newSelected);
-    if (!isMobile) emitFilters(newSelected, priceRange);
+    filtersRef.current = next;
+    setFilters(next);
+    if (immediate) {
+      emitClean(next);
+    } else {
+      debouncedEmit(next);
+    }
   };
 
-  const handlePriceChange = (field, val) => {
-    const newPrice = { ...priceRange, [field]: val };
-    setPriceRange(newPrice);
-    if (!isMobile) emitFilters(selected, newPrice);
-  };
-
-  const handleReset = () => {
-    const empty = {
-      listingType: [],
-      propertyType: [],
-      rooms: [],
-      region: [],
-      city: [],
-    };
-    setSelected(empty);
-    setPriceRange({ min: "", max: "" });
+  const handleResetAll = () => {
+    filtersRef.current = EMPTY_FILTERS;
+    setFilters(EMPTY_FILTERS);
+    setOpenMenu(null);
     onFilter({});
   };
 
-  const handleSearch = () => {
-    emitFilters(selected, priceRange);
-    if (onClose) onClose();
+  const anyActive = Object.values(filters).some((v) => v !== "");
+  const advancedActive = !!(
+    filters.minPrice ||
+    filters.maxPrice ||
+    filters.minSurface ||
+    filters.maxSurface ||
+    filters.rooms
+  );
+
+  const formatRange = (min, max, unit) => {
+    if (min && max) return `${min}-${max} ${unit}`;
+    if (min) return `Dès ${min} ${unit}`;
+    if (max) return `Jusqu'à ${max} ${unit}`;
+    return null;
   };
 
-  const totalSelected =
-    Object.values(selected).flat().length +
-    (priceRange.min || priceRange.max ? 1 : 0);
+  const advancedLabel = () => {
+    const parts = [];
+    const priceLabel = formatRange(filters.minPrice, filters.maxPrice, "MAD");
+    if (priceLabel) parts.push(priceLabel);
 
-  // ─── Render ────────────────────────────────────────────────────────────
-  return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+    const surfaceLabel = formatRange(filters.minSurface, filters.maxSurface, "m²");
+    if (surfaceLabel) parts.push(surfaceLabel);
 
-      {/* Header */}
-      <div className="bg-gradient-to-r from-[#2D5016] to-[#3d6b1f] px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <svg
-            className="w-4 h-4 text-white"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"
-            />
-          </svg>
-          <span className="text-white font-semibold text-sm">
-            Filtrer les annonces
-          </span>
-          {totalSelected > 0 && (
-            <span className="bg-[#A7D129] text-white text-xs rounded-full px-2 py-0.5 font-bold">
-              {totalSelected}
-            </span>
-          )}
-        </div>
-        {totalSelected > 0 && (
-          <button
-            onClick={handleReset}
-            className="text-white/70 hover:text-white text-xs underline transition-colors"
-          >
-            Réinitialiser
-          </button>
-        )}
-      </div>
+    if (filters.rooms) {
+      parts.push(ROOM_OPTIONS.find((r) => r.value === filters.rooms)?.label);
+    }
+    // When nothing is active, show a label that itself shrinks on small screens.
+    return parts.length ? (
+      <span className="truncate">{parts.join(" · ")}</span>
+    ) : (
+      <ResponsiveLabel full="Filtres avancés" short="Filtres" />
+    );
+  };
 
-      {/* Type d'annonce (Vente / Location) */}
-      <FilterSection
-        icon="🏷️"
-        label="Type d'annonce"
-        badge={selected.listingType.length}
-        isOpen={open.listingType}
-        onToggle={() => toggleSection("listingType")}
-      >
-        <div className="px-3 pb-3 space-y-0.5">
-          {LISTING_TYPES.map((t) => (
-            <FilterOption
-              key={t.value}
-              label={t.label}
-              isChecked={selected.listingType[0] === t.value}
-              onClick={() => handleCheck("listingType", t.value)}
-            />
-          ))}
-        </div>
-      </FilterSection>
-
-      {/* Type de bien */}
-      <FilterSection
-        icon="🏠"
-        label="Type de bien"
-        badge={selected.propertyType.length}
-        isOpen={open.propertyType}
-        onToggle={() => toggleSection("propertyType")}
-      >
-        {loadingCats ? (
-          <FilterSkeleton />
-        ) : categories.length === 0 ? (
-          <p className="px-4 pb-3 text-xs text-gray-400 italic">
-            Aucune catégorie disponible
-          </p>
-        ) : (
-          <div className="px-3 pb-3 space-y-0.5">
-            {categories.map((cat) => (
-              <FilterOption
-                key={cat.id}
-                label={cat.name}
-                isChecked={selected.propertyType[0] === cat.id}
-                onClick={() => handleCheck("propertyType", cat.id)}
-              />
-            ))}
-          </div>
-        )}
-      </FilterSection>
-
-      {/* Prix */}
-      <FilterSection
-        icon="💰"
-        label="Prix (MAD)"
-        badge={priceRange.min || priceRange.max ? 1 : 0}
-        isOpen={open.price}
-        onToggle={() => toggleSection("price")}
-      >
-        <div className="px-3 pb-3 flex gap-2">
+  const advancedFiltersBody = (
+    <div className="space-y-4">
+      <div>
+        <p className="text-xs font-bold text-gray-400 uppercase mb-2">Prix (MAD)</p>
+        <div className="flex gap-2">
           <input
             type="number"
             placeholder="Min"
-            value={priceRange.min}
-            onChange={(e) => handlePriceChange("min", e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#A7D129] focus:border-transparent transition"
+            value={filters.minPrice}
+            onChange={(e) => updateFilter("minPrice", e.target.value)}
+            className="w-full border border-gray-100 bg-gray-50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#A7D129]/30"
           />
           <input
             type="number"
             placeholder="Max"
-            value={priceRange.max}
-            onChange={(e) => handlePriceChange("max", e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#A7D129] focus:border-transparent transition"
+            value={filters.maxPrice}
+            onChange={(e) => updateFilter("maxPrice", e.target.value)}
+            className="w-full border border-gray-100 bg-gray-50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#A7D129]/30"
           />
         </div>
-      </FilterSection>
+      </div>
 
-      {/* Pièces */}
-      <FilterSection
-        icon="🛏️"
-        label="Pièces min."
-        badge={selected.rooms.length}
-        isOpen={open.rooms}
-        onToggle={() => toggleSection("rooms")}
-      >
-        <div className="px-3 pb-3 space-y-0.5">
+      <div>
+        <p className="text-xs font-bold text-gray-400 uppercase mb-2">Surface (m²)</p>
+        <div className="flex gap-2">
+          <input
+            type="number"
+            placeholder="Min"
+            value={filters.minSurface}
+            onChange={(e) => updateFilter("minSurface", e.target.value)}
+            className="w-full border border-gray-100 bg-gray-50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#A7D129]/30"
+          />
+          <input
+            type="number"
+            placeholder="Max"
+            value={filters.maxSurface}
+            onChange={(e) => updateFilter("maxSurface", e.target.value)}
+            className="w-full border border-gray-100 bg-gray-50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#A7D129]/30"
+          />
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs font-bold text-gray-400 uppercase mb-2">Nombre de pièces</p>
+        <div className="space-y-1">
           {ROOM_OPTIONS.map((r) => (
-            <FilterOption
+            <OptionRow
               key={r.value}
               label={r.label}
-              isChecked={selected.rooms[0] === r.value}
-              onClick={() => handleCheck("rooms", r.value)}
+              isChecked={filters.rooms === r.value}
+              onClick={() =>
+                updateFilter("rooms", filters.rooms === r.value ? "" : r.value, {
+                  immediate: true,
+                })
+              }
             />
           ))}
         </div>
-      </FilterSection>
+      </div>
+    </div>
+  );
 
-      {/* Région */}
-      <FilterSection
-        icon="🗺️"
-        label="Région"
-        badge={selectedRegion ? 1 : 0}
-        isOpen={open.region}
-        onToggle={() => toggleSection("region")}
-      >
-        <div className="px-3 pb-3 space-y-0.5 max-h-64 overflow-y-auto">
-          {regionOptions.map((opt) => (
-            <FilterOption
-              key={opt.value}
-              label={opt.label}
-              isChecked={selectedRegion === opt.value}
-              onClick={() => handleCheck("region", opt.value)}
+  const listingTypePills = (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {LISTING_TYPE_TABS.map((tab) => {
+        const isActive = filters.listingType === tab.value;
+        return (
+          <button
+            key={tab.label}
+            type="button"
+            onClick={() => updateFilter("listingType", tab.value, { immediate: true })}
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 ${isActive
+              ? "bg-[#2D5016] text-white shadow-sm"
+              : "bg-[#E8F5D0] text-[#2D5016] hover:bg-[#A7D129] hover:text-white"
+              }`}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <div className="w-full bg-white">
+      {/* ══════════════════════ DESKTOP / TABLET (md+) ══════════════════════ */}
+      <div className="hidden md:block">
+        {/*
+          Row 1: search + region + city + property type + advanced.
+          FIX: previously `flex-nowrap` + `overflow-x-auto` + `shrink-0` on
+          every child forced a fixed total width, so anything that didn't
+          fit just scrolled off-screen instead of shrinking to fit.
+
+          Now every field is allowed to shrink (`min-w-0`, no `shrink-0`),
+          min-widths shrink progressively at each breakpoint, and the
+          longer labels (Région / Type de bien / Filtres avancés) swap to
+          short forms below the `lg` breakpoint via <ResponsiveLabel>.
+          Nothing scrolls — everything always fits on one row.
+        */}
+        <div className="flex flex-nowrap items-stretch gap-2 lg:gap-3">
+          {/* Search — still the widest field, but its min-width now shrinks
+              with the viewport instead of forcing a scrollbar */}
+          <div className="relative group flex-[2_2_140px] min-w-0">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#2D5016] transition-colors" />
+            <input
+              type="text"
+              placeholder="Rechercher..."
+              value={filters.search}
+              onChange={(e) => updateFilter("search", e.target.value)}
+              className="w-full bg-gray-50 border border-gray-400 rounded-3xl pl-10 pr-3 lg:pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#A7D129]/30 transition"
             />
-          ))}
-        </div>
-      </FilterSection>
+          </div>
 
-      {/* Ville */}
-      <FilterSection
-        icon="📍"
-        label={selectedRegion ? `Ville — ${selectedRegion}` : "Ville"}
-        badge={selectedCity ? 1 : 0}
-        isOpen={open.city}
-        onToggle={() => toggleSection("city")}
-      >
-        <div className="px-3 pb-3 space-y-0.5 max-h-64 overflow-y-auto">
-          {cityOptions.length === 0 ? (
-            <p className="px-1 py-2 text-xs text-gray-400 italic">
-              {selectedRegion
-                ? "Aucune ville dans cette région"
-                : "Aucune ville disponible"}
-            </p>
-          ) : (
-            cityOptions.map((opt) => (
-              <FilterOption
-                key={opt.value}
-                label={opt.label}
-                isChecked={selectedCity === opt.value}
-                onClick={() => handleCheck("city", opt.value)}
-              />
-            ))
+          {/* Region */}
+          <div className="flex-1 min-w-0 basis-24 lg:basis-40">
+            <SearchableDropdown
+              label={<ResponsiveLabel full="Région" short="Rég." />}
+              icon={MapPin}
+              value={filters.region}
+              options={ALL_REGIONS}
+              onSelect={(val) => updateFilter("region", val, { immediate: true })}
+              placeholder="Rechercher une région..."
+            />
+          </div>
+
+          {/* City */}
+          <div className="flex-1 min-w-0 basis-24 lg:basis-40">
+            <SearchableDropdown
+              label="Ville"
+              icon={MapPin}
+              value={filters.city}
+              options={cityOptions}
+              onSelect={(val) => updateFilter("city", val, { immediate: true })}
+              placeholder="Rechercher une ville..."
+            />
+          </div>
+
+          {/* Property Type */}
+          <div className="flex-1 min-w-0 basis-24 lg:basis-40">
+            <SearchableDropdown
+              label={<ResponsiveLabel full="Type de bien" short="Type" />}
+              icon={Home}
+              value={filters.propertyType}
+              options={PROPERTY_TYPES}
+              onSelect={(val) => updateFilter("propertyType", val, { immediate: true })}
+            />
+          </div>
+
+          {/* Advanced filters: price + surface + rooms grouped together */}
+          <FilterDropdown
+            label={advancedLabel()}
+            icon={SlidersHorizontal}
+            active={advancedActive}
+            isOpen={openMenu === "advanced"}
+            onToggle={() => setOpenMenu(openMenu === "advanced" ? null : "advanced")}
+            onClose={() => setOpenMenu((c) => (c === "advanced" ? null : c))}
+            width="w-80"
+            align="right"
+            className="flex-none min-w-0 basis-20 lg:basis-52 max-w-[9rem] lg:max-w-[13rem]"
+          >
+            {advancedFiltersBody}
+          </FilterDropdown>
+
+          {extraActions && <div className="flex-none">{extraActions}</div>}
+        </div>
+
+        {/* Row 2: listing type pills (Tous / Vente / Location) + reset, same row */}
+        <div className="flex items-center justify-between flex-wrap gap-2 mt-3">
+          {listingTypePills}
+
+          {anyActive && (
+            <button
+              type="button"
+              onClick={handleResetAll}
+              className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-red-500 transition-colors px-2"
+            >
+              <X size={16} />
+              Réinitialiser
+            </button>
           )}
         </div>
-      </FilterSection>
+      </div>
 
-      {/* Mobile-only search button */}
-      {isMobile && (
-        <div className="sticky bottom-0 bg-white border-t border-gray-100 p-3">
+      {/* ══════════════════════ MOBILE / SMALL TABLET (below md) ══════════════════════ */}
+      <div className="md:hidden">
+        {/* Compact bar: search + icon-only filter button */}
+        <div className="flex items-center gap-2">
+          <div className="relative group flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#2D5016] transition-colors" />
+            <input
+              type="text"
+              placeholder="Rechercher..."
+              value={filters.search}
+              onChange={(e) => updateFilter("search", e.target.value)}
+              className="w-full bg-gray-50 border border-gray-400 rounded-3xl pl-10 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#A7D129]/30 transition"
+            />
+          </div>
+
+          {extraActions}
+
           <button
-            onClick={handleSearch}
-            className="w-full py-3 bg-[#2D5016] text-white rounded-xl font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition"
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Filtres"
+            className={`relative shrink-0 w-11 h-11 rounded-full border flex items-center justify-center transition-colors
+              ${anyActive
+                ? "border-[#2D5016] bg-[#E8F5D0] text-[#2D5016]"
+                : "border-gray-400 bg-gray-50 text-gray-600"
+              }`}
           >
-            Rechercher
+            <SlidersHorizontal size={16} />
+            {anyActive && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#A7D129] border-2 border-white" />
+            )}
           </button>
+        </div>
+
+        {/* Quick property-type pills, horizontally scrollable */}
+        <div
+          className="flex gap-1.5 overflow-x-auto no-scrollbar mt-2.5 -mx-4 px-4"
+          style={{
+            maskImage:
+              "linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent)",
+            WebkitMaskImage:
+              "linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent)",
+          }}
+        >
+          {PROPERTY_TYPES.map((t) => {
+            const isActive = filters.propertyType === t.value;
+            return (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() =>
+                  updateFilter("propertyType", isActive ? "" : t.value, { immediate: true })
+                }
+                className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${isActive
+                  ? "bg-[#2D5016] text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Mobile filter drawer — slides in from the left */}
+      {drawerOpen && (
+        <div className="md:hidden fixed inset-0 z-[200]">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setDrawerOpen(false)}
+          />
+          <div className="absolute top-0 left-0 h-full w-[85%] max-w-[360px] bg-white shadow-2xl overflow-y-auto animate-slide-in-left">
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100 sticky top-0 bg-white z-10">
+              <span className="font-bold text-gray-800 text-sm">Filtres</span>
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
+                aria-label="Fermer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-5">
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase mb-2">Transaction</p>
+                {listingTypePills}
+              </div>
+
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase mb-2">Région</p>
+                <SearchableDropdown
+                  label="Région"
+                  icon={MapPin}
+                  value={filters.region}
+                  options={ALL_REGIONS}
+                  onSelect={(val) => updateFilter("region", val, { immediate: true })}
+                  placeholder="Rechercher une région..."
+                />
+              </div>
+
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase mb-2">Ville</p>
+                <SearchableDropdown
+                  label="Ville"
+                  icon={MapPin}
+                  value={filters.city}
+                  options={cityOptions}
+                  onSelect={(val) => updateFilter("city", val, { immediate: true })}
+                  placeholder="Rechercher une ville..."
+                />
+              </div>
+
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase mb-2">Type de bien</p>
+                <SearchableDropdown
+                  label="Type de bien"
+                  icon={Home}
+                  value={filters.propertyType}
+                  options={PROPERTY_TYPES}
+                  onSelect={(val) => updateFilter("propertyType", val, { immediate: true })}
+                />
+              </div>
+
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase mb-2">Filtres avancés</p>
+                {advancedFiltersBody}
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 flex gap-3">
+              {anyActive && (
+                <button
+                  type="button"
+                  onClick={handleResetAll}
+                  className="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-gray-600 font-semibold text-sm hover:bg-gray-50 transition"
+                >
+                  Réinitialiser
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(false)}
+                className="flex-1 py-2.5 bg-[#2D5016] text-white rounded-xl font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition"
+              >
+                Voir les résultats
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

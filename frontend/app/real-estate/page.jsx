@@ -13,21 +13,17 @@ import InlineRegisterSection from "@/components/real-estate/InlineRegisterSectio
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import AdPlaceholder from "@/components/shared/AdPlaceholder";
 import { Suspense } from "react";
+import { ChevronDown, Bell } from "lucide-react";
+import SplitMapLayout from "@/components/shared/SplitMapLayout";
+import StickyFilterBar from "@/components/shared/StickyFilterBar";
+import SortSelect from "@/components/shared/SortSelect";
+import Pagination from "@/components/shared/Pagination";
+import MultiPinMap from "@/components/shared/maps/MultiPinMap";
+// import AlertModalShell from "@/components/shared/AlertModalShell";
 
-const CATEGORIES = [
-  { label: "Tous", listingType: null },
-  { label: "Vente", listingType: "SALE" },
-  { label: "Location", listingType: "RENT" },
-];
-
-const PROPERTY_TABS = [
-  { label: "Tous", value: null },
-  { label: "Appartements", value: "APARTMENT" },
-  { label: "Villas", value: "VILLA" },
-  { label: "Maisons", value: "HOUSE" },
-  { label: "Studios", value: "STUDIO" },
-  { label: "Terrains", value: "LAND" },
-  { label: "Bureaux", value: "OFFICE" },
+const LISTING_TYPES = [
+  { value: "SALE", label: "Vente" },
+  { value: "RENT", label: "Location" },
 ];
 
 const citiesByRegion = cities.reduce((acc, city) => {
@@ -36,37 +32,6 @@ const citiesByRegion = cities.reduce((acc, city) => {
   return acc;
 }, {});
 const ALL_REGIONS = Object.keys(citiesByRegion).sort();
-
-const LISTING_TYPES = [
-  { value: "SALE", label: "Vente" },
-  { value: "RENT", label: "Location" },
-];
-
-// ─── Small local debounce hook (no extra dependency needed) ─────────────────
-// Returns a stable function; calling it repeatedly only fires `fn` once,
-// `delay`ms after the last call. Used so the search box doesn't refetch
-// the API on every keystroke.
-function useDebouncedCallback(fn, delay = 400) {
-  const fnRef = useRef(fn);
-  const timeoutRef = useRef(null);
-
-  useEffect(() => {
-    fnRef.current = fn;
-  }, [fn]);
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, []);
-
-  return (...args) => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
-      fnRef.current(...args);
-    }, delay);
-  };
-}
 
 // ─── ALERT MODAL COMPONENT ───────────────────────────────────────────────────
 function AlertModal({ token, onClose }) {
@@ -94,7 +59,7 @@ function AlertModal({ token, onClose }) {
       .then((d) => {
         if (d.success) setCategories(d.data);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const handleRegionChange = (region) => {
@@ -137,7 +102,12 @@ function AlertModal({ token, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 animate-slide-up">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -302,7 +272,7 @@ function AlertModal({ token, onClose }) {
 }
 
 function RealEstatePageContent() {
-  const { user, token } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -334,27 +304,15 @@ function RealEstatePageContent() {
   const [fromHero, setFromHero] = useState(hasHeroFilters);
   const [listings, setListings] = useState([]);
   const [pagination, setPagination] = useState(null);
+  const [mapPins, setMapPins] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeType, setActiveType] = useState(searchParams.get("listingType") || null);
-  const [activeProp, setActiveProp] = useState(searchParams.get("propertyType") || null);
   const [favoritedIds, setFavoritedIds] = useState(new Set());
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [showBusinessGate, setShowBusinessGate] = useState(false);
-
-  // Local, uncontrolled-feeling search text so the input updates instantly
-  // while the actual filter/API call is debounced.
-  const [searchText, setSearchText] = useState(filters.search || "");
-
-  const debouncedSearch = useDebouncedCallback((value) => {
-    handleFilter({ search: value || undefined });
-  }, 450);
-
-  const handleSearchChange = (e) => {
-    const value = e.target.value;
-    setSearchText(value);
-    debouncedSearch(value);
-  };
-
+  const [hoveredCardId, setHoveredCardId] = useState(null);
+  const [hoveredPinId, setHoveredPinId] = useState(null);
+  const [selectedListingId, setSelectedListingId] = useState(null);
+  const hoveredListingId = hoveredCardId || hoveredPinId;
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -377,51 +335,30 @@ function RealEstatePageContent() {
     load();
   }, [filters, token]);
 
+  // Map pins are fetched independently from the paginated grid — same
+  // filters (minus page/limit), but returns every matching listing so the
+  // map always shows the full filtered result set, not just the current page.
+  useEffect(() => {
+    const { page, limit, sort, ...mapFilters } = filters;
+    realEstateService
+      .getMapPins(mapFilters)
+      .then((res) => setMapPins(res.pins || []))
+      .catch((err) => {
+        console.error(err);
+        setMapPins([]);
+      });
+  }, [filters]);
+
   const handleResetAll = () => {
     setFilters({ page: 1, limit: 12 });
     setFromHero(false);
-    setSearchText("");
     window.history.replaceState({}, "", "/real-estate");
   };
 
-  const handleFilter = (newFilters) => {
-    if (Object.keys(newFilters).length === 0) {
-      setFilters({ page: 1, limit: 12 });
-      setFromHero(false);
-      window.history.replaceState({}, "", "/real-estate");
-      return;
-    }
+  const handleFilter = (updatedFilters) => {
     setFromHero(false);
-    setFilters((prev) => {
-      const merged = { ...prev, ...newFilters, page: 1 };
-      Object.keys(merged).forEach((k) => {
-        if (merged[k] === undefined) delete merged[k];
-      });
-      return merged;
-    });
-  };
-
-  const handleTypeTab = (cat) => {
-    setActiveType(cat.listingType);
-    setActiveProp(null);
-    setFilters({
-      page: 1,
-      limit: 12,
-      ...(cat.listingType && { listingType: cat.listingType }),
-    });
-  };
-
-  const handlePropTab = (prop) => {
-    setActiveProp(prop.value);
-    setFilters((p) => {
-      const merged = { ...p, page: 1 };
-      if (prop.value) {
-        merged.propertyType = prop.value;
-      } else {
-        delete merged.propertyType;
-      }
-      return merged;
-    });
+    setFilters({ ...updatedFilters, page: 1, limit: 12 });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handlePageChange = (n) => {
@@ -446,216 +383,42 @@ function RealEstatePageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {/* TOP BAR */}
-      <div className="bg-white border-b border-gray-100 static md:sticky md:top-0 z-30 shadow-sm">
-        <div className="max-w-[1400px] mx-auto px-4 pt-2.5 pb-0 flex flex-col gap-0">
-          {/* ── MOBILE ONLY: category tabs (Tous / Vente / Location) ── */}
-          <div className="md:hidden flex gap-1.5 overflow-x-auto no-scrollbar pb-2 px-0.5">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.label}
-                onClick={() => handleTypeTab(cat)}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-150 ${
-                  activeType === cat.listingType
-                    ? "bg-[#2D5016] text-white shadow-sm"
-                    : "bg-[#E8F5D0] text-[#2D5016]"
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-
-          {/* ── MOBILE ONLY: search bar + filter button + alert bell ── */}
-          <div className="md:hidden flex items-center gap-2 w-full pb-2.5">
-            <div className="flex-1 flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2.5">
-              <svg
-                viewBox="0 0 24 24"
-                className="w-4 h-4 text-gray-400 shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <circle cx="11" cy="11" r="7" />
-                <path strokeLinecap="round" d="M21 21l-4.3-4.3" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Ville, quartier..."
-                value={searchText}
-                onChange={handleSearchChange}
-                className="flex-1 text-sm outline-none bg-transparent placeholder:text-gray-400 min-w-0"
-              />
-            </div>
-
-            <button
-              onClick={() => setShowFilterDrawer(true)}
-              className="shrink-0 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition"
-              aria-label="Filtrer"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"
-                />
-              </svg>
-            </button>
-
-            {user?.role === "citizen" && (
+      <StickyFilterBar>
+        <RealEstateFilter
+          onFilter={handleFilter}
+          initialFilters={filters}
+          extraActions={
+            !authLoading && user?.role === "citizen" ? (
               <button
                 onClick={() => setShowAlertModal(true)}
-                className="shrink-0 w-10 h-10 rounded-full border border-[#A7D129] flex items-center justify-center text-base hover:bg-[#E8F5D0] transition"
                 aria-label="Créer une alerte"
+                className="flex items-center justify-center gap-2 border border-gray-400 bg-gray-50 rounded-full md:rounded-3xl w-11 h-11 md:w-auto md:h-auto md:px-3 md:py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors shrink-0"
               >
-                🔔
+                <Bell size={16} className="text-gray-400 md:hidden" />
+                <Bell size={14} className="text-gray-400 hidden md:block" />
+                <span className="hidden md:inline">Alerte</span>
               </button>
-            )}
-          </div>
-
-          {/* ── MOBILE ONLY: property type tabs, single row, no wrap, foggy edges ── */}
-          <div className="md:hidden relative -mx-4 px-4 pb-2.5">
-            <div
-              className="flex gap-1.5 overflow-x-auto no-scrollbar"
-              style={{
-                maskImage:
-                  "linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent)",
-                WebkitMaskImage:
-                  "linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent)",
-              }}
-              onWheel={(e) => {
-                // let a plain mouse wheel (vertical delta) scroll this row horizontally too
-                if (e.deltaY !== 0) {
-                  e.currentTarget.scrollLeft += e.deltaY;
-                }
-              }}
-            >
-              {PROPERTY_TABS.map((tab) => (
-                <button
-                  key={tab.label}
-                  onClick={() => handlePropTab(tab)}
-                  className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap shrink-0 transition-all duration-150 ${
-                    activeProp === tab.value
-                      ? "bg-gray-800 text-white"
-                      : "bg-gray-100 text-gray-600"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Row 1: category tabs — desktop only */}
-          <div className="hidden md:flex gap-1.5 flex-wrap pb-2">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.label}
-                onClick={() => handleTypeTab(cat)}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 ${
-                  activeType === cat.listingType
-                    ? "bg-[#2D5016] text-white shadow-sm"
-                    : "bg-[#E8F5D0] text-[#2D5016] hover:bg-[#A7D129] hover:text-white"
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Row 2: property type tabs (desktop) + action buttons */}
-          <div className="flex items-center justify-between pb-2.5 gap-2 flex-wrap">
-            <div className="hidden md:flex gap-1 flex-wrap">
-              {PROPERTY_TABS.map((tab) => (
-                <button
-                  key={tab.label}
-                  onClick={() => handlePropTab(tab)}
-                  className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all duration-150 ${
-                    activeProp === tab.value
-                      ? "bg-gray-800 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Action buttons — right side (desktop) */}
-            <div className="hidden md:flex items-center gap-2 shrink-0">
-              {user?.role === "citizen" && (
-                <button
-                  onClick={() => setShowAlertModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#A7D129] text-[#2D5016] font-semibold text-sm hover:bg-[#E8F5D0] transition-all duration-150"
-                >
-                  🔔 Créer une alerte
-                </button>
-              )}
-              {(!user ||
-                user?.role === "business" ||
-                user?.role === "citizen") && (
-                <button
-                  onClick={handlePublishClick}
-                  className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-[#2D5016] text-white font-bold text-sm shadow-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-150 hover:scale-105 active:scale-100 group cursor-pointer"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="w-3.5 h-3.5 fill-current shrink-0"
-                  >
-                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                  </svg>
-                  Publier une annonce
-                </button>
-              )}
-            </div>
-
-            {/* Publish button — mobile only, full width-ish, since alert bell already moved to search row */}
-            {(!user ||
-              user?.role === "business" ||
-              user?.role === "citizen") && (
-              <button
-                onClick={handlePublishClick}
-                className="md:hidden inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-[#2D5016] text-white font-bold text-sm shadow-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all duration-150"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  className="w-3.5 h-3.5 fill-current shrink-0"
-                >
-                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                </svg>
-                Publier une annonce
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+            ) : null
+          }
+        />
+      </StickyFilterBar>
 
       {/* MAIN */}
-      <div className="relative flex justify-center gap-4">
+      <div className="relative flex justify-center gap-4 mb-4">
         {/* Side-rail ads — only where there's real empty margin (2xl+ screens).
             Sticky (not fixed) so they scroll along with the page and settle
             near the top instead of floating over unrelated content lower down. */}
-        <div className="hidden 2xl:block w-[160px] shrink-0">
-          <div className="sticky top-24">
-            <AdPlaceholder variant="rail" />
-          </div>
-        </div>
 
-        <div className="max-w-[1400px] w-full px-4 py-6 flex gap-6">
+        <div className="w-full flex gap-4">
           {/* SIDEBAR (desktop) */}
-          <aside className="hidden md:block w-[260px] shrink-0">
-            {/* Not sticky for now — the outer nav is already sticky, so a sticky
+          {/* <aside className="hidden md:block w-[260px] shrink-0"> */}
+          {/* Not sticky for now — the outer nav is already sticky, so a sticky
                 filter panel here ends up mostly hidden behind it. Revisit once
                 the nav height is finalized / not sticky on its own. */}
-            <RealEstateFilter onFilter={handleFilter} />
-          </aside>
+          {/* <RealEstateFilter onFilter={handleFilter} />
+          </aside> */}
 
           {/* Mobile drawer */}
           {showFilterDrawer && (
@@ -676,7 +439,7 @@ function RealEstatePageContent() {
                     ✕
                   </button>
                 </div>
-                <div className="p-3 pb-0">
+                <div className="px-5 md:px-6 pb-0">
                   <RealEstateFilter
                     isMobile
                     onFilter={handleFilter}
@@ -689,119 +452,137 @@ function RealEstatePageContent() {
 
           {/* GRID */}
           <main className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-              <p className="text-sm text-gray-500">
-                {pagination ? (
-                  <>
-                    <span className="font-semibold text-gray-800">
-                      {pagination.total}
-                    </span>{" "}
-                    annonces trouvées
-                  </>
-                ) : (
-                  <span className="animate-pulse bg-gray-200 rounded w-24 h-4 inline-block" />
-                )}
-              </p>
+            <SplitMapLayout
+              map={
+                <MultiPinMap
+                  items={mapPins}
+                  hoveredItemId={hoveredListingId}
+                  focusItemId={hoveredCardId}
+                  selectedItemId={selectedListingId}
+                  onSelectItem={setSelectedListingId}
+                  onHoverItem={setHoveredPinId}
+                  getHref={(item) => `/real-estate/${item.id}`}
+                />
+              }
+            >
 
-              {fromHero && (
-                <div className="flex items-center gap-3 bg-[#E8F5D0] border border-[#A7D129] rounded-full px-4 py-1.5">
-                  <span className="text-xs font-medium text-[#2D5016]">
-                    Filtres appliqués depuis la recherche
-                  </span>
-                  <button
-                    onClick={handleResetAll}
-                    className="text-xs font-bold text-[#2D5016] hover:text-red-600 transition-colors underline underline-offset-2"
-                  >
-                    Réinitialiser
-                  </button>
-                </div>
-              )}
-            </div>
+              <>
+                <div className="flex items-center justify-between mb-2 flex-wrap gap-2 px-5 md:px-6">
+                  <p className="text-sm text-gray-500">
+                    {pagination ? (
+                      <>
+                        <span className="font-semibold text-gray-800">
+                          {pagination.total}
+                        </span>{" "}
+                        annonces trouvées
+                      </>
+                    ) : (
+                      <span className="animate-pulse bg-gray-200 rounded w-24 h-4 inline-block" />
+                    )}
+                  </p>
 
-            {/* Mobile banner ad */}
-            <div className="md:hidden mb-4">
-              <AdPlaceholder variant="mobile-banner" />
-            </div>
+                  <div className="flex items-center gap-3">
+                    {!authLoading && (!user ||
+                      user?.role === "business" ||
+                      user?.role === "citizen") && (
+                        <button
+                          onClick={handlePublishClick}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 rounded-full bg-[#2D5016] text-white font-bold text-xs md:text-sm shadow-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition-all"
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            className="w-3 h-3 md:w-3.5 md:h-3.5 fill-current shrink-0"
+                          >
+                            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                          </svg>
+                          Publier
+                        </button>
+                      )}
+                    {fromHero && (
+                      <div className="flex items-center gap-3 bg-[#E8F5D0] border border-[#A7D129] rounded-full px-4 py-1.5">
+                        <span className="text-xs font-medium text-[#2D5016]">
+                          Filtres appliqués depuis la recherche
+                        </span>
+                        <button
+                          onClick={handleResetAll}
+                          className="text-xs font-bold text-[#2D5016] hover:text-red-600 transition-colors underline underline-offset-2"
+                        >
+                          Réinitialiser
+                        </button>
+                      </div>
+                    )}
 
-            {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[...Array(6)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse"
-                  >
-                    <div className="h-[260px] bg-gray-100" />
-                    <div className="p-4 space-y-3">
-                      <div className="h-5 bg-gray-100 rounded w-1/2" />
-                      <div className="h-4 bg-gray-100 rounded w-3/4" />
-                      <div className="h-3 bg-gray-100 rounded w-1/3" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : listings.length === 0 ? (
-              <div className="text-center py-24 bg-white rounded-2xl border border-gray-100">
-                <div className="text-5xl mb-4">🏠</div>
-                <p className="text-lg font-semibold text-gray-700">
-                  Aucune annonce trouvée
-                </p>
-                <p className="text-sm text-gray-400 mt-1">
-                  Essayez de modifier vos filtres
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {listings.map((l, i) => (
-                  <Fragment key={l.id}>
-                    <RealEstateCard
-                      listing={l}
-                      initialFavorited={favoritedIds.has(l.id)}
+                    <SortSelect
+                      value={filters.sort || "newest"}
+                      onChange={(value) => {
+                        setFilters((prev) => {
+                          const next = { ...prev, page: 1 };
+                          if (value === "newest") delete next.sort;
+                          else next.sort = value;
+                          return next;
+                        });
+                      }}
+                      options={[
+                        { value: "newest", label: "Plus récent" },
+                        { value: "price_asc", label: "Prix croissant" },
+                        { value: "price_desc", label: "Prix décroissant" },
+                      ]}
                     />
-                    {(i + 1) % 6 === 0 && <AdPlaceholder variant="grid" />}
-                  </Fragment>
-                ))}
-              </div>
-            )}
+                  </div>
+                </div>
 
-            {/* PAGINATION */}
-            {pagination && pagination.totalPages > 1 && (
-              <div className="flex justify-center gap-1.5 mt-8">
-                <button
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                  className="w-9 h-9 rounded-full border border-gray-200 text-gray-500 text-sm flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
-                >
-                  ‹
-                </button>
-                {[...Array(pagination.totalPages)].map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handlePageChange(i + 1)}
-                    className={`w-9 h-9 rounded-full text-sm font-medium transition ${
-                      pagination.page === i + 1
-                        ? "bg-primary-dark text-white shadow-sm"
-                        : "bg-white text-primary-dark border border-gray-200 hover:border-primary-dark hover:bg-orange-50"
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-                <button
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page === pagination.totalPages}
-                  className="w-9 h-9 rounded-full border border-gray-200 text-gray-500 text-sm flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
-                >
-                  ›
-                </button>
-              </div>
-            )}
+                {loading ? (
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-x-6 gap-y-4 px-5 md:px-6">
+                    {[...Array(6)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse"
+                      >
+                        <div className="h-[260px] bg-gray-100" />
+                        <div className="p-4 space-y-3">
+                          <div className="h-5 bg-gray-100 rounded w-1/2" />
+                          <div className="h-4 bg-gray-100 rounded w-3/4" />
+                          <div className="h-3 bg-gray-100 rounded w-1/3" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : listings.length === 0 ? (
+                  <div className="text-center py-24 bg-white rounded-2xl border border-gray-100">
+                    <div className="text-5xl mb-4">🏠</div>
+                    <p className="text-lg font-semibold text-gray-700">
+                      Aucune annonce trouvée
+                    </p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Essayez de modifier vos filtres
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-x-6 gap-y-4 px-5 md:px-6">
+                    {listings.map((l) => (
+                      <Fragment key={l.id}>
+                        <div
+                          onMouseEnter={() => setHoveredCardId(l.id)}
+                          onMouseLeave={() => setHoveredCardId(null)}
+                        >
+                          <RealEstateCard
+                            listing={l}
+                            initialFavorited={favoritedIds.has(l.id)}
+                          />
+                        </div>
+                      </Fragment>
+                    ))}
+                  </div>
+                )}
+
+                <Pagination
+                  page={pagination?.page}
+                  totalPages={pagination?.totalPages}
+                  onPageChange={handlePageChange}
+                />
+              </>
+            </SplitMapLayout>
           </main>
-        </div>
-
-        <div className="hidden 2xl:block w-[160px] shrink-0">
-          <div className="sticky top-24">
-            <AdPlaceholder variant="rail" />
-          </div>
         </div>
       </div>
 

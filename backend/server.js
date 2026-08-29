@@ -44,7 +44,66 @@ const shopRoutes = require('./routes/shops');
 const googleAuthRoutes = require("./routes/googleAuth")
 const pressRoutes = require('./routes/press');
 const { startPressScheduler } = require('./scheduled/scheduler');
+const prisma = require('./config/db');
+const {
+  EXACT_COORDINATES_BY_ROW_ID,
+  SOURCE: EDUCATION_SEED_SOURCE,
+  readRows: readEducationSeedRows,
+  seedEducationInstitutions,
+} = require('./prisma/seeds/education.seed');
 
+function coordinatesMatch(record, expected) {
+  const lat = record.latitude == null ? null : Number(record.latitude);
+  const lng = record.longitude == null ? null : Number(record.longitude);
+  return Math.abs(lat - expected.lat) < 0.000001 && Math.abs(lng - expected.lng) < 0.000001;
+}
+
+async function seedEducationIfMissing() {
+  if (process.env.AUTO_SEED_EDUCATION === 'false') return;
+
+  try {
+    const expectedCount = readEducationSeedRows().length;
+    const exactCoordinateIds = Object.keys(EXACT_COORDINATES_BY_ROW_ID);
+    const exactExternalIds = exactCoordinateIds.map((id) => `menps-public-kenitra-${id}`);
+    const [existingCount, geolocatedCount, exactRecords] = await Promise.all([
+      prisma.educationInstitution.count({
+        where: { source: EDUCATION_SEED_SOURCE },
+      }),
+      prisma.educationInstitution.count({
+        where: {
+          source: EDUCATION_SEED_SOURCE,
+          NOT: [{ latitude: null }, { longitude: null }],
+        },
+      }),
+      prisma.educationInstitution.findMany({
+        where: {
+          source: EDUCATION_SEED_SOURCE,
+          externalId: { in: exactExternalIds },
+        },
+        select: { externalId: true, latitude: true, longitude: true },
+      }),
+    ]);
+    const exactRecordsById = new Map(exactRecords.map((record) => [record.externalId.replace('menps-public-kenitra-', ''), record]));
+    const exactCoordinatesReady = exactCoordinateIds.every((id) => {
+      const record = exactRecordsById.get(id);
+      return record && coordinatesMatch(record, EXACT_COORDINATES_BY_ROW_ID[id]);
+    });
+
+    if (existingCount >= expectedCount && geolocatedCount >= expectedCount && exactCoordinatesReady) {
+      console.log(
+        `[educationSeed] ${existingCount}/${expectedCount} education records already present, ${geolocatedCount} geolocated, ${exactCoordinateIds.length} exact Kenitra points ready.`,
+      );
+      return;
+    }
+
+    console.log(
+      `[educationSeed] Found ${existingCount}/${expectedCount} education records, ${geolocatedCount} geolocated, exact Kenitra ready: ${exactCoordinatesReady}. Seeding missing data...`,
+    );
+    await seedEducationInstitutions(prisma);
+  } catch (error) {
+    console.error(`[educationSeed] Failed to verify or seed education data: ${error.message}`);
+  }
+}
 
 app.use('/api/auth', authRoutes)
 app.use("/api/auth", googleAuthRoutes)
@@ -108,4 +167,5 @@ startPressScheduler();
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
+  seedEducationIfMissing()
 })

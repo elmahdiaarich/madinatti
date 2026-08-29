@@ -5,8 +5,9 @@ import LayoutShell from "../components/shared/LayoutShell";
 import GlobalImageViewer from "../components/shared/GlobalImageViewer";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import Script from "next/script";
+import ScrollRestorationFix from "@/components/shared/ScrollRestorationFix";
 import ChatWidget from '@/components/shared/ChatWidget';
-import "./globals.css";
+import { ImageViewerProvider } from '@/components/shared/ImageViewerContext'; import "./globals.css";
 
 export const metadata = {
   title: "Madinatti",
@@ -25,15 +26,18 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
+        <ScrollRestorationFix />
         <GoogleOAuthProvider
           clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}
         >
           <AuthProvider>
             <ToastProvider>
-              <LayoutShell>{children}</LayoutShell>
-              <GlobalImageViewer />
-            {/*  <DevTools  /> */  }
-             <ChatWidget /> 
+              <ImageViewerProvider>
+                <LayoutShell>{children}</LayoutShell>
+                <GlobalImageViewer />
+              </ImageViewerProvider>
+              {/*  <DevTools  /> */}
+              <ChatWidget />
             </ToastProvider>
           </AuthProvider>
         </GoogleOAuthProvider>

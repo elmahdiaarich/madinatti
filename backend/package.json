@@ -7,6 +7,7 @@
     "dev": "nodemon server.js",
     "start": "node server.js",
     "seed": "node prisma/seeds/index.js",
+    "seed:education": "node prisma/seeds/education.seed.js",
     "test": "node --test tests/*.test.js"
   },
   "keywords": [],

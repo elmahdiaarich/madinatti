@@ -10,11 +10,11 @@ const service = require('../services/cars');
 const { trackListingView } = require('../services/viewTrackingService');
 
 // ── Allowed enum values (source of truth for validation) ─────────────────────
-const LISTING_TYPES   = ['SALE', 'RENT'];
-const CONDITIONS      = ['NEW', 'USED', 'DAMAGED'];
-const FUEL_TYPES      = ['PETROL', 'DIESEL', 'HYBRID', 'ELECTRIC', 'LPG', 'OTHER'];
-const TRANSMISSIONS   = ['MANUAL', 'AUTOMATIC', 'SEMI_AUTOMATIC'];
-const BODY_TYPES      = ['SEDAN', 'SUV', 'HATCHBACK', 'COUPE', 'CONVERTIBLE', 'WAGON', 'PICKUP', 'VAN', 'MINIVAN', 'OTHER'];
+const LISTING_TYPES = ['SALE', 'RENT'];
+const CONDITIONS = ['NEW', 'USED', 'DAMAGED'];
+const FUEL_TYPES = ['PETROL', 'DIESEL', 'HYBRID', 'ELECTRIC', 'LPG', 'OTHER'];
+const TRANSMISSIONS = ['MANUAL', 'AUTOMATIC', 'SEMI_AUTOMATIC'];
+const BODY_TYPES = ['SEDAN', 'SUV', 'HATCHBACK', 'COUPE', 'CONVERTIBLE', 'WAGON', 'PICKUP', 'VAN', 'MINIVAN', 'OTHER'];
 const INQUIRY_STATUSES = ['pending', 'read', 'replied', 'closed'];
 
 // ── Validators ────────────────────────────────────────────────────────────────
@@ -174,8 +174,7 @@ async function getListingById(req, res) {
     if (listing.status !== 'APPROVED' || !listing.isActive)
       return res.status(404).json({ success: false, message: 'Listing not available.' });
 
-    await trackListingView(listing.id, 'CAR', req.user?.userId || null);
-
+    await trackListingView(listing.id, 'CAR', req.user?.userId || null, req.ip);
     return res.json({ success: true, data: listing });
   } catch (err) {
     console.error('[cars/getListingById]', err);
@@ -282,6 +281,16 @@ async function getMyListings(req, res) {
     return res.json({ success: true, ...result });
   } catch (err) {
     console.error('[cars/getMyListings]', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
+async function getMapPins(req, res) {
+  try {
+    const result = await service.getMapPins(req.query);
+    return res.json({ success: true, ...result });
+  } catch (err) {
+    console.error('[cars/getMapPins]', err);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }
@@ -495,6 +504,7 @@ module.exports = {
   getCategories,
   getCatalog,
   getListings,
+  getMapPins,
   getListingById,
   // authenticated
   toggleFavorite,

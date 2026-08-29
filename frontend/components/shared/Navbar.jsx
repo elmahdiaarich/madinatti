@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef ,forwardRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -495,7 +495,7 @@ function CategoriesDrawer({
 // ─────────────────────────────────────────────────────────────────────────────
 // NAVBAR
 // ─────────────────────────────────────────────────────────────────────────────
-export default function Navbar() {
+const Navbar = forwardRef(function Navbar(_props, ref) {
   const {
     user,
     loading,
@@ -688,7 +688,7 @@ export default function Navbar() {
     return (
       <div
         key={link.label}
-        className="relative px-0 lg:px-0.5"
+        className="relative px-0 lg:px-0.5 "
         onMouseEnter={() => svc && handleModuleMouseEnter(link.label)}
       >
         <a
@@ -798,9 +798,8 @@ export default function Navbar() {
 
   return (
     <div
-      className={`w-full flex flex-col bg-white border-b border-gray-200 sticky top-0 z-50 transition-shadow ${
-        scrolled ? "shadow-md" : ""
-      }`}
+      ref={ref}
+      className={`w-full flex flex-col bg-white border-b border-gray-200 sticky top-0 z-50 transition-shadow `}
     >
       {/* 1. Thin Top Category Trigger Bar */}
       <div className="hidden items-center justify-between border-b border-gray-100 bg-gray-50/80 px-6 py-1.5 backdrop-blur-xs md:flex">
@@ -1371,4 +1370,6 @@ export default function Navbar() {
       </AnimatePresence>
     </div>
   );
-}
+});
+
+export default Navbar;

@@ -330,6 +330,81 @@ async function getListings(query) {
 }
 
 /**
+ * MAP PINS — public, all filtered listings, lightweight payload.
+ * Same filter logic as getListings but ignores pagination — the map needs
+ * every matching listing's coordinates, not just the current page.
+ */
+async function getMapPins(query) {
+  const {
+    city, region,
+    listingType, condition,
+    make, model,
+    fuelType, transmission, bodyType,
+    categoryId,
+    minPrice, maxPrice,
+    minYear, maxYear,
+    maxMileage,
+    search,
+  } = query;
+
+  let locationFilter = {};
+  if (city) {
+    locationFilter = { city: { contains: city, mode: 'insensitive' } };
+  } else if (region) {
+    const cities = citiesByRegion[region] || [];
+    if (cities.length) locationFilter = { city: { in: cities } };
+  }
+
+  const where = {
+    status: 'APPROVED',
+    isActive: true,
+    latitude: { not: null },
+    longitude: { not: null },
+    ...locationFilter,
+    ...(listingType   && { listingType }),
+    ...(condition     && { condition }),
+    ...(make          && { make: { contains: make, mode: 'insensitive' } }),
+    ...(model         && { model: { contains: model, mode: 'insensitive' } }),
+    ...(fuelType      && { fuelType }),
+    ...(transmission  && { transmission }),
+    ...(bodyType      && { bodyType }),
+    ...(categoryId    && { categoryId }),
+    ...((minPrice || maxPrice) && {
+      price: {
+        ...(minPrice && { gte: parseFloat(minPrice) }),
+        ...(maxPrice && { lte: parseFloat(maxPrice) }),
+      },
+    }),
+    ...((minYear || maxYear) && {
+      year: {
+        ...(minYear && { gte: parseInt(minYear, 10) }),
+        ...(maxYear && { lte: parseInt(maxYear, 10) }),
+      },
+    }),
+    ...(maxMileage && { mileage: { lte: parseInt(maxMileage, 10) } }),
+    ...(search && {
+      OR: [
+        { title:       { contains: search, mode: 'insensitive' } },
+        { make:        { contains: search, mode: 'insensitive' } },
+        { model:       { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ],
+    }),
+  };
+
+  const pins = await prisma.carListing.findMany({
+    where,
+    take: 2000,
+    select: {
+      id: true, title: true, price: true,
+      latitude: true, longitude: true, images: true,
+    },
+  });
+
+  return { pins };
+}
+
+/**
  * 3. GET LISTING DETAIL — public (caller must check status externally)
  */
 async function getListingById(id) {
@@ -835,6 +910,7 @@ module.exports = {
   getCatalog,
   createListing,
   getListings,
+  getMapPins,
   getListingById,
   // authenticated
   toggleFavorite,

@@ -113,6 +113,17 @@ async function getListings(req, res) {
   }
 }
 
+// ─── MAP PINS (public) ───────────────────────────────────────────────────────
+async function getMapPins(req, res) {
+  try {
+    const result = await service.getMapPins(req.query);
+    return res.json({ success: true, ...result });
+  } catch (err) {
+    console.error('[getMapPins]', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
 // ─── 3. GET LISTING DETAIL (public) ─────────────────────────────────────────
 async function getListingById(req, res) {
   try {
@@ -122,7 +133,7 @@ async function getListingById(req, res) {
     if (listing.status !== 'APPROVED' || !listing.isActive)
       return res.status(404).json({ success: false, message: 'Listing not available.' });
 
-    await trackListingView(listing.id, 'REAL_ESTATE', req.user?.userId || null);
+    await trackListingView(listing.id, 'REAL_ESTATE', req.user?.userId || null, req.ip);
 
     return res.json({ success: true, data: listing });
   } catch (err) {
@@ -165,25 +176,25 @@ async function createInquiry(req, res) {
     if (result.error)
       return res.status(result.status).json({ success: false, message: result.error });
     // Notify business of new inquiry
-if (result.inquiry) {
-  const { createNotification } = require('./notificationController');
-  const prisma = require('../config/db');
-  const listing = await prisma.realEstateListing.findUnique({
-    where: { id: listingId },
-    select: { userId: true, title: true, id: true }
-  });
-  if (listing) {
-    await createNotification(
-      listing.userId,
-      'NEW_INQUIRY',
-      'Nouveau message reçu',
-      `Nouveau message pour votre annonce "${listing.title}".`,
-      '/dashboard/messages'
-    );
-  }
-}
+    if (result.inquiry) {
+      const { createNotification } = require('./notificationController');
+      const prisma = require('../config/db');
+      const listing = await prisma.realEstateListing.findUnique({
+        where: { id: listingId },
+        select: { userId: true, title: true, id: true }
+      });
+      if (listing) {
+        await createNotification(
+          listing.userId,
+          'NEW_INQUIRY',
+          'Nouveau message reçu',
+          `Nouveau message pour votre annonce "${listing.title}".`,
+          '/dashboard/messages'
+        );
+      }
+    }
 
-return res.status(201).json({ success: true, data: result.inquiry });
+    return res.status(201).json({ success: true, data: result.inquiry });
   } catch (err) {
     console.error('[createInquiry]', err);
     return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -431,6 +442,7 @@ module.exports = {
   createInquiry,
   // business
   getMyListings,
+  getMapPins,
   getMyListingById,
   updateMyListing,
   deleteMyListing,

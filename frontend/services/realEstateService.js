@@ -12,6 +12,13 @@ export const realEstateService = {
     return res.json();
   },
 
+  getMapPins: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_URL}/real-estate/map-pins?${query}`);
+    if (!res.ok) throw new Error("Erreur lors de la récupération des pins");
+    return res.json();
+  },
+
   getCategories: async () => {
     const res = await fetch(`${API_URL}/real-estate/categories`);
     if (!res.ok) throw new Error("Erreur lors de la récupération des catégories");

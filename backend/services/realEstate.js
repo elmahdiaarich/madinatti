@@ -113,7 +113,7 @@ const SLUG_TO_PROPERTY_TYPE = {
 async function createListing(data, userId) {
   const slug = generateSlug(data.title);
   const listingOwner = await prepareListingOwnership(data.shopId, userId);
- 
+
   // Derive propertyType from category slug
   const category = await prisma.category.findUnique({
     where: { id: data.categoryId },
@@ -121,7 +121,7 @@ async function createListing(data, userId) {
   });
   const propertyType = SLUG_TO_PROPERTY_TYPE[category?.slug];
   if (!propertyType) throw new Error(`Unknown category slug: ${category?.slug}`);
- 
+
   return prisma.realEstateListing.create({
     data: {
       userId,
@@ -165,9 +165,8 @@ async function createListing(data, userId) {
     },
   });
 }
- 
+
 // ─── 2. GET LISTINGS (public, APPROVED only) ─────────────────────────────────
- 
 async function getListings(query) {
   const {
     page = 1,
@@ -181,100 +180,82 @@ async function getListings(query) {
     maxPrice,
     rooms,
     search,
+    sort,
+    minSurface,
+    maxSurface,
   } = query;
- 
+
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
   const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 12));
   const skip = (pageNum - 1) * limitNum;
- 
-  // ── Build each optional filter fragment once ──────────────────────
-  // Prisma.empty = "insert nothing" when the filter wasn't provided.
-  // Every column is prefixed with l. (the RealEstateListing alias) to
-  // avoid ambiguous-column errors against joined tables (User, Category).
-  let locationFragment = Prisma.empty;
+
+  let locationFilter = {};
   if (city) {
-    locationFragment = Prisma.sql`AND l.city ILIKE ${'%' + city + '%'}`;
+    locationFilter = { city: { contains: city, mode: 'insensitive' } };
   } else if (region) {
     const citiesInRegion = citiesByRegion[region] || [];
-    if (citiesInRegion.length > 0) {
-      locationFragment = Prisma.sql`AND l.city = ANY(${citiesInRegion})`;
-    }
+    if (citiesInRegion.length > 0) locationFilter = { city: { in: citiesInRegion } };
   }
- 
-  const listingTypeFragment = listingType
-    ? Prisma.sql`AND l."listingType" = ${listingType}::"ListingType"`
-    : Prisma.empty;
- 
-  const propertyTypeFragment = propertyType
-    ? Prisma.sql`AND l."propertyType" = ${propertyType}::"PropertyType"`
-    : Prisma.empty;
- 
-  const categoryFragment = categoryId
-    ? Prisma.sql`AND l."categoryId" = ${categoryId}`
-    : Prisma.empty;
- 
-  const roomsFragment = rooms
-    ? Prisma.sql`AND l.rooms >= ${parseInt(rooms, 10)}`
-    : Prisma.empty;
- 
-  let priceFragment = Prisma.empty;
-  if (minPrice && maxPrice) {
-    priceFragment = Prisma.sql`AND l.price BETWEEN ${parseFloat(minPrice)} AND ${parseFloat(maxPrice)}`;
-  } else if (minPrice) {
-    priceFragment = Prisma.sql`AND l.price >= ${parseFloat(minPrice)}`;
-  } else if (maxPrice) {
-    priceFragment = Prisma.sql`AND l.price <= ${parseFloat(maxPrice)}`;
-  }
- 
-  const searchFragment = search
-    ? Prisma.sql`AND (l.title ILIKE ${'%' + search + '%'} OR l.description ILIKE ${'%' + search + '%'})`
-    : Prisma.empty;
- 
-  // ── One shared WHERE clause, reused in both queries ───────────────
-  const whereClause = Prisma.sql`
-    WHERE l.status = 'APPROVED'
-      AND l."isActive" = true
-      ${locationFragment}
-      ${listingTypeFragment}
-      ${propertyTypeFragment}
-      ${categoryFragment}
-      ${roomsFragment}
-      ${priceFragment}
-      ${searchFragment}
-  `;
- 
-  const [listings, countResult] = await Promise.all([
-    prisma.$queryRaw`
-      SELECT
-        l.id, l.slug, l.title, l."listingType", l."propertyType", l.price,
-        l."priceNegotiable",
-        l.city, l.surface, l.rooms, l.bathrooms, l.images, l."isActive",
-        l."isFeatured", l."isSponsored", l."boostExpiresAt", l."createdAt",
-        json_build_object('id', u.id, 'name', u.name, 'avatar', u.avatar) AS user,
-        json_build_object('id', c.id, 'name', c.name) AS category
-      FROM "RealEstateListing" l
-      JOIN "User" u ON u.id = l."userId"
-      JOIN "Category" c ON c.id = l."categoryId"
-      ${whereClause}
-      ORDER BY
-        CASE
-          WHEN l."isSponsored" = true AND l."boostExpiresAt" > NOW() THEN 0
-          WHEN l."isSponsored" = true THEN 1
-          WHEN l."isFeatured" = true THEN 2
-          ELSE 3
-        END,
-        l."createdAt" DESC
-      LIMIT ${limitNum} OFFSET ${skip}
-    `,
-    prisma.$queryRaw`
-      SELECT COUNT(*)::int AS count
-      FROM "RealEstateListing" l
-      ${whereClause}
-    `,
+
+  const SORT_MAP = {
+    price_asc: { price: 'asc' },
+    price_desc: { price: 'desc' },
+  };
+  const userSort = SORT_MAP[sort] || { createdAt: 'desc' };
+
+  const where = {
+    status: 'APPROVED',
+    isActive: true,
+    ...locationFilter,
+    ...(listingType && { listingType }),
+    ...(propertyType && { propertyType }),
+    ...(categoryId && { categoryId }),
+    ...(rooms && { rooms: { gte: parseInt(rooms, 10) } }),
+    ...((minPrice || maxPrice) && {
+      price: {
+        ...(minPrice && { gte: parseFloat(minPrice) }),
+        ...(maxPrice && { lte: parseFloat(maxPrice) }),
+      },
+    }),
+    ...((minSurface || maxSurface) && {
+      surface: {
+        ...(minSurface && { gte: parseFloat(minSurface) }),
+        ...(maxSurface && { lte: parseFloat(maxSurface) }),
+      },
+    }),
+    ...(search && {
+      OR: [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ],
+    }),
+  };
+
+  const [listings, total] = await prisma.$transaction([
+    prisma.realEstateListing.findMany({
+      where,
+      skip,
+      take: limitNum,
+      orderBy: [
+        { isSponsored: 'desc' },
+        { isFeatured: 'desc' },
+        userSort,
+      ],
+      select: {
+        id: true, slug: true, title: true,
+        listingType: true, propertyType: true,
+        price: true, priceNegotiable: true,
+        city: true, surface: true, rooms: true, bathrooms: true,
+        images: true, isActive: true,
+        latitude: true, longitude: true,
+        isFeatured: true, isSponsored: true, boostExpiresAt: true, createdAt: true,
+        user: { select: { id: true, name: true, avatar: true } },
+        category: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.realEstateListing.count({ where }),
   ]);
- 
-  const total = countResult[0]?.count ?? 0;
- 
+
   return {
     listings,
     pagination: {
@@ -285,7 +266,97 @@ async function getListings(query) {
     },
   };
 }
- 
+
+// ─── MAP PINS (public) — all filtered listings, lightweight payload ──────────
+// Ignores pagination entirely: the map needs every matching listing's
+// coordinates + price, not just the current page's 12. Kept deliberately
+// thin (no images, no joins) so this stays cheap even at high listing counts.
+async function getMapPins(query) {
+  const {
+    city,
+    region,
+    listingType,
+    propertyType,
+    categoryId,
+    minPrice,
+    maxPrice,
+    rooms,
+    search,
+    minSurface,
+    maxSurface,
+  } = query;
+
+  // ── Same filter fragments as getListings, kept in sync manually for now ──
+  let locationFragment = Prisma.empty;
+  if (city) {
+    locationFragment = Prisma.sql`AND l.city ILIKE ${'%' + city + '%'}`;
+  } else if (region) {
+    const citiesInRegion = citiesByRegion[region] || [];
+    if (citiesInRegion.length > 0) {
+      locationFragment = Prisma.sql`AND l.city = ANY(${citiesInRegion})`;
+    }
+  }
+
+  const listingTypeFragment = listingType
+    ? Prisma.sql`AND l."listingType" = ${listingType}::"ListingType"`
+    : Prisma.empty;
+
+  const propertyTypeFragment = propertyType
+    ? Prisma.sql`AND l."propertyType" = ${propertyType}::"PropertyType"`
+    : Prisma.empty;
+
+  const categoryFragment = categoryId
+    ? Prisma.sql`AND l."categoryId" = ${categoryId}`
+    : Prisma.empty;
+
+  const roomsFragment = rooms
+    ? Prisma.sql`AND l.rooms >= ${parseInt(rooms, 10)}`
+    : Prisma.empty;
+
+  let priceFragment = Prisma.empty;
+  if (minPrice && maxPrice) {
+    priceFragment = Prisma.sql`AND l.price BETWEEN ${parseFloat(minPrice)} AND ${parseFloat(maxPrice)}`;
+  } else if (minPrice) {
+    priceFragment = Prisma.sql`AND l.price >= ${parseFloat(minPrice)}`;
+  } else if (maxPrice) {
+    priceFragment = Prisma.sql`AND l.price <= ${parseFloat(maxPrice)}`;
+  }
+
+  let surfaceFragment = Prisma.empty;
+  if (minSurface && maxSurface) {
+    surfaceFragment = Prisma.sql`AND l.surface BETWEEN ${parseFloat(minSurface)} AND ${parseFloat(maxSurface)}`;
+  } else if (minSurface) {
+    surfaceFragment = Prisma.sql`AND l.surface >= ${parseFloat(minSurface)}`;
+  } else if (maxSurface) {
+    surfaceFragment = Prisma.sql`AND l.surface <= ${parseFloat(maxSurface)}`;
+  }
+
+  const searchFragment = search
+    ? Prisma.sql`AND (l.title ILIKE ${'%' + search + '%'} OR l.description ILIKE ${'%' + search + '%'})`
+    : Prisma.empty;
+
+  const pins = await prisma.$queryRaw`
+    SELECT
+      l.id, l.title, l.price, l.latitude, l.longitude, l.images
+    FROM "RealEstateListing" l
+    WHERE l.status = 'APPROVED'
+      AND l."isActive" = true
+      AND l.latitude IS NOT NULL
+      AND l.longitude IS NOT NULL
+      ${locationFragment}
+      ${listingTypeFragment}
+      ${propertyTypeFragment}
+      ${categoryFragment}
+      ${roomsFragment}
+      ${priceFragment}
+      ${surfaceFragment}
+      ${searchFragment}
+    LIMIT 2000
+  `;
+
+  return { pins };
+}
+
 // ─── 3. GET LISTING DETAIL (public) ─────────────────────────────────────────
 async function getListingById(id) {
   return prisma.realEstateListing.findUnique({
@@ -510,7 +581,7 @@ async function updateMyListing(id, userId, data) {
   if (!listing) return { error: "Listing not found.", status: 404 };
   if (listing.userId !== userId) return { error: "Forbidden.", status: 403 };
   if (!listing.isActive) return { error: "Listing is deleted.", status: 400 };
- 
+
   const updated = await prisma.realEstateListing.update({
     where: { id },
     data: {
@@ -562,7 +633,7 @@ async function updateMyListing(id, userId, data) {
     },
     select: BUSINESS_LISTING_SELECT,
   });
- 
+
   return { listing: updated };
 }
 
@@ -927,6 +998,7 @@ module.exports = {
   createListing,
   getListings,
   getListingById,
+  getMapPins,
   // authenticated
   toggleFavorite,
   getUserFavorites,
