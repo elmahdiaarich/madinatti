@@ -166,7 +166,23 @@ function formatDate(date) {
 }
 
 // ─── JobCard ──────────────────────────────────────────────────────────────────
-export default function JobCard({ job, initialFavorited = false, onFavoriteToggle, showShare = false }) {
+/**
+ * Props:
+ *   job              — job object
+ *   initialFavorited — boolean
+ *   onFavoriteToggle — callback
+ *   showShare        — boolean
+ *   onClick          — (job) => void  ← when provided, disables Link navigation
+ *   isActive         — boolean        ← shows selected highlight
+ */
+export default function JobCard({
+  job,
+  initialFavorited = false,
+  onFavoriteToggle,
+  showShare = false,
+  onClick,
+  isActive = false,
+}) {
   const [reportOpen, setReportOpen] = useState(false);
 
   const salary     = formatSalary(job.salaryMin, job.salaryMax);
@@ -175,145 +191,156 @@ export default function JobCard({ job, initialFavorited = false, onFavoriteToggl
   const experience = EXPERIENCE_LABELS[job.experienceLevel];
   const education  = EDUCATION_LABELS[job.educationLevel];
 
+  // ── Card inner content (shared between Link and button modes) ───────────────
+  const cardContent = (
+    <div
+      className={`bg-white border rounded-2xl overflow-hidden
+        transition-all duration-200 ease-out
+        ${isActive
+          ? 'border-[#2D5016] shadow-lg shadow-[#2D5016]/10 ring-1 ring-[#2D5016]/20'
+          : 'border-gray-200 hover:border-[#A7D129] hover:shadow-lg hover:shadow-[#A7D129]/10 hover:-translate-y-px'
+        }`}
+    >
+      {/* Top accent bar */}
+      <div className={`h-[3px] bg-gradient-to-r from-[#A7D129] via-[#2D5016] to-[#A7D129]
+        transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
+
+      <div className="px-5 py-4">
+
+        {/* ── SECTION 1: Identity ─────────────────────────────────────────── */}
+        <div className="flex items-start gap-3.5">
+
+          <CompanyAvatar logo={job.user?.companyLogo} name={job.companyName} />
+
+          <div className="flex-1 min-w-0 pr-2">
+            {/* Row: title + premium + date */}
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                <h2 className={`font-bold text-[15px] leading-snug
+                  transition-colors duration-200 line-clamp-1
+                  ${isActive ? 'text-[#2D5016]' : 'text-gray-900 group-hover:text-[#2D5016]'}`}>
+                  {job.title}
+                </h2>
+                {job.isFeatured && (
+                  <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-[#A7D129] text-[#7BA428] bg-[#E8F5D0]">
+                    ⭐ Premium
+                  </span>
+                )}
+              </div>
+              {/* Date — right aligned */}
+              {dateInfo && (
+                <span className={`text-[11px] shrink-0 font-semibold whitespace-nowrap mt-0.5
+                  ${dateInfo.fresh ? 'text-emerald-600' : 'text-gray-400'}`}>
+                  {dateInfo.label}
+                </span>
+              )}
+            </div>
+
+            {/* Company + City */}
+            <p className="text-[13px] text-gray-500 mt-0.5 flex items-center gap-1 flex-wrap">
+              <span className="font-medium text-gray-600 truncate max-w-[160px]">{job.companyName}</span>
+              {job.city && (
+                <>
+                  <span className="text-gray-300">·</span>
+                  <span className="flex items-center gap-0.5">
+                    <svg className="w-3 h-3 text-gray-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                    </svg>
+                    {job.city}
+                  </span>
+                </>
+              )}
+            </p>
+          </div>
+
+          {/* Favorite + Share — appear on hover / always visible when active */}
+          <div className={`flex items-center gap-0.5 shrink-0
+            transition-opacity duration-200 -mt-0.5
+            ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+            <FavoriteButton jobId={job.id} initialFavorited={initialFavorited} onToggle={onFavoriteToggle} />
+            {showShare && <ShareButton job={job} />}
+          </div>
+        </div>
+
+        {/* ── SECTION 2: Key attributes ──────────────────────────────────── */}
+        {(contract || experience || education) && (
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
+
+            {/* Contract type — colored pill */}
+            {contract && (
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full
+                text-[11px] font-bold border ${contract.color}`}>
+                {contract.label}
+              </span>
+            )}
+
+            {/* Education level */}
+            {education && (
+              <span className="inline-flex items-center gap-1 text-[12px] text-gray-500 font-medium">
+                <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M12 14l9-5-9-5-9 5 9 5zm0 0v5m-4 2h8" />
+                </svg>
+                {education}
+              </span>
+            )}
+
+            {(contract || education) && experience && (
+              <span className="text-gray-200 text-xs">·</span>
+            )}
+
+            {/* Experience required */}
+            {experience && (
+              <span className="inline-flex items-center gap-1 text-[12px] text-gray-500 font-medium">
+                <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                {experience}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* ── SECTION 3: Salary + CTA ────────────────────────────────────── */}
+        <div className="flex items-center justify-between mt-3.5 pt-3.5 border-t border-gray-50">
+          {salary ? (
+            <p className="font-bold text-[#1a7a3a] text-[13px]">{salary}</p>
+          ) : (
+            <p className="text-[12px] text-gray-400 italic font-medium">Salaire non précisé</p>
+          )}
+
+          <span className={`flex items-center gap-1.5 text-[12px] font-semibold shrink-0
+            transition-colors duration-200
+            ${isActive ? 'text-[#2D5016]' : 'text-gray-400 group-hover:text-[#2D5016]'}`}>
+            {onClick ? 'Voir le détail' : 'Voir le détail'}
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+            </svg>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <>
-      <div className="relative group">
-        <Link href={`/jobs/${job.id}`} className="block">
+      <div className={`relative group ${isActive ? 'z-10' : ''}`}>
 
-          {/*
-           * CARD ANATOMY (top → bottom):
-           *  1. [Avatar]  [Title + Premium badge]       [Date]
-           *               [Company · City]
-           *  ──────────────────────────────────────────────────
-           *  2. [Contract pill]  [Experience]
-           *  ──────────────────────────────────────────────────
-           *  3. [Salary (green, prominent)]   [Voir le détail →]
-           */}
-          <div
-            className="bg-white border border-gray-200 rounded-2xl overflow-hidden
-              transition-all duration-250 ease-out
-              hover:border-[#A7D129] hover:shadow-lg hover:shadow-[#A7D129]/10 hover:-translate-y-px"
+        {/* ── Click mode (split-panel) vs Link mode (full page) ──────────── */}
+        {onClick ? (
+          <button
+            type="button"
+            className="block w-full text-left"
+            onClick={() => onClick(job)}
           >
-            {/* Top green accent bar — visible on hover */}
-            <div className="h-[2px] bg-gradient-to-r from-[#A7D129] via-[#2D5016] to-[#A7D129]
-              opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-            <div className="px-5 py-4">
-
-              {/* ── SECTION 1: Identity ───────────────────────────── */}
-              <div className="flex items-start gap-3.5">
-
-                <CompanyAvatar logo={job.user?.companyLogo} name={job.companyName} />
-
-                <div className="flex-1 min-w-0 pr-2">
-                  {/* Row: title + premium + date */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                      <h2 className="font-bold text-gray-900 text-[15px] leading-snug
-                        group-hover:text-[#2D5016] transition-colors duration-200 line-clamp-1">
-                        {job.title}
-                      </h2>
-                      {job.isFeatured && (
-                        <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-[#A7D129] text-[#7BA428] bg-[#E8F5D0]">
-                          ⭐ Premium
-                        </span>
-                      )}
-                    </div>
-                    {/* Date — right aligned, fresh = green */}
-                    {dateInfo && (
-                      <span className={`text-[11px] shrink-0 font-semibold whitespace-nowrap mt-0.5
-                        ${dateInfo.fresh ? 'text-emerald-600' : 'text-gray-400'}`}>
-                        {dateInfo.label}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Company + City */}
-                  <p className="text-[13px] text-gray-500 mt-0.5 flex items-center gap-1 flex-wrap">
-                    <span className="font-medium text-gray-600 truncate max-w-[160px]">{job.companyName}</span>
-                    {job.city && (
-                      <>
-                        <span className="text-gray-300">·</span>
-                        <span className="flex items-center gap-0.5">
-                          <svg className="w-3 h-3 text-gray-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                          </svg>
-                          {job.city}
-                        </span>
-                      </>
-                    )}
-                  </p>
-                </div>
-
-                {/* Favorite + Share — appear on hover */}
-                <div className="flex items-center gap-0.5 shrink-0
-                  opacity-0 group-hover:opacity-100 transition-opacity duration-200 -mt-0.5">
-                  <FavoriteButton jobId={job.id} initialFavorited={initialFavorited} onToggle={onFavoriteToggle} />
-                  {showShare && <ShareButton job={job} />}
-                </div>
-              </div>
-
-              {/* ── SECTION 2: Key attributes ─────────────────────── */}
-              {(contract || experience || education) && (
-                <div className="flex items-center gap-2 mt-3 flex-wrap">
-
-                  {/* Contract type — colored pill */}
-                  {contract && (
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full
-                      text-[11px] font-bold border ${contract.color}`}>
-                      {contract.label}
-                    </span>
-                  )}
-
-                  {/* Education level — Bac+2, Bac+5, etc. */}
-                  {education && (
-                    <span className="inline-flex items-center gap-1 text-[12px] text-gray-500 font-medium">
-                      <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                          d="M12 14l9-5-9-5-9 5 9 5zm0 0v5m-4 2h8" />
-                      </svg>
-                      {education}
-                    </span>
-                  )}
-
-                  {(contract || education) && experience && (
-                    <span className="text-gray-200 text-xs">·</span>
-                  )}
-
-                  {/* Experience required */}
-                  {experience && (
-                    <span className="inline-flex items-center gap-1 text-[12px] text-gray-500 font-medium">
-                      <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                          d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                      {experience}
-                    </span>
-                  )}
-
-                </div>
-              )}
-
-              {/* ── SECTION 3: Salary + CTA ───────────────────────── */}
-              <div className="flex items-center justify-between mt-3.5 pt-3.5 border-t border-gray-50">
-                {salary ? (
-                  <p className="font-bold text-[#1a7a3a] text-[13px]">{salary}</p>
-                ) : (
-                  <p className="text-[12px] text-gray-400 italic font-medium">Salaire non précisé</p>
-                )}
-
-                <span className="flex items-center gap-1.5 text-[12px] font-semibold text-gray-400
-                  group-hover:text-[#2D5016] transition-colors duration-200 shrink-0">
-                  Voir le détail
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                  </svg>
-                </span>
-              </div>
-
-            </div>
-          </div>
-        </Link>
+            {cardContent}
+          </button>
+        ) : (
+          <Link href={`/jobs/${job.id}`} className="block">
+            {cardContent}
+          </Link>
+        )}
 
         {/* Report — ultra-discreet, hover only */}
         <div className="flex justify-end mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">

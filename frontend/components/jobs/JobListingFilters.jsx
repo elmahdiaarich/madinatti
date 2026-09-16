@@ -70,7 +70,7 @@ export default function JobListingFilters({ onChange, showStatus = true, jobs = 
             className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
           >
             <option value="">Tous les contrats</option>
-           {contractTypes.map(t => (
+            {contractTypes.map(t => (
               <option key={t} value={t}>{CONTRACT_LABELS[t] ?? t}</option>
             ))}
           </select>

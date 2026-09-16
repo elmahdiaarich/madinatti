@@ -253,38 +253,15 @@ function MiniJobs() {
         </div>
       </div>
 
-      {/* Sidebar desktop uniquement ; sur mobile/tablette, bouton "Filtrer" + bottom sheet */}
-      <div className="max-w-[1200px] mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6">
-        <aside className="hidden lg:block lg:w-[280px] shrink-0">
-          <div className="lg:sticky lg:top-[20px]">
-            {tab === 'profiles' ? (
-              <WorkerProfileFilter onFilter={(f) => setProfileFilters({ ...f, page: 1, limit: 8 })} />
-            ) : (
-              <TaskRequestFilter onFilter={(f) => setTaskFilters({ ...f, page: 1, limit: 9 })} />
-            )}
-          </div>
-        </aside>
-
-        <main className="flex-1 min-w-0">
+      <div className="max-w-[1200px] mx-auto px-4 py-6">
+        <main className="min-w-0">
           {tab === 'profiles' && (
             <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
               <p className="text-sm text-gray-500">
                 {profilePagination ? <><span className="font-semibold text-gray-800">{profilePagination.total}</span> prestataires</> : '...'}
               </p>
               <div className="flex items-center gap-2 flex-wrap">
-                {/* Bouton filtres — mobile/tablette uniquement */}
-                <button
-                  onClick={() => setMobileFiltersOpen(true)}
-                  className="lg:hidden inline-flex items-center gap-1.5 border border-primary-dark text-primary-dark font-semibold text-xs px-3.5 py-2 rounded-full shrink-0 hover:bg-primary-mint transition-colors"
-                >
-                  <SlidersHorizontal size={13} />
-                  Filtrer
-                  {activeFiltersCount > 0 && (
-                    <span className="bg-primary text-primary-dark text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
-                      {activeFiltersCount}
-                    </span>
-                  )}
-                </button>
+                <WorkerProfileFilter onFilter={(f) => setProfileFilters({ ...f, page: 1, limit: 8 })} />
                 <SortSelect value={profileFilters.sort || ''} onChange={handleSortChange} />
                 {canActOnMiniJobs && (
                   <button onClick={handleCreateProfile}
@@ -297,25 +274,13 @@ function MiniJobs() {
             </div>
           )}
 
-         {tab === 'tasks' && (
+          {tab === 'tasks' && (
             <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
               <p className="text-sm text-gray-500">
                 {taskPagination ? <><span className="font-semibold text-gray-800">{taskPagination.total}</span> demandes</> : '...'}
               </p>
               <div className="flex items-center gap-2 flex-wrap">
-                {/* Bouton filtres — mobile/tablette uniquement */}
-                <button
-                  onClick={() => setMobileFiltersOpen(true)}
-                  className="lg:hidden inline-flex items-center gap-1.5 border border-primary-dark text-primary-dark font-semibold text-xs px-3.5 py-2 rounded-full shrink-0 hover:bg-primary-mint transition-colors"
-                >
-                  <SlidersHorizontal size={13} />
-                  Filtrer
-                  {activeFiltersCount > 0 && (
-                    <span className="bg-primary text-primary-dark text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
-                      {activeFiltersCount}
-                    </span>
-                  )}
-                </button>
+                <TaskRequestFilter onFilter={(f) => setTaskFilters({ ...f, page: 1, limit: 9 })} />
                 {canActOnMiniJobs && (
                   <button onClick={handlePublishTask}
                     className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary-dark text-white font-bold text-sm shadow-sm hover:bg-primary hover:text-primary-dark transition-all">
@@ -368,20 +333,7 @@ function MiniJobs() {
   </main>
       </div>
 
-      {/* MOBILE FILTER SHEET */}
-      {mobileFiltersOpen && (
-        <MobileFilterSheet
-          title={tab === 'profiles' ? 'Filtrer les prestataires' : 'Filtrer les demandes'}
-          resultsCount={tab === 'profiles' ? profilePagination?.total : taskPagination?.total}
-          onClose={() => setMobileFiltersOpen(false)}
-        >
-          {tab === 'profiles' ? (
-            <WorkerProfileFilter onFilter={(f) => setProfileFilters({ ...f, page: 1, limit: 8 })} />
-          ) : (
-            <TaskRequestFilter onFilter={(f) => setTaskFilters({ ...f, page: 1, limit: 9 })} />
-          )}
-        </MobileFilterSheet>
-      )}
+      {/* Filter drawers handled by WorkerProfileFilter / TaskRequestFilter themselves */}
 
       {isVisitor && (
         <div id="inscription" className="max-w-[1200px] mx-auto px-4 py-12">

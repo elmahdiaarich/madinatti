@@ -1,18 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import {
-  citiesByRegion,
-  buildRegionOptions,
-  buildCityOptions,
-  FilterSkeleton,
-  FilterOption,
-  FilterSection,
-  FilterHeader,
-  ToggleRow,
-} from '@/components/shared/FilterPanel';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL + '/api';
+import { useState, useRef, useEffect } from 'react';
+import { SlidersHorizontal, X } from 'lucide-react';
+import { OptionRow } from '@/components/shared/FilterDropdown';
 
 const CONTRACT_OPTIONS = [
   { value: 'CDI',           label: 'CDI' },
@@ -26,16 +16,6 @@ const CONTRACT_OPTIONS = [
   { value: 'STATUTAIRE',    label: 'Statutaire' },
 ];
 
-const EDUCATION_OPTIONS = [
-  { value: 'BEFORE_BAC',      label: 'Qualification avant Bac' },
-  { value: 'BAC',             label: 'Bac' },
-  { value: 'BAC_PLUS_1',      label: 'Bac+1' },
-  { value: 'BAC_PLUS_2',      label: 'Bac+2' },
-  { value: 'BAC_PLUS_3',      label: 'Bac+3' },
-  { value: 'BAC_PLUS_4',      label: 'Bac+4' },
-  { value: 'BAC_PLUS_5_PLUS', label: 'Bac+5 et plus' },
-];
-
 const EXPERIENCE_OPTIONS = [
   { value: 'STUDENT_FRESH_GRAD', label: 'Étudiant / Jeune diplômé' },
   { value: 'JUNIOR_LESS_2',      label: 'Débutant < 2 ans' },
@@ -44,235 +24,233 @@ const EXPERIENCE_OPTIONS = [
   { value: 'EXPERT_PLUS_10',     label: '> 10 ans' },
 ];
 
+const EDUCATION_OPTIONS = [
+  { value: 'BEFORE_BAC',      label: 'Avant Bac' },
+  { value: 'BAC',             label: 'Bac' },
+  { value: 'BAC_PLUS_1',      label: 'Bac+1' },
+  { value: 'BAC_PLUS_2',      label: 'Bac+2' },
+  { value: 'BAC_PLUS_3',      label: 'Bac+3' },
+  { value: 'BAC_PLUS_4',      label: 'Bac+4' },
+  { value: 'BAC_PLUS_5_PLUS', label: 'Bac+5 et plus' },
+];
+
+const EMPTY_FILTERS = {
+  contractType:    '',
+  experienceLevel: '',
+  educationLevel:  '',
+  salarySpecified: false,
+};
+
 export default function JobFilter({ onFilter }) {
-  const [open, setOpen] = useState({
-    categorySlug:    true,
-    contractType:    false,
-    experienceLevel: false,
-    educationLevel:  false,
-    region:          false,
-    city:            false,
-  });
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [drawerOpen,   setDrawerOpen]   = useState(false);
+  const [filters,      setFilters]      = useState(EMPTY_FILTERS);
+  const filtersRef = useRef(filters);
+  useEffect(() => { filtersRef.current = filters; }, [filters]);
 
-  const [selected, setSelected]   = useState({});
-  const [counts, setCounts]       = useState(null);
-  const [loadingCounts, setLoadingCounts] = useState(true);
-  const [hideSalaryUnspecified, setHideSalaryUnspecified] = useState(false);
-
-  const selectedRegion = (selected.region || [])[0] || null;
-  const selectedCity   = (selected.city   || [])[0] || null;
-
-  useEffect(() => {
-    const fetchCounts = async () => {
-      try {
-        const res  = await fetch(`${API_URL}/jobs/filters-count`);
-        if (!res.ok) throw new Error('Erreur counts');
-        const json = await res.json();
-        setCounts(json.data);
-      } catch (err) {
-        console.error('Erreur chargement des counts filtres :', err);
-      } finally {
-        setLoadingCounts(false);
-      }
-    };
-    fetchCounts();
-  }, []);
-
-  const regionOptions = useMemo(() => buildRegionOptions(counts?.region), [counts]);
-  const cityOptions = useMemo(
-    () => buildCityOptions(selectedRegion, counts?.city),
-    [selectedRegion, counts]
-  );
-
-  const categoryOptions = counts?.categories
-    ? counts.categories.map((c) => ({ value: c.slug, label: c.name, count: c.count }))
-    : [];
-
-  const toggleSection = (key) =>
-    setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
-
-  const emitFilters = (newSelected, hideUnspecified) => {
-    const filters = {};
-
-    ['categorySlug', 'contractType', 'experienceLevel', 'educationLevel'].forEach((k) => {
-      const vals = newSelected[k] || [];
-      filters[k] = vals.length > 0 ? vals[0] : undefined;
+  const emitClean = (obj) => {
+    const clean = {};
+    Object.keys(obj).forEach((k) => {
+      if (obj[k] !== '' && obj[k] !== false) clean[k] = obj[k];
     });
-
-    const city   = (newSelected.city   || [])[0];
-    const region = (newSelected.region || [])[0];
-    filters.city = city   || undefined;
-    filters.region   = !city && region ? region : undefined;
-
-    if (hideUnspecified) filters.salarySpecified = true;
-    else filters.salarySpecified = undefined;
-
-    onFilter(filters);
+    onFilter(clean);
   };
 
-  const handleCheck = (key, value) => {
-    const current = (selected[key] || [])[0];
-
-    let newVal;
-    if (key === 'region') {
-      const isSame = current === value;
-      newVal = { ...selected, region: isSame ? [] : [value], city: [] };
-    } else {
-      newVal = {
-        ...selected,
-        [key]: current === value ? [] : [value],
-      };
-    }
-
-    setSelected(newVal);
-    emitFilters(newVal, hideSalaryUnspecified);
+  const updateFilter = (key, value) => {
+    const next = { ...filtersRef.current, [key]: value };
+    filtersRef.current = next;
+    setFilters(next);
+    emitClean(next);
   };
 
-  const handleSalaryToggle = () => {
-    const newVal = !hideSalaryUnspecified;
-    setHideSalaryUnspecified(newVal);
-    emitFilters(selected, newVal);
-  };
-
-  const handleReset = () => {
-    setSelected({});
-    setHideSalaryUnspecified(false);
+  const handleResetAll = () => {
+    filtersRef.current = EMPTY_FILTERS;
+    setFilters(EMPTY_FILTERS);
+    setDropdownOpen(false);
     onFilter({});
   };
 
-  const totalSelected =
-    Object.values(selected).flat().length + (hideSalaryUnspecified ? 1 : 0);
+  const anyActive = !!(
+    filters.contractType ||
+    filters.experienceLevel ||
+    filters.educationLevel ||
+    filters.salarySpecified
+  );
 
-  const staticSections = [
-    {
-      key: 'categorySlug',
-      label: 'Secteur',
-      icon: '🏢',
-      options: categoryOptions,
-      countsMap: counts?.categories
-        ? Object.fromEntries(counts.categories.map((c) => [c.slug, c.count]))
-        : {},
-    },
-    {
-      key: 'contractType',
-      label: 'Type de contrat',
-      icon: '📄',
-      options: CONTRACT_OPTIONS,
-      countsMap: counts?.contractType || {},
-    },
-    {
-      key: 'experienceLevel',
-      label: "Niveau d'expérience",
-      icon: '💼',
-      options: EXPERIENCE_OPTIONS,
-      countsMap: counts?.experienceLevel || {},
-    },
-    {
-      key: 'educationLevel',
-      label: "Niveau d'études",
-      icon: '🎓',
-      options: EDUCATION_OPTIONS,
-      countsMap: counts?.educationLevel || {},
-    },
-  ];
+  // ─── Shared filters panel ────────────────────────────────────────────────────
+  const FiltersPanel = () => (
+    <div className="space-y-4">
+      {/* Salary toggle */}
+      <div
+        onClick={() => updateFilter('salarySpecified', !filters.salarySpecified)}
+        className={`flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${
+          filters.salarySpecified ? 'bg-[#E8F5D0]' : 'hover:bg-gray-50'
+        }`}
+      >
+        <span className="text-sm font-medium text-gray-700">💰 Salaire affiché uniquement</span>
+        <div className={`w-9 h-5 rounded-full transition-colors flex items-center px-0.5 ${
+          filters.salarySpecified ? 'bg-[#A7D129]' : 'bg-gray-200'
+        }`}>
+          <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${
+            filters.salarySpecified ? 'translate-x-4' : 'translate-x-0'
+          }`} />
+        </div>
+      </div>
 
-  const headerIcon = (
-    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
-    </svg>
+      {/* Contract type */}
+      <div>
+        <p className="text-xs font-bold text-gray-400 uppercase mb-2">Type de contrat</p>
+        <div className="space-y-1">
+          {CONTRACT_OPTIONS.map((o) => (
+            <OptionRow
+              key={o.value}
+              label={o.label}
+              isChecked={filters.contractType === o.value}
+              onClick={() => updateFilter('contractType', filters.contractType === o.value ? '' : o.value)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Experience */}
+      <div>
+        <p className="text-xs font-bold text-gray-400 uppercase mb-2">Expérience</p>
+        <div className="space-y-1">
+          {EXPERIENCE_OPTIONS.map((o) => (
+            <OptionRow
+              key={o.value}
+              label={o.label}
+              isChecked={filters.experienceLevel === o.value}
+              onClick={() => updateFilter('experienceLevel', filters.experienceLevel === o.value ? '' : o.value)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Education */}
+      <div>
+        <p className="text-xs font-bold text-gray-400 uppercase mb-2">Niveau d'études</p>
+        <div className="space-y-1">
+          {EDUCATION_OPTIONS.map((o) => (
+            <OptionRow
+              key={o.value}
+              label={o.label}
+              isChecked={filters.educationLevel === o.value}
+              onClick={() => updateFilter('educationLevel', filters.educationLevel === o.value ? '' : o.value)}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
   );
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-      <FilterHeader icon={headerIcon} title="Filtrer les offres" totalSelected={totalSelected} onReset={handleReset} />
+    <div className="relative">
 
-      <ToggleRow icon="💰" label="Salaire affiché" checked={hideSalaryUnspecified} onToggle={handleSalaryToggle} />
-
-      {staticSections.map((section) => (
-        <FilterSection
-          key={section.key}
-          icon={section.icon}
-          label={section.label}
-          badge={(selected[section.key] || []).length}
-          isOpen={open[section.key]}
-          onToggle={() => toggleSection(section.key)}
+      {/* ══ DESKTOP (sm+) — icon button + dropdown ══ */}
+      <div className="hidden sm:block">
+        <button
+          type="button"
+          onClick={() => setDropdownOpen((v) => !v)}
+          aria-label="Filtres avancés"
+          className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all shadow-sm ${
+            anyActive
+              ? 'border-[#2D5016] bg-[#E8F5D0] text-[#2D5016]'
+              : 'border-gray-200 bg-white text-gray-600 hover:border-[#2D5016]/40 hover:text-[#2D5016]'
+          }`}
         >
-          {loadingCounts ? (
-            <FilterSkeleton />
-          ) : section.options.length === 0 ? (
-            <p className="px-4 pb-3 text-xs text-gray-400 italic">Aucune option disponible</p>
-          ) : (
-            <div className="px-3 pb-3 space-y-0.5">
-              {section.options.map((opt) => {
-                const count = opt.count !== undefined ? opt.count : section.countsMap?.[opt.value];
-                if (count === 0) return null;
-                return (
-                  <FilterOption
-                    key={opt.value}
-                    label={opt.label}
-                    count={count}
-                    isChecked={(selected[section.key] || []).includes(opt.value)}
-                    onClick={() => handleCheck(section.key, opt.value)}
-                  />
-                );
-              })}
+          <SlidersHorizontal size={15} className="shrink-0" />
+          <span className="hidden lg:inline whitespace-nowrap">Filtres avancés</span>
+          {anyActive && (
+            <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#A7D129] border-2 border-white" />
+          )}
+        </button>
+
+        {/* Click-outside backdrop */}
+        {dropdownOpen && (
+          <div className="fixed inset-0 z-[99]" onClick={() => setDropdownOpen(false)} />
+        )}
+
+        {/* Dropdown panel */}
+        {dropdownOpen && (
+          <div className="absolute left-0 top-[calc(100%+6px)] w-80 max-h-[70vh] overflow-y-auto bg-white rounded-xl border border-gray-200 shadow-xl z-[100] p-4">
+            <FiltersPanel />
+            {anyActive && (
+              <button
+                type="button"
+                onClick={handleResetAll}
+                className="mt-4 w-full flex items-center justify-center gap-2 text-sm font-medium text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <X size={14} />
+                Réinitialiser les filtres
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ══ MOBILE (below sm) — pill button + left drawer ══ */}
+      <div className="sm:hidden">
+        <button
+          type="button"
+          onClick={() => setDrawerOpen(true)}
+          aria-label="Filtres avancés"
+          className={`relative flex items-center gap-2 px-4 py-2.5 rounded-full border text-sm font-semibold transition-colors ${
+            anyActive
+              ? 'border-[#2D5016] bg-[#E8F5D0] text-[#2D5016]'
+              : 'border-gray-300 bg-gray-50 text-gray-600'
+          }`}
+        >
+          <SlidersHorizontal size={15} />
+          Filtres
+          {anyActive && (
+            <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#A7D129] border-2 border-white" />
+          )}
+        </button>
+
+        {/* Mobile drawer */}
+        {drawerOpen && (
+          <div className="fixed inset-0 z-[200]">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setDrawerOpen(false)} />
+            <div className="absolute top-0 left-0 h-full w-[85%] max-w-[360px] bg-white shadow-2xl overflow-y-auto animate-slide-in-left">
+              <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100 sticky top-0 bg-white z-10">
+                <span className="font-bold text-gray-800 text-sm">Filtres avancés</span>
+                <button
+                  type="button"
+                  onClick={() => setDrawerOpen(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="p-4">
+                <FiltersPanel />
+              </div>
+
+              <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 flex gap-3">
+                {anyActive && (
+                  <button
+                    type="button"
+                    onClick={() => { handleResetAll(); setDrawerOpen(false); }}
+                    className="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-gray-600 font-semibold text-sm hover:bg-gray-50 transition"
+                  >
+                    Réinitialiser
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setDrawerOpen(false)}
+                  className="flex-1 py-2.5 bg-[#2D5016] text-white rounded-xl font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition"
+                >
+                  Voir les résultats
+                </button>
+              </div>
             </div>
-          )}
-        </FilterSection>
-      ))}
+          </div>
+        )}
+      </div>
 
-      <FilterSection
-        icon="🗺️"
-        label="Région"
-        badge={selectedRegion ? 1 : 0}
-        isOpen={open.region}
-        onToggle={() => toggleSection('region')}
-      >
-        <div className="px-3 pb-3 space-y-0.5 max-h-52 overflow-y-auto">
-          {regionOptions.length === 0 ? (
-            <p className="px-1 py-2 text-xs text-gray-400 italic">Aucune région disponible</p>
-          ) : (
-            regionOptions.map((opt) => (
-              <FilterOption
-                key={opt.value}
-                label={opt.label}
-                count={opt.count}
-                isChecked={selectedRegion === opt.value}
-                onClick={() => handleCheck('region', opt.value)}
-              />
-            ))
-          )}
-        </div>
-      </FilterSection>
-
-      <FilterSection
-        icon="📍"
-        label={selectedRegion ? `Ville — ${selectedRegion}` : 'Ville'}
-        badge={selectedCity ? 1 : 0}
-        isOpen={open.city}
-        onToggle={() => toggleSection('city')}
-      >
-        <div className="px-3 pb-3 space-y-0.5 max-h-52 overflow-y-auto">
-          {cityOptions.length === 0 ? (
-            <p className="px-1 py-2 text-xs text-gray-400 italic">
-              {selectedRegion
-                ? 'Aucune ville avec des offres dans cette région'
-                : 'Aucune ville disponible'}
-            </p>
-          ) : (
-            cityOptions.map((opt) => (
-              <FilterOption
-                key={opt.value}
-                label={opt.label}
-                count={opt.count}
-                isChecked={selectedCity === opt.value}
-                onClick={() => handleCheck('city', opt.value)}
-              />
-            ))
-          )}
-        </div>
-      </FilterSection>
     </div>
   );
 }

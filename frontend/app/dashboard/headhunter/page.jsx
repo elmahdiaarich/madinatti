@@ -9,8 +9,9 @@ import { creditService } from "@/services/creditService";
 import CandidateFilter from "@/components/headhunter/CandidateFilter";
 import CandidateCard from "@/components/headhunter/CandidateCard";
 import Link from "next/link";
-import { Coins, SlidersHorizontal, X, ChevronDown, Bell } from "lucide-react";
+import { Coins, X, ChevronDown, Bell } from "lucide-react";
 import HeadhunterAlertModal from "@/components/headhunter/HeadhunterAlertModal";
+import LocationCombobox from "@/components/jobs/LocationCombobox";
 
 export default function HeadhunterPage() {
   return (
@@ -52,8 +53,8 @@ function CreditBanner({ balance }) {
   if (level === "loading" || level === "ok") return null;
 
   const styles = {
-    empty:  { bg: "bg-red-50 border-red-200",   text: "text-red-800",   icon: "🚨", msg: "Crédits épuisés — vous ne pouvez plus débloquer de profils." },
-    low:    { bg: "bg-amber-50 border-amber-200", text: "text-amber-800", icon: "⚠️", msg: `Solde faible (${balance} crédit${balance > 1 ? 's' : ''}) — rechargez bientôt.` },
+    empty:  { bg: "bg-red-50 border-red-200",    text: "text-red-800",    icon: "🚨", msg: "Crédits épuisés — vous ne pouvez plus débloquer de profils." },
+    low:    { bg: "bg-amber-50 border-amber-200", text: "text-amber-800",  icon: "⚠️", msg: `Solde faible (${balance} crédit${balance > 1 ? 's' : ''}) — rechargez bientôt.` },
     medium: { bg: "bg-yellow-50 border-yellow-200", text: "text-yellow-800", icon: "💡", msg: `Il vous reste ${balance} crédits.` },
   };
   const s = styles[level];
@@ -151,34 +152,6 @@ function SortDropdown({ value, onChange }) {
   );
 }
 
-// ─── Mobile filter sheet ──────────────────────────────────────────────────────
-function MobileFilterSheet({ open, onClose, onFilter }) {
-  if (!open) return null;
-  return (
-    <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={onClose} />
-      {/* Sheet */}
-      <div className="fixed inset-x-0 bottom-0 z-50 lg:hidden rounded-t-2xl bg-white shadow-2xl
-        max-h-[85vh] overflow-y-auto animate-slide-up">
-        <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100 sticky top-0 bg-white">
-          <p className="font-bold text-gray-900 text-base flex items-center gap-2">
-            <SlidersHorizontal size={16} className="text-[#2D5016]" />
-            Filtrer les candidats
-          </p>
-          <button onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition">
-            <X size={18} />
-          </button>
-        </div>
-        <div className="p-4">
-          <CandidateFilter onFilter={(f) => { onFilter(f); onClose(); }} />
-        </div>
-      </div>
-    </>
-  );
-}
-
 // ─── Skeleton loader ──────────────────────────────────────────────────────────
 function SkeletonGrid() {
   return (
@@ -210,19 +183,21 @@ function HeadhunterContent() {
   const { token } = useAuth();
   const { toast } = useToast();
 
-  const [candidates, setCandidates]     = useState([]);
-  const [pagination, setPagination]     = useState(null);
-  const [loading, setLoading]           = useState(true);
-  const [filters, setFilters]           = useState({ page: 1, limit: 9, availableOnly: "true" });
-  const [unlockingId, setUnlockingId] = useState(null);
-  const [balance, setBalance] = useState(null);
-  const [searchInput, setSearchInput] = useState("");
-  const [togglingFavoriteId, setTogglingFavoriteId] = useState(null);
-  const [sortBy, setSortBy]             = useState("recent");
-  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  const [alertModalOpen, setAlertModalOpen] = useState(false);
+  const [candidates,        setCandidates]        = useState([]);
+  const [pagination,        setPagination]        = useState(null);
+  const [loading,           setLoading]           = useState(true);
+  const [filters,           setFilters]           = useState({ page: 1, limit: 9, availableOnly: "true" });
+  const [unlockingId,       setUnlockingId]       = useState(null);
+  const [balance,           setBalance]           = useState(null);
+  const [searchInput,       setSearchInput]       = useState("");
+  const [locationValue,     setLocationValue]     = useState(null);
+  const [sectorInput,       setSectorInput]       = useState("");
+  const [categories,        setCategories]        = useState([]);
+  const [togglingFavoriteId,setTogglingFavoriteId]= useState(null);
+  const [sortBy,            setSortBy]            = useState("recent");
+  const [alertModalOpen,    setAlertModalOpen]    = useState(false);
 
-  // ── Load candidates ────────────────────────────────────────────────────────
+  // Load candidates
   useEffect(() => {
     if (!token) return;
     setLoading(true);
@@ -232,7 +207,7 @@ function HeadhunterContent() {
       .finally(() => setLoading(false));
   }, [filters, token]);
 
-  // ── Load credit balance ────────────────────────────────────────────────────
+  // Load credit balance
   useEffect(() => {
     if (!token) return;
     creditService.getMine(token)
@@ -240,7 +215,15 @@ function HeadhunterContent() {
       .catch(() => {});
   }, [token]);
 
-  // ── Client-side sort ───────────────────────────────────────────────────────
+  // Load job categories for sector select
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs/categories`)
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setCategories(d.data); })
+      .catch(() => {});
+  }, []);
+
+  // Client-side sort
   const sortedCandidates = useMemo(() => {
     if (sortBy === "salary_desc") {
       return [...candidates].sort((a, b) => (b.desiredSalaryMax || 0) - (a.desiredSalaryMax || 0));
@@ -252,10 +235,10 @@ function HeadhunterContent() {
         return aMin - bMin;
       });
     }
-    return candidates; // "recent" — already sorted by backend
+    return candidates;
   }, [candidates, sortBy]);
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
+  // Handlers
   const handleFilter = (newFilters) =>
     setFilters((prev) => ({ ...prev, ...newFilters, page: 1 }));
 
@@ -274,7 +257,26 @@ function HeadhunterContent() {
   const handlePageChange = (p) =>
     setFilters((prev) => ({ ...prev, page: p }));
 
-  const handleSearch = () => setFilters((prev) => ({ ...prev, search: searchInput || undefined, page: 1 }));
+  const handleSearch = () => {
+    const locationFilter = locationValue
+      ? locationValue.type === 'city'
+        ? { city: locationValue.raw, region: undefined }
+        : { region: locationValue.raw, city: undefined }
+      : { city: undefined, region: undefined };
+
+    setFilters((prev) => {
+      const next = {
+        ...prev,
+        search: searchInput || undefined,
+        categorySlug: sectorInput || undefined,
+        ...locationFilter,
+        page: 1,
+      };
+      // remove undefined keys
+      Object.keys(next).forEach((k) => { if (next[k] === undefined) delete next[k]; });
+      return next;
+    });
+  };
 
   const handleToggleFavorite = async (candidate) => {
     setTogglingFavoriteId(candidate.id);
@@ -318,12 +320,12 @@ function HeadhunterContent() {
     }
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // Render
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-[1240px] mx-auto px-4 py-6">
 
-        {/* ── PAGE HEADER ─────────────────────────────────────────────────── */}
+        {/* PAGE HEADER */}
         <div className="flex items-start justify-between gap-4 mb-5">
           <div>
             <h1 className="text-2xl font-extrabold text-gray-900 leading-tight">
@@ -338,7 +340,7 @@ function HeadhunterContent() {
           </div>
 
           {/* Top-right actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button onClick={() => setAlertModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:border-[#A7D129] transition">
               <Bell size={16} /> Alerte
             </button>
@@ -357,124 +359,143 @@ function HeadhunterContent() {
           </div>
         </div>
 
-        {/* ── CREDIT WARNING BANNER ────────────────────────────────────────── */}
+        {/* CREDIT WARNING BANNER */}
         <CreditBanner balance={balance} />
 
-        {/* ── SEARCH BAR ──────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-2 mb-5">
-          {/* Mobile filter button */}
-          <button onClick={() => setMobileFilterOpen(true)}
-            className="lg:hidden flex items-center gap-2 px-3.5 py-2.5 border border-gray-200
-              rounded-xl bg-white text-sm font-semibold text-gray-700 hover:border-[#A7D129] transition shrink-0">
-            <SlidersHorizontal size={15} />
-            Filtres
-          </button>
+        {/* SEARCH BAR + FILTERS (same row) */}
+        <div className="flex items-center gap-2 mb-5 flex-wrap">
 
-          <div className="flex flex-1 items-center border border-gray-200 rounded-xl
-            px-3.5 py-1 bg-white shadow-sm hover:border-[#2D5016]/30 transition-colors">
-            <svg className="w-4 h-4 text-gray-300 shrink-0 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Ex : développeur React, comptable Casablanca..."
-              value={searchInput}
-              className="flex-1 outline-none text-sm text-gray-700 bg-transparent py-2"
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            />
-            {searchInput && (
-              <button onClick={() => { setSearchInput(""); handleFilter({ search: undefined }); }}
-                className="mr-1 text-gray-300 hover:text-gray-500 transition">
-                <X size={14} />
-              </button>
-            )}
-            <button onClick={handleSearch}
-              className="ml-1 px-4 py-1.5 rounded-lg bg-[#2D5016] text-white text-sm font-semibold
-                hover:bg-[#1a2e0a] transition shrink-0">
+          {/* Advanced filter button — left */}
+          <CandidateFilter onFilter={handleFilter} />
+
+          {/* Combined search bar: keyword + location */}
+          <div className="flex flex-1 flex-col sm:flex-row gap-2 sm:gap-0
+            sm:items-center sm:border sm:border-gray-200 sm:rounded-2xl sm:bg-white
+            sm:shadow-sm sm:hover:border-[#2D5016]/30 sm:transition-colors min-w-[280px]">
+
+            {/* Keyword */}
+            <div className="flex items-center gap-2 px-3.5 py-1
+              border border-gray-200 rounded-xl bg-white sm:border-0 sm:rounded-none sm:flex-1 sm:bg-transparent">
+              <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Ex : développeur full stack..."
+                value={searchInput}
+                className="flex-1 outline-none text-sm text-gray-700 bg-transparent py-2"
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              />
+              {searchInput && (
+                <button onClick={() => { setSearchInput(""); }}
+                  className="text-gray-300 hover:text-gray-500 transition">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div className="hidden sm:block w-px h-7 bg-gray-200 shrink-0" />
+
+            {/* Location */}
+            <div className="flex items-center px-3.5 py-1
+              border border-gray-200 rounded-xl bg-white sm:border-0 sm:rounded-none sm:flex-1 sm:bg-transparent">
+              <LocationCombobox
+                value={locationValue}
+                onChange={setLocationValue}
+                placeholder="Ville, région..."
+              />
+            </div>
+
+            {/* Search button */}
+            <button
+              onClick={handleSearch}
+              className="mx-1.5 my-1.5 px-5 py-2.5 rounded-xl bg-[#2D5016] text-white text-sm font-bold
+                hover:bg-[#1a2e0a] transition-colors shrink-0 shadow-sm"
+            >
               Rechercher
             </button>
           </div>
+
+          {/* Sector / category select */}
+          <div className="relative flex-1 min-w-[160px] max-w-[240px]">
+            <select
+              value={sectorInput}
+              onChange={(e) => setSectorInput(e.target.value)}
+              className="w-full appearance-none border border-gray-200 rounded-xl px-3.5 py-[11px] text-sm
+                bg-white outline-none focus:border-[#2D5016]/40 text-gray-700 shadow-sm
+                hover:border-gray-300 transition pr-8"
+            >
+              <option value="">Tous les secteurs</option>
+              {categories.map((c) => (
+                <option key={c.slug} value={c.slug}>{c.name}</option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          </div>
         </div>
 
-        {/* ── MAIN LAYOUT ─────────────────────────────────────────────────── */}
-        <div className="flex gap-6">
+        {/* RESULTS */}
+        <main className="min-w-0">
 
-          {/* Sidebar — desktop only */}
-          <aside className="hidden lg:block w-[272px] shrink-0">
-            <div className="sticky top-[80px]">
-              <CandidateFilter onFilter={handleFilter} />
+          {/* Results header: count + sort */}
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div>
+              {!loading && pagination && (
+                <p className="text-sm text-gray-500">
+                  <span className="font-bold text-gray-800">{pagination.total}</span> candidat{pagination.total > 1 ? "s" : ""} trouvé{pagination.total > 1 ? "s" : ""}
+                </p>
+              )}
             </div>
-          </aside>
+            <SortDropdown value={sortBy} onChange={setSortBy} />
+          </div>
 
-          {/* Results */}
-          <main className="flex-1 min-w-0">
+          {/* Active filter pills */}
+          <ActiveFilterPills filters={filters} onRemove={handleRemoveFilter} />
 
-            {/* Results header: count + sort */}
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <div>
-                {!loading && pagination && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-bold text-gray-800">{pagination.total}</span> candidat{pagination.total > 1 ? "s" : ""} trouvé{pagination.total > 1 ? "s" : ""}
-                  </p>
-                )}
-              </div>
-              <SortDropdown value={sortBy} onChange={setSortBy} />
+          {/* Cards grid */}
+          {loading ? (
+            <SkeletonGrid />
+          ) : sortedCandidates.length === 0 ? (
+            <div className="text-center py-24 bg-white rounded-2xl border border-gray-100">
+              <div className="text-5xl mb-4">🔍</div>
+              <p className="text-lg font-semibold text-gray-700">Aucun candidat trouvé</p>
+              <p className="text-sm text-gray-400 mt-1">Essayez de modifier vos filtres</p>
             </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {sortedCandidates.map((c) => (
+                <CandidateCard
+                  key={c.id}
+                  candidate={c}
+                  onUnlock={handleUnlock}
+                  unlocking={unlockingId === c.id}
+                  onToggleFavorite={handleToggleFavorite}
+                  togglingFavorite={togglingFavoriteId === c.id}
+                />
+              ))}
+            </div>
+          )}
 
-            {/* Active filter pills */}
-            <ActiveFilterPills filters={filters} onRemove={handleRemoveFilter} />
-
-            {/* Cards grid */}
-            {loading ? (
-              <SkeletonGrid />
-            ) : sortedCandidates.length === 0 ? (
-              <div className="text-center py-24 bg-white rounded-2xl border border-gray-100">
-                <div className="text-5xl mb-4">🔍</div>
-                <p className="text-lg font-semibold text-gray-700">Aucun candidat trouvé</p>
-                <p className="text-sm text-gray-400 mt-1">Essayez de modifier vos filtres</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {sortedCandidates.map((c) => (
-                  <CandidateCard
-                    key={c.id}
-                    candidate={c}
-                    onUnlock={handleUnlock}
-                    unlocking={unlockingId === c.id}
-                    onToggleFavorite={handleToggleFavorite}
-                    togglingFavorite={togglingFavoriteId === c.id}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Pagination */}
-            {pagination && pagination.totalPages > 1 && (
-              <div className="flex justify-center gap-1.5 mt-8">
-                {[...Array(pagination.totalPages)].map((_, i) => (
-                  <button key={i} onClick={() => handlePageChange(i + 1)}
-                    className={`w-9 h-9 rounded-full text-sm font-medium transition
-                      ${pagination.page === i + 1
-                        ? "bg-[#A7D129] text-white shadow-sm"
-                        : "bg-white text-[#2D5016] border border-gray-200 hover:border-[#A7D129]"
-                      }`}>
-                    {i + 1}
-                  </button>
-                ))}
-              </div>
-            )}
-          </main>
-        </div>
+          {/* Pagination */}
+          {pagination && pagination.totalPages > 1 && (
+            <div className="flex justify-center gap-1.5 mt-8">
+              {[...Array(pagination.totalPages)].map((_, i) => (
+                <button key={i} onClick={() => handlePageChange(i + 1)}
+                  className={`w-9 h-9 rounded-full text-sm font-medium transition
+                    ${pagination.page === i + 1
+                      ? "bg-[#A7D129] text-white shadow-sm"
+                      : "bg-white text-[#2D5016] border border-gray-200 hover:border-[#A7D129]"
+                    }`}>
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+          )}
+        </main>
       </div>
-
-      {/* Mobile filter sheet */}
-      <MobileFilterSheet
-        open={mobileFilterOpen}
-        onClose={() => setMobileFilterOpen(false)}
-        onFilter={handleFilter}
-      />
 
       {alertModalOpen && (
         <HeadhunterAlertModal

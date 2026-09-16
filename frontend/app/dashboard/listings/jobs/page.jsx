@@ -16,10 +16,10 @@ import { loadJobDraft, clearJobDraft, formatRelativeTime } from "@/lib/jobDraft"
 const fmtDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("fr-FR", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
     : "";
 
 const CONTRACT_LABELS = {
@@ -36,10 +36,10 @@ const CONTRACT_LABELS = {
 
 // ─── Stats bar ────────────────────────────────────────────────────────────────
 function StatsBar({ jobs }) {
-  const active    = jobs.filter((j) => j.status === "APPROVED").length;
-  const pending   = jobs.filter((j) => j.status === "PENDING").length;
+  const active = jobs.filter((j) => j.status === "APPROVED").length;
+  const pending = jobs.filter((j) => j.status === "PENDING").length;
   const totalApps = jobs.reduce((sum, j) => sum + (j._count?.applications ?? 0), 0);
-  const newApps   = jobs.reduce((sum, j) => sum + (j._count?.newApplications ?? 0), 0);
+  const newApps = jobs.reduce((sum, j) => sum + (j._count?.newApplications ?? 0), 0);
 
   const stats = [
     {
@@ -160,7 +160,7 @@ function JobCard({ job, onDelete, onViewApplications }) {
                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
                 <circle cx="12" cy="9" r="2.5" />
               </svg>
-               {job.city || "—"}
+              {job.city || "—"}
               <span className="opacity-30">·</span>
               {job.category?.name || "—"}
               {job.contractType && (
@@ -196,11 +196,10 @@ function JobCard({ job, onDelete, onViewApplications }) {
             <button
               onClick={(e) => { e.stopPropagation(); onViewApplications({ id: job.id, title: job.title }); }}
               title="Voir les candidatures"
-              className={`relative flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg transition ${
-                appCount > 0
+              className={`relative flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg transition ${appCount > 0
                   ? "text-[#2D5016] bg-[#E8F5D0] hover:bg-[#A7D129]/30"
                   : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-              }`}
+                }`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -286,8 +285,8 @@ function DashboardContent() {
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({});
-const [page, setPage] = useState(1);
-const [selectedJob, setSelectedJob] = useState(null);
+  const [page, setPage] = useState(1);
+  const [selectedJob, setSelectedJob] = useState(null);
   const [jobToDelete, setJobToDelete] = useState(null);
   const [draft, setDraft] = useState(null);
 
@@ -302,7 +301,7 @@ const [selectedJob, setSelectedJob] = useState(null);
     }
   }, []);
 
- useEffect(() => { loadAll(); }, []);
+  useEffect(() => { loadAll(); }, []);
   useEffect(() => { load(); }, [page, filters]);
   useEffect(() => {
     if (user?.id) setDraft(loadJobDraft(user.id));
@@ -312,7 +311,7 @@ const [selectedJob, setSelectedJob] = useState(null);
     try {
       const res = await jobsService.getMyJobs({ page: 1, limit: 100 }, token);
       setAllJobs(res.jobs || []);
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const load = async () => {
@@ -322,10 +321,10 @@ const [selectedJob, setSelectedJob] = useState(null);
         {
           page,
           limit: 10,
-          ...(filters.status       && { status: filters.status }),
-          ...(filters.city         && { location: filters.city }),
+          ...(filters.status && { status: filters.status }),
+          ...(filters.city && { location: filters.city }),
           ...(filters.contractType && { contractType: filters.contractType }),
-          ...(filters.search       && { search: filters.search }),
+          ...(filters.search && { search: filters.search }),
         },
         token,
       );
@@ -364,7 +363,7 @@ const [selectedJob, setSelectedJob] = useState(null);
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-5">
 
-       {/* Stats bar */}
+        {/* Stats bar */}
         {allJobs.length > 0 && <StatsBar jobs={allJobs} />}
 
         {/* Brouillon en cours */}
@@ -443,11 +442,10 @@ const [selectedJob, setSelectedJob] = useState(null);
               <button
                 key={i}
                 onClick={() => setPage(i + 1)}
-                className={`w-9 h-9 rounded-full text-sm font-medium transition ${
-                  page === i + 1
+                className={`w-9 h-9 rounded-full text-sm font-medium transition ${page === i + 1
                     ? "bg-primary-dark text-white"
                     : "bg-white border border-gray-200 text-gray-600 hover:border-primary-dark"
-                }`}
+                  }`}
               >
                 {i + 1}
               </button>
@@ -456,7 +454,7 @@ const [selectedJob, setSelectedJob] = useState(null);
         )}
       </div>
 
-{selectedJob && (
+      {selectedJob && (
         <ApplicationsDrawer
           jobId={selectedJob.id}
           jobTitle={selectedJob.title}

@@ -1,147 +1,225 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { headhunterService } from '@/services/headhunterService';
-import { useAuth } from '@/context/AuthContext';
-import {
-  buildRegionOptions,
-  buildCityOptions,
-  FilterOption,
-  FilterSection,
-  FilterHeader,
-  ToggleRow,
-} from '@/components/shared/FilterPanel';
+import { useState, useRef, useEffect } from 'react';
+import { SlidersHorizontal, X } from 'lucide-react';
+import { OptionRow } from '@/components/shared/FilterDropdown';
 
 const CONTRACT_OPTIONS = [
-  { value: 'CDI', label: 'CDI' }, { value: 'CDD', label: 'CDD' },
-  { value: 'STAGE', label: 'Stage' }, { value: 'FREELANCE', label: 'Freelance' },
-  { value: 'INTERIM', label: 'Intérim' }, { value: 'ALTERNANCE', label: 'Alternance' },
-  { value: 'ANAPEC', label: 'Anapec' }, { value: 'TEMPS_PARTIEL', label: 'Temps partiel' },
+  { value: 'CDI',          label: 'CDI' },
+  { value: 'CDD',          label: 'CDD' },
+  { value: 'STAGE',        label: 'Stage' },
+  { value: 'FREELANCE',    label: 'Freelance' },
+  { value: 'INTERIM',      label: 'Intérim' },
+  { value: 'ALTERNANCE',   label: 'Alternance' },
+  { value: 'ANAPEC',       label: 'Anapec' },
+  { value: 'TEMPS_PARTIEL',label: 'Temps partiel' },
 ];
 
 const EDUCATION_OPTIONS = [
-  { value: 'BEFORE_BAC', label: 'Qualification avant Bac' }, { value: 'BAC', label: 'Bac' },
-  { value: 'BAC_PLUS_1', label: 'Bac+1' }, { value: 'BAC_PLUS_2', label: 'Bac+2' },
-  { value: 'BAC_PLUS_3', label: 'Bac+3' }, { value: 'BAC_PLUS_4', label: 'Bac+4' },
+  { value: 'BEFORE_BAC',      label: 'Avant Bac' },
+  { value: 'BAC',             label: 'Bac' },
+  { value: 'BAC_PLUS_1',      label: 'Bac+1' },
+  { value: 'BAC_PLUS_2',      label: 'Bac+2' },
+  { value: 'BAC_PLUS_3',      label: 'Bac+3' },
+  { value: 'BAC_PLUS_4',      label: 'Bac+4' },
   { value: 'BAC_PLUS_5_PLUS', label: 'Bac+5 et plus' },
 ];
 
 const EXPERIENCE_OPTIONS = [
   { value: 'STUDENT_FRESH_GRAD', label: 'Étudiant / Jeune diplômé' },
-  { value: 'JUNIOR_LESS_2', label: 'Débutant < 2 ans' },
-  { value: 'MID_2_TO_5', label: 'Entre 2 et 5 ans' },
-  { value: 'SENIOR_5_TO_10', label: 'Entre 5 et 10 ans' },
-  { value: 'EXPERT_PLUS_10', label: '> 10 ans' },
+  { value: 'JUNIOR_LESS_2',      label: '< 2 ans' },
+  { value: 'MID_2_TO_5',         label: '2 – 5 ans' },
+  { value: 'SENIOR_5_TO_10',     label: '5 – 10 ans' },
+  { value: 'EXPERT_PLUS_10',     label: '> 10 ans' },
 ];
 
+const EMPTY = {
+  educationLevel: '', experienceLevel: '', contractType: '',
+  availableOnly: true,
+};
+
 export default function CandidateFilter({ onFilter }) {
-  const { token } = useAuth();
-  const [open, setOpen] = useState({ categorySlug: true, educationLevel: false, experienceLevel: false, contractType: false, region: false, city: false });
-  const [selected, setSelected] = useState({});
-  const [availableOnly, setAvailableOnly] = useState(true);
-  const [counts, setCounts] = useState(null);
-  const [categories, setCategories] = useState([]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [drawerOpen,   setDrawerOpen]   = useState(false);
+  const [filters,      setFilters]      = useState(EMPTY);
+  const filtersRef = useRef(filters);
+  useEffect(() => { filtersRef.current = filters; }, [filters]);
 
-  const selectedRegion = (selected.region || [])[0] || null;
-  const selectedCity = (selected.city || [])[0] || null;
-
-  useEffect(() => {
-    if (!token) return;
-    headhunterService.getFiltersCount(token).then((json) => { if (json.success) setCounts(json.data); }).catch(() => {});
-  }, [token]);
-
-  useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs/categories`)
-      .then((r) => r.json())
-      .then((d) => { if (d.success) setCategories(d.data); })
-      .catch(() => {});
-  }, []);
-  const regionOptions = useMemo(() => buildRegionOptions(), []);
-  const cityOptions = useMemo(() => buildCityOptions(selectedRegion), [selectedRegion]);
-
-  const toggleSection = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
-
-  const emit = (newSelected, newAvailableOnly) => {
-    const filters = {};
-    ['categorySlug', 'educationLevel', 'experienceLevel', 'contractType'].forEach((k) => {
-      const vals = newSelected[k] || [];
-      filters[k] = vals.length > 0 ? vals[0] : undefined;
+  const emitClean = (obj) => {
+    const clean = {};
+    Object.entries(obj).forEach(([k, v]) => {
+      if (k === 'availableOnly') { if (v) clean[k] = 'true'; }
+      else if (v) clean[k] = v;
     });
-    const city = (newSelected.city || [])[0];
-    const region = (newSelected.region || [])[0];
-    filters.city = city || undefined;
-    filters.region = !city && region ? region : undefined;
-    filters.availableOnly = newAvailableOnly ? 'true' : undefined;
-    onFilter(filters);
+    onFilter(clean);
   };
 
-  const handleCheck = (key, value) => {
-    const current = (selected[key] || [])[0];
-    let newVal;
-    if (key === 'region') {
-      newVal = { ...selected, region: current === value ? [] : [value], city: [] };
-    } else {
-      newVal = { ...selected, [key]: current === value ? [] : [value] };
-    }
-    setSelected(newVal);
-    emit(newVal, availableOnly);
-  };
-
-  const handleAvailableToggle = () => {
-    const next = !availableOnly;
-    setAvailableOnly(next);
-    emit(selected, next);
+  const update = (key, value, opts = {}) => {
+    const next = { ...filtersRef.current, [key]: value };
+    filtersRef.current = next;
+    setFilters(next);
+    if (opts.immediate) emitClean(next);
   };
 
   const handleReset = () => {
-    setSelected({});
-    setAvailableOnly(true);
+    filtersRef.current = EMPTY;
+    setFilters(EMPTY);
+    setDropdownOpen(false);
     onFilter({ availableOnly: 'true' });
   };
 
-  const totalSelected = Object.values(selected).flat().length;
+  const anyActive = !!(
+    filters.educationLevel || filters.experienceLevel || filters.contractType ||
+    !filters.availableOnly
+  );
 
-  const categoryOptions = categories.map((c) => ({ value: c.slug, label: c.name }));
+  const FiltersPanel = () => (
+    <div className="space-y-5">
+      {/* Available toggle */}
+      <div
+        onClick={() => update('availableOnly', !filters.availableOnly, { immediate: true })}
+        className={`flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${
+          filters.availableOnly ? 'bg-[#E8F5D0]' : 'hover:bg-gray-50'
+        }`}
+      >
+        <span className="text-sm font-medium text-gray-700">✅ Disponibles uniquement</span>
+        <div className={`w-9 h-5 rounded-full transition-colors flex items-center px-0.5 ${
+          filters.availableOnly ? 'bg-[#A7D129]' : 'bg-gray-200'
+        }`}>
+          <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${
+            filters.availableOnly ? 'translate-x-4' : 'translate-x-0'
+          }`} />
+        </div>
+      </div>
 
-  const staticSections = [
-    { key: 'categorySlug', label: 'Métier', icon: '🏢', options: categoryOptions, countsMap: {} },
-    { key: 'educationLevel', label: "Niveau d'études", icon: '🎓', options: EDUCATION_OPTIONS, countsMap: counts?.educationLevel || {} },
-    { key: 'experienceLevel', label: "Niveau d'expérience", icon: '💼', options: EXPERIENCE_OPTIONS, countsMap: counts?.experienceLevel || {} },
-    { key: 'contractType', label: 'Contrat recherché', icon: '📄', options: CONTRACT_OPTIONS, countsMap: counts?.contractType || {} },
-  ];
+      {/* Contract */}
+      <div>
+        <p className="text-xs font-bold text-gray-400 uppercase mb-2">Contrat recherché</p>
+        <div className="space-y-1">
+          {CONTRACT_OPTIONS.map((o) => (
+            <OptionRow
+              key={o.value}
+              label={o.label}
+              isChecked={filters.contractType === o.value}
+              onClick={() => update('contractType', filters.contractType === o.value ? '' : o.value, { immediate: true })}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Experience */}
+      <div>
+        <p className="text-xs font-bold text-gray-400 uppercase mb-2">Expérience</p>
+        <div className="space-y-1">
+          {EXPERIENCE_OPTIONS.map((o) => (
+            <OptionRow
+              key={o.value}
+              label={o.label}
+              isChecked={filters.experienceLevel === o.value}
+              onClick={() => update('experienceLevel', filters.experienceLevel === o.value ? '' : o.value, { immediate: true })}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Education */}
+      <div>
+        <p className="text-xs font-bold text-gray-400 uppercase mb-2">Niveau d'études</p>
+        <div className="space-y-1">
+          {EDUCATION_OPTIONS.map((o) => (
+            <OptionRow
+              key={o.value}
+              label={o.label}
+              isChecked={filters.educationLevel === o.value}
+              onClick={() => update('educationLevel', filters.educationLevel === o.value ? '' : o.value, { immediate: true })}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-      <FilterHeader title="Filtrer les candidats" totalSelected={totalSelected} onReset={handleReset} />
+    <div className="relative">
+      {/* ══ DESKTOP button ══ */}
+      <div className="hidden sm:block">
+        <button
+          type="button"
+          onClick={() => setDropdownOpen((v) => !v)}
+          className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all shadow-sm ${
+            anyActive
+              ? 'border-[#2D5016] bg-[#E8F5D0] text-[#2D5016]'
+              : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-gray-800'
+          }`}
+        >
+          <SlidersHorizontal size={15} className="shrink-0" />
+          <span className="hidden lg:inline whitespace-nowrap">Filtres avancés</span>
+          {anyActive && (
+            <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#A7D129] border-2 border-white" />
+          )}
+        </button>
 
-      <ToggleRow icon="✅" label="Disponibles uniquement" checked={availableOnly} onToggle={handleAvailableToggle} />
+        {dropdownOpen && <div className="fixed inset-0 z-[99]" onClick={() => setDropdownOpen(false)} />}
 
-      {staticSections.map((section) => (
-        <FilterSection key={section.key} icon={section.icon} label={section.label} badge={(selected[section.key] || []).length} isOpen={open[section.key]} onToggle={() => toggleSection(section.key)}>
-          <div className="px-3 pb-3 space-y-0.5">
-            {section.options.map((opt) => (
-              <FilterOption key={opt.value} label={opt.label} count={section.countsMap?.[opt.value]}
-                isChecked={(selected[section.key] || []).includes(opt.value)} onClick={() => handleCheck(section.key, opt.value)} />
-            ))}
+        {dropdownOpen && (
+          <div className="absolute left-0 top-[calc(100%+6px)] w-80 max-h-[75vh] overflow-y-auto bg-white rounded-xl border border-gray-200 shadow-xl z-[100] p-4">
+            <FiltersPanel />
+            {anyActive && (
+              <button
+                type="button"
+                onClick={handleReset}
+                className="mt-4 w-full flex items-center justify-center gap-2 text-sm font-medium text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <X size={14} />
+                Réinitialiser les filtres
+              </button>
+            )}
           </div>
-        </FilterSection>
-      ))}
+        )}
+      </div>
 
-      <FilterSection icon="🗺️" label="Région" badge={selectedRegion ? 1 : 0} isOpen={open.region} onToggle={() => toggleSection('region')}>
-        <div className="px-3 pb-3 space-y-0.5 max-h-52 overflow-y-auto">
-          {regionOptions.map((opt) => (
-            <FilterOption key={opt.value} label={opt.label} isChecked={selectedRegion === opt.value} onClick={() => handleCheck('region', opt.value)} />
-          ))}
-        </div>
-      </FilterSection>
+      {/* ══ MOBILE button ══ */}
+      <div className="sm:hidden">
+        <button
+          type="button"
+          onClick={() => setDrawerOpen(true)}
+          className={`relative flex items-center gap-2 px-4 py-2.5 rounded-full border text-sm font-semibold transition-colors ${
+            anyActive ? 'border-[#2D5016] bg-[#E8F5D0] text-[#2D5016]' : 'border-gray-300 bg-gray-50 text-gray-600'
+          }`}
+        >
+          <SlidersHorizontal size={15} />
+          Filtres
+          {anyActive && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#A7D129] border-2 border-white" />}
+        </button>
 
-      <FilterSection icon="📍" label={selectedRegion ? `Ville — ${selectedRegion}` : 'Ville'} badge={selectedCity ? 1 : 0} isOpen={open.city} onToggle={() => toggleSection('city')}>
-        <div className="px-3 pb-3 space-y-0.5 max-h-52 overflow-y-auto">
-          {cityOptions.map((opt) => (
-            <FilterOption key={opt.value} label={opt.label} isChecked={selectedCity === opt.value} onClick={() => handleCheck('city', opt.value)} />
-          ))}
-        </div>
-      </FilterSection>
+        {drawerOpen && (
+          <div className="fixed inset-0 z-[200]">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setDrawerOpen(false)} />
+            <div className="absolute top-0 left-0 h-full w-[85%] max-w-[360px] bg-white shadow-2xl overflow-y-auto">
+              <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100 sticky top-0 bg-white z-10">
+                <span className="font-bold text-gray-800 text-sm">Filtres avancés</span>
+                <button type="button" onClick={() => setDrawerOpen(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100">
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="p-4"><FiltersPanel /></div>
+              <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 flex gap-3">
+                {anyActive && (
+                  <button type="button" onClick={() => { handleReset(); setDrawerOpen(false); }}
+                    className="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-gray-600 font-semibold text-sm hover:bg-gray-50 transition">
+                    Réinitialiser
+                  </button>
+                )}
+                <button type="button" onClick={() => setDrawerOpen(false)}
+                  className="flex-1 py-2.5 bg-[#2D5016] text-white rounded-xl font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition">
+                  Voir les résultats
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
