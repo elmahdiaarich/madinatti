@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { cities } from 'morocco-cities';
+import { isStrongPassword, PASSWORD_MESSAGE } from '@/lib/passwordPolicy.mjs';
 
 const citiesByRegion = cities.reduce((acc, city) => {
   if (!acc[city.region_name]) acc[city.region_name] = [];
@@ -35,7 +36,7 @@ export default function InlineRegisterSection() {
   const validate = () => {
     if (!formData.name) return 'Nom requis';
     if (!formData.email.includes('@')) return 'Email invalide';
-    if (formData.password.length < 6) return 'Mot de passe trop court (min. 6 caractères)';
+    if (!isStrongPassword(formData.password)) return PASSWORD_MESSAGE;
     if (!formData.phone) return 'Téléphone requis';
     if (!formData.city) return 'Ville requise';
     if (!agreed) return "Veuillez accepter les conditions d'utilisation";

@@ -207,6 +207,10 @@ test('event create derives mainImage from gallery cover and stores a single cove
   const eventService = loadEventServiceWithMock(prisma);
 
   const created = await eventService.createEvent({
+    status: 'PUBLISHED',
+    verified: true,
+    featured: true,
+    organizerId: 'other-user',
     title: 'Concert Images Test',
     description: 'Description evenement images test',
     categoryId: 'cat-1',
@@ -224,6 +228,10 @@ test('event create derives mainImage from gallery cover and stores a single cove
   }, { userId: 'owner-1', role: 'business' });
 
   assert.equal(created.mainImage, 'https://example.com/b.jpg');
+  assert.equal(createdData.status, 'PENDING_REVIEW');
+  assert.equal(createdData.verified, false);
+  assert.equal(createdData.featured, false);
+  assert.equal(createdData.organizerId, 'owner-1');
   assert.equal(createdData.mainImage, 'https://example.com/b.jpg');
   assert.deepEqual(createdData.gallery.map((image) => image.isCover), [false, true, false]);
   assert.equal(dynamicRows.length, 1);

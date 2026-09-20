@@ -119,7 +119,7 @@ async function updateStatus(req, res) {
 
 async function getOccurrences(req, res) {
   try {
-    const data = await eventService.getOccurrences(req.params.id, req.query);
+    const data = await eventService.getOccurrences(req.params.id, req.query, req.user);
     if (!data) return res.status(404).json({ success: false, message: 'Evenement introuvable.' });
     res.json({ success: true, data });
   } catch (error) {

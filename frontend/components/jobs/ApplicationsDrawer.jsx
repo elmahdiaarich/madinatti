@@ -1,4 +1,5 @@
 'use client'
+import CvDownload from '@/components/shared/CvDownload';
 
 import { useEffect, useState, useCallback } from 'react'
 import { X, Download, ChevronDown, ChevronUp, Users } from 'lucide-react'
@@ -56,14 +57,11 @@ function ApplicantCard({ application, onRetain, isRetaining }) {
       <div className="px-4 pb-4 flex items-center gap-2 flex-wrap">
         {/* Télécharger CV */}
            {cvPath && (
-  <a
-    href={`${process.env.NEXT_PUBLIC_API_URL}/api/jobs/cv/download?url=${encodeURIComponent(cvPath)}&name=${encodeURIComponent(user?.name || 'Candidat')}`}
-    target="_blank"
-    rel="noopener noreferrer"
+  <CvDownload applicationId={id}
     className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-[#A7D129] bg-[#E8F5D0] text-[#2D5016] hover:bg-[#A7D129]/20 transition no-underline"
   >
     <Download size={12} /> Voir CV
-  </a>
+  </CvDownload>
 )}
 
         {/* Lettre de motivation */}

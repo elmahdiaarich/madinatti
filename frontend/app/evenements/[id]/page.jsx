@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { safeJsonLd } from "@/lib/safeJsonLd.mjs";
 import { CalendarDays, Globe, Mail, MapPin, Navigation, Phone, Share2, Ticket } from "lucide-react";
 import MapFrame from "@/components/shared/MapFrame";
 import EventFavoriteButton from "@/components/events/EventFavoriteButton";
@@ -102,7 +103,7 @@ export default async function EventDetailPage({ params }) {
 
   return (
     <main className="bg-gray-50">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
       <section className="bg-white">
         <div className="mx-auto grid max-w-6xl gap-8 px-6 py-8 lg:grid-cols-[1.2fr_.8fr]">
           <div>

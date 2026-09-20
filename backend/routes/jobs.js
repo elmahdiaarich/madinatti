@@ -19,7 +19,7 @@ const {
 } = require('../controllers/jobController');
 const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
-const { upload }     = require('../config/cloudinary');
+const { upload } = require('../config/cloudinary');
 const { createListingLimiter, applyLimiter } = require('../middlewares/rateLimiter');
 
 // ── Public ───────────────────────────────────────────────────────────────────
@@ -32,25 +32,8 @@ router.get('/favorites/me',      authMiddleware, getMyFavorites);
 router.get('/my',                authMiddleware, roleMiddleware('business'), getMyJobs);
 
 // ── CV download proxy (AVANT /:id) ───────────────────────────────────────────
-router.get('/cv/download', async (req, res) => {
-  const { url, name } = req.query
-  if (!url) return res.status(400).json({ message: 'URL manquante' })
-  
-  const axios = require('axios')
-  const safeName = name 
-    ? `CV_${name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\u00C0-\u017E]/g, '')}.pdf`
-    : 'CV.pdf'
-  
-  try {
-    const response = await axios.get(url, { responseType: 'arraybuffer' })
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', `inline; filename="${safeName}"`)
-    res.send(Buffer.from(response.data))
-  } catch (e) {
-    console.error('CV download error:', e.message)
-    res.status(500).json({ message: 'Erreur: ' + e.message })
-  }
-})
+router.get('/cv/download', authMiddleware, require('../controllers/cvController').downloadCv);
+router.get('/applications/my', authMiddleware, roleMiddleware('citizen'), getMyApplications);
 
 router.get('/my-applications', authMiddleware, roleMiddleware('business'), getBusinessApplications);
 
