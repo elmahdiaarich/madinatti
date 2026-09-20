@@ -16,7 +16,8 @@ import Footer from './Footer'
 
 export default function LayoutShell({ children }) {
   const pathname = usePathname()
-  const isAdmin  = pathname?.startsWith('/admin')
+  const isAdmin = pathname?.startsWith('/admin')
+  const isAuth = pathname?.startsWith('/auth')
   const navRef = useRef(null)
 
   useEffect(() => {
@@ -33,7 +34,7 @@ export default function LayoutShell({ children }) {
     return () => observer.disconnect()
   }, [])
 
-  if (isAdmin) {
+  if (isAdmin || isAuth) {
     // Le admin/layout.jsx gère son propre structure — on rend juste les enfants
     return <>{children}</>
   }

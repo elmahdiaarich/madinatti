@@ -1,12 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
 export default function BusinessAccountGate({ onClose }) {
-  const { addAccount } = useAuth();
-  const router = useRouter();
+  const { addAccount, switchAccount } = useAuth();
   const [mode, setMode] = useState('choice');
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
@@ -17,11 +15,12 @@ export default function BusinessAccountGate({ onClose }) {
     setError('');
     setLoading(true);
     try {
-      const res = await addAccount(form.email, form.password);
+      const res = await addAccount(form.email, form.password, { activate: false });
       if (res?.user?.role !== 'business') {
         setError("Ce compte n'est pas un compte business.");
         return;
       }
+      await switchAccount(res.user.id);
     } catch {
       setError('Email ou mot de passe incorrect');
     } finally {
@@ -51,17 +50,12 @@ export default function BusinessAccountGate({ onClose }) {
       </h2>
       <p className="text-sm text-gray-500 mb-6 leading-relaxed">
         Pour publier une annonce, vous avez besoin d'un compte business.
-        Votre compte citoyen reste actif — vous pouvez basculer entre les deux à tout moment.
+        Vous pouvez ajouter un compte business existant. La création ou conversion
+        d'un compte business depuis l'inscription n'est pas encore disponible.
       </p>
 
       {mode === 'choice' && (
         <div className="flex flex-col gap-3">
-          <button
-            onClick={() => router.push('/auth/register?type=business')}
-            className="w-full py-3 rounded-xl bg-[#2D5016] text-white font-bold text-sm hover:bg-[#A7D129] hover:text-[#2D5016] transition"
-          >
-            Créer un compte business
-          </button>
           <button
             onClick={() => setMode('add')}
             className="w-full py-3 rounded-xl border-2 border-[#2D5016] text-[#2D5016] font-bold text-sm hover:bg-[#E8F5D0] transition"

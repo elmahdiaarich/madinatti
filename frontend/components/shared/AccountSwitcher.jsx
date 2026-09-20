@@ -20,9 +20,14 @@ export default function AccountSwitcher() {
 
   const otherAccounts = accounts.filter(a => a.user.id !== user?.id)
 
-  const handleSwitch = (id) => {
-    switchAccount(id)
-    setOpen(false)
+  const handleSwitch = async (id) => {
+    setError('')
+    try {
+      await switchAccount(id)
+      setOpen(false)
+    } catch (error) {
+      setError(error.response?.data?.message || 'Ce compte n’est plus disponible')
+    }
   }
 
   const handleAdd = async (e) => {

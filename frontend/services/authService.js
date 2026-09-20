@@ -25,3 +25,10 @@ export const logout = async (token) => {
   })
   return response.data
 }
+
+export const logoutAll = async (token) => {
+  const response = await axios.post(`${API_URL}/api/auth/logout-all`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  return response.data
+}

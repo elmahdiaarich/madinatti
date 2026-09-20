@@ -325,7 +325,10 @@ async function getEventByIdOrSlug(idOrSlug, user) {
 
 function payloadToData(payload, user, existing) {
   const isAdmin = user?.role === 'admin';
-  const status = payload.status || (isAdmin ? 'PUBLISHED' : 'PENDING_REVIEW');
+  // Only moderators may publish. A supplied status is never a permission.
+  const status = isAdmin
+    ? (payload.status || 'PUBLISHED')
+    : (payload.status === 'DRAFT' ? 'DRAFT' : 'PENDING_REVIEW');
   const publishedAt = status === 'PUBLISHED' ? (existing?.publishedAt || new Date()) : existing?.publishedAt;
   const gallery = normalizeImages(payload.gallery);
   return {
@@ -336,7 +339,7 @@ function payloadToData(payload, user, existing) {
     categoryId: payload.categoryId,
     customSubsubcategory: optionalString(payload.customSubsubcategory),
     organizerName: payload.organizerName?.trim(),
-    organizerId: payload.organizerId || null,
+    organizerId: isAdmin ? (payload.organizerId || null) : user.userId,
     organizerPhone: optionalString(payload.organizerPhone),
     organizerEmail: optionalString(payload.organizerEmail),
     websiteUrl: optionalString(payload.websiteUrl),
@@ -504,8 +507,8 @@ async function getUserFavorites(userId) {
   return events.map((event) => serializeEvent(event));
 }
 
-async function getOccurrences(idOrSlug, filters = {}) {
-  const event = await prisma.event.findFirst({ where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] } });
+async function getOccurrences(idOrSlug, filters = {}, user) {
+  const event = await getEventByIdOrSlug(idOrSlug, user);
   if (!event) return null;
   const from = filters.from ? new Date(filters.from) : new Date();
   const to = filters.to ? new Date(filters.to) : new Date(Date.now() + 365 * 86400000);

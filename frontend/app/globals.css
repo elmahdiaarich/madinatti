@@ -73,13 +73,14 @@ html.dark .shadow-xl {
 
 /* register and login inputs */
 @layer components {
-  .input-green {
-    @apply bg-white border-2 border-[var(--color-primary-dark)] text-black rounded-lg p-3 outline-none transition focus:ring-2 focus:ring-[var(--color-primary)];
-  }
+.input-green {
+  @apply bg-white border border-gray-300 text-black rounded-lg p-3 text-sm outline-none transition
+         focus:border-[var(--color-primary-dark)] focus:ring-2 focus:ring-[var(--color-primary)]/20;
+}
 
-  .input-green:focus {
+  /* .input-green:focus {
     border-color: var(--color-primary-dark);
-  }
+  } */
 }
 
 /*for realestate create route*/

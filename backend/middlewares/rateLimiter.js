@@ -36,6 +36,15 @@ const forgotPasswordLimiter = rateLimit({
   legacyHeaders: false,
   handler,
 });
+const updatePasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  skip: skipAutomatedTests,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler,
+});
+
 // ── LISTINGS — Création  ──────────────────────────────────────────────
 const createListingLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -143,6 +152,7 @@ module.exports = {
   inquiryLimiter,
   reportLimiter,
   chatLimiter,
+  updatePasswordLimiter,
   // Ces deux étaient déjà déclarés (Phase 3) mais absents de cet objet
   // exports — les routes taskRequests.js / bookings.js recevaient donc
   // `undefined` comme middleware. Corrigé ici.

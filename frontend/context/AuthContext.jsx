@@ -4,11 +4,26 @@ import { createContext, useContext, useState, useEffect } from "react";
 import {
   login as loginService,
   logout as logoutService,
+  logoutAll as logoutAllService,
   register as registerService,
 } from "../services/authService";
 import axios from "axios";
 
 const AuthContext = createContext();
+const API_ME_URL = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`;
+
+function readStoredAccounts() {
+  if (typeof window === "undefined") return [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem("accounts") || "[]");
+    return Array.isArray(parsed)
+      ? parsed.filter((entry) => entry?.token && entry?.user?.id)
+      : [];
+  } catch {
+    localStorage.removeItem("accounts");
+    return [];
+  }
+}
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -22,9 +37,7 @@ export const AuthProvider = ({ children }) => {
       if (typeof window === "undefined") return;
 
       const storedToken = localStorage.getItem("token");
-      const storedAccounts = JSON.parse(
-        localStorage.getItem("accounts") || "[]",
-      );
+      const storedAccounts = readStoredAccounts();
 
       // Load accounts array into memory immediately on start
       setAccounts(storedAccounts);
@@ -46,14 +59,7 @@ export const AuthProvider = ({ children }) => {
         if (res.data?.user) {
           const freshUser = res.data.user;
 
-          // Prefer the role stored in localStorage over the JWT role
-          // because JWT may be stale (e.g. minted before completeProfile updated the role)
-          const storedEntry = storedAccounts.find(
-            (a) => a.user?.id === freshUser.id,
-          );
-          const resolvedRole = storedEntry?.user?.role || freshUser.role;
-          const mergedUser = { ...freshUser, role: resolvedRole };
-
+          const mergedUser = { ...freshUser };
           setUser(mergedUser);
 
           // Upsert without duplicating — deduplication effect below still handles the Set logic
@@ -156,21 +162,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logoutAll = async () => {
-    try {
-      await Promise.all(
-        accounts.map(async (acc) => {
-          try {
-            await logoutService(acc.token);
-          } catch (err) {
-            console.warn(
-              `Backend remote teardown failed for account: ${acc.user?.id}`,
-            );
-          }
-        }),
-      );
-    } catch (err) {
-      console.error("Global cleanup batch exception:", err);
-    }
+    if (!token) throw new Error("Session absente");
+    await logoutAllService(token);
 
     setUser(null);
     setToken(null);
@@ -191,33 +184,62 @@ export const AuthProvider = ({ children }) => {
     _upsertAccount(googleToken, googleUser);
   };
 
-  const updateUser = (updatedUser) => {
+  const updateUser = (updatedUser, replacementToken = token) => {
     if (!updatedUser) return;
     setUser(updatedUser);
-    _upsertAccount(token, updatedUser);
+    if (replacementToken) {
+      _upsertAccount(replacementToken, updatedUser);
+      if (replacementToken !== token) {
+        _setActiveAccount(replacementToken, updatedUser);
+      }
+    }
   };
 
-  const switchAccount = (accountUserId) => {
+  const switchAccount = async (accountUserId) => {
     const account = accounts.find((a) => a.user?.id === accountUserId);
-    if (!account) return;
-    _setActiveAccount(account.token, account.user);
+    if (!account) throw new Error("Compte introuvable");
+    try {
+      const res = await axios.get(
+        API_ME_URL,
+        { headers: { Authorization: `Bearer ${account.token}` } },
+      );
+      const freshUser = res.data?.user;
+      if (!freshUser) throw new Error("Session invalide");
+      _upsertAccount(account.token, freshUser);
+      _setActiveAccount(account.token, freshUser);
+      return freshUser;
+    } catch (error) {
+      if ([401, 403].includes(error.response?.status)) {
+        setAccounts((prev) => prev.filter((entry) => entry.token !== account.token));
+        if (typeof window !== "undefined") {
+          const stored = readStoredAccounts().filter((entry) => entry.token !== account.token);
+          localStorage.setItem("accounts", JSON.stringify(stored));
+        }
+      }
+      throw error;
+    }
   };
 
-  const addAccount = async (email, password) => {
+  const addAccount = async (email, password, { activate = true } = {}) => {
     // ✅ FIX: Check if this account is already in the list before logging in
     const alreadyAdded = accounts.find(
       (a) => a.user?.email?.toLowerCase() === email.toLowerCase(),
     );
     if (alreadyAdded) {
-      // Just switch to it instead of re-logging in
-      _setActiveAccount(alreadyAdded.token, alreadyAdded.user);
-      return { token: alreadyAdded.token, user: alreadyAdded.user };
+      const res = await axios.get(API_ME_URL, {
+        headers: { Authorization: `Bearer ${alreadyAdded.token}` },
+      });
+      const freshUser = res.data?.user;
+      if (!freshUser) throw new Error("Session invalide");
+      _upsertAccount(alreadyAdded.token, freshUser);
+      if (activate) _setActiveAccount(alreadyAdded.token, freshUser);
+      return { token: alreadyAdded.token, user: freshUser };
     }
 
     const response = await loginService({ email, password });
     if (response?.token && response?.user) {
       _upsertAccount(response.token, response.user);
-      _setActiveAccount(response.token, response.user);
+      if (activate) _setActiveAccount(response.token, response.user);
     }
     return response;
   };

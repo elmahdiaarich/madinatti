@@ -609,9 +609,14 @@ const Navbar = forwardRef(function Navbar(_props, ref) {
   };
 
   const handleLogoutAll = async () => {
-    setUserMenuOpen(false);
-    await logoutAll();
-    router.push("/");
+    try {
+      await logoutAll();
+      setUserMenuOpen(false);
+      router.push("/");
+    } catch (error) {
+      console.error("Logout all failed", error);
+      setAddError("Impossible de fermer toutes les sessions. Réessayez.");
+    }
   };
 
   const handleSwitch = async (accountId) => {
@@ -622,6 +627,7 @@ const Navbar = forwardRef(function Navbar(_props, ref) {
       setUserMenuOpen(false);
     } catch (err) {
       console.error("Account switch failed", err);
+      setAddError(err?.response?.data?.message || "Ce compte n'est plus disponible.");
     } finally {
       setSwitchingId(null);
     }
