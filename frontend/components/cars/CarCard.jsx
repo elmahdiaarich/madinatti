@@ -9,8 +9,8 @@ import ShareMenu from '@/components/shared/ShareMenu';
 import { Gauge, Fuel, Settings, Store } from 'lucide-react';
 
 const LISTING_TYPE_LABELS = {
-  SALE: { label: 'Vente', color: 'bg-[#2D5016] text-white' },
-  RENT: { label: 'Location', color: 'bg-[#A7D129] text-[#2D5016]' },
+  SALE: { label: 'Vente', color: 'bg-[#123524] text-white shadow-sm' },
+  RENT: { label: 'Location', color: 'bg-white/95 text-[#123524] border border-[#123524]/20 shadow-sm' },
 };
 
 const FUEL_LABELS = { PETROL: 'Essence', DIESEL: 'Diesel', ELECTRIC: 'Électrique', HYBRID: 'Hybride', LPG: 'GPL' };
@@ -220,12 +220,12 @@ export default function CarCard({ listing, initialFavorited = false, onFavoriteT
             {/* Badges overlay */}
             <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 z-10 max-w-[calc(100%-6rem)]">
               {listingType && (
-                <span className={`px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap ${listingType.color}`}>
+                <span className={`px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap ${listingType.color}`}>
                   {listingType.label}
                 </span>
               )}
               {listing.condition && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap bg-white/90 text-gray-700">
+                <span className="px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap bg-white/95 text-slate-700 shadow-sm ring-1 ring-black/5">
                   {COND_LABELS[listing.condition]}
                 </span>
               )}
