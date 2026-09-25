@@ -1,4 +1,5 @@
 "use client";
+import CvDownload from '@/components/shared/CvDownload';
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -248,10 +249,7 @@ function DetailPanel({ app, onClose, onStatusChange, updating }) {
           {app.cvPath && (
             <div>
               <p className="text-xs font-semibold text-gray-400 mb-2">CV</p>
-              <a
-                href={`${API}/api/jobs/cv/download?url=${encodeURIComponent(app.cvPath)}&name=${encodeURIComponent(app.user?.name || "candidat")}`}
-                target="_blank"
-                rel="noreferrer"
+              <CvDownload applicationId={app.id}
                 className="flex items-center gap-3 p-3 border border-gray-200 rounded-2xl hover:border-[#A7D129] hover:bg-[#E8F5D0]/30 transition group"
               >
                 <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
@@ -262,7 +260,7 @@ function DetailPanel({ app, onClose, onStatusChange, updating }) {
                   <p className="text-xs text-gray-400">Cliquer pour télécharger</p>
                 </div>
                 <Download size={16} className="text-gray-400 group-hover:text-[#2D5016] transition" />
-              </a>
+              </CvDownload>
             </div>
           )}
         </div>
@@ -641,16 +639,13 @@ export default function ApplicationsPage() {
                     <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
   <div className="flex justify-end items-center gap-2">
     {app.cvPath && (
-      <a
-        href={`${API}/api/jobs/cv/download?url=${encodeURIComponent(app.cvPath)}&name=${encodeURIComponent(app.user?.name || "candidat")}`}
-        target="_blank"
-        rel="noreferrer"
+      <CvDownload applicationId={app.id}
         title="Voir CV"
         className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#2D5016] bg-[#E8F5D0] border border-[#A7D129]/40 rounded-full hover:bg-[#dcf0b8] transition"
       >
         <Download size={13} />
         Voir CV
-      </a>
+      </CvDownload>
     )}
     <button
       onClick={() => setSelectedApp(app)}

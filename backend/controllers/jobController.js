@@ -454,9 +454,9 @@ const applyToJob = async (req, res) => {
       const stream = cloudinary.uploader.upload_stream(
         {
           folder: "cv",
-          resource_type: "auto",
-          public_id: `cv_${userId}_${jobId}_${Date.now()}`,
-          access_mode: "public",
+          resource_type: "raw",
+          public_id: `cv_${userId}_${jobId}_${Date.now()}.pdf`,
+          type: "authenticated",
         },
         (error, result) => {
           if (error) reject(error);

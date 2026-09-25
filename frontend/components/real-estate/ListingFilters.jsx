@@ -1,26 +1,13 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 
-const STATUS_OPTIONS = [
-  { label: 'Tous les statuts', value: '' },
-  { label: 'En attente', value: 'PENDING' },
-  { label: 'Approuvée', value: 'APPROVED' },
-  { label: 'Rejetée', value: 'REJECTED' },
-];
-
-const LISTING_TYPE_LABELS = { SALE: 'Vente', RENT: 'Location' };
-const PROPERTY_TYPE_LABELS = {
-  APARTMENT: 'Appartement', VILLA: 'Villa', HOUSE: 'Maison',
-  STUDIO: 'Studio', LAND: 'Terrain', OFFICE: 'Bureau', SHOP: 'Commerce',
-};
+const EMPTY_FILTERS = { status: "", listingType: "", city: "", search: "" };
+const TYPE_LABELS = { SALE: "Vente", RENT: "Location" };
+const SELECT_CLASS = "border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white text-gray-700";
 
 export default function ListingFilters({ onChange, showStatus = true, listings = [] }) {
-  const [filters, setFilters] = useState({
-    status: '', listingType: '', city: '', search: '',
-  });
-
-  // Derive unique values from actual listings
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
   const cities = [...new Set(listings.map(l => l.city).filter(Boolean))].sort();
   const listingTypes = [...new Set(listings.map(l => l.listingType).filter(Boolean))];
 
@@ -31,74 +18,56 @@ export default function ListingFilters({ onChange, showStatus = true, listings =
   };
 
   const reset = () => {
-    const empty = { status: '', listingType: '', city: '', search: '' };
+    const empty = { ...EMPTY_FILTERS };
     setFilters(empty);
     onChange(empty);
   };
 
-  const hasActive = Object.values(filters).some(v => v !== '');
+  const hasActive = Object.values(filters).some(value => value !== "");
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col gap-3">
-      {/* Search */}
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+        <span aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
         <input
+          aria-label="Rechercher par titre"
           value={filters.search}
-          onChange={e => set('search', e.target.value)}
+          onChange={e => set("search", e.target.value)}
           placeholder="Rechercher par titre..."
           className="w-full border border-gray-200 rounded-xl pl-8 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        {/* Status */}
         {showStatus && (
-          <select
-            value={filters.status}
-            onChange={e => set('status', e.target.value)}
-            className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-          >
-            {STATUS_OPTIONS.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
+          <select aria-label="Statut" value={filters.status} onChange={e => set("status", e.target.value)} className={SELECT_CLASS}>
+            <option value="">Tous les statuts</option>
+            <option value="PENDING">En attente</option>
+            <option value="APPROVED">Approuvée</option>
+            <option value="REJECTED">Rejetée</option>
           </select>
         )}
 
-        {/* Listing type — only show types that exist in user's listings */}
         {listingTypes.length > 1 && (
-          <select
-            value={filters.listingType}
-            onChange={e => set('listingType', e.target.value)}
-            className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-          >
-            <option value="">Vente & Location</option>
-            {listingTypes.map(t => (
-              <option key={t} value={t}>{LISTING_TYPE_LABELS[t] || t}</option>
+          <select aria-label="Type d'annonce" value={filters.listingType} onChange={e => set("listingType", e.target.value)} className={SELECT_CLASS}>
+            <option value="">Vente &amp; Location</option>
+            {listingTypes.map(type => (
+              <option key={type} value={type}>{TYPE_LABELS[type] ?? type}</option>
             ))}
           </select>
         )}
 
-        {/* City — only cities that exist in user's listings */}
         {cities.length > 1 && (
-          <select
-            value={filters.city}
-            onChange={e => set('city', e.target.value)}
-            className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-          >
+          <select aria-label="Ville" value={filters.city} onChange={e => set("city", e.target.value)} className={SELECT_CLASS}>
             <option value="">Toutes les villes</option>
-            {cities.map(c => (
-              <option key={c} value={c}>{c}</option>
+            {cities.map(city => (
+              <option key={city} value={city}>{city}</option>
             ))}
           </select>
         )}
 
-        {/* Reset */}
         {hasActive && (
-          <button
-            onClick={reset}
-            className="text-xs text-gray-400 hover:text-red-500 transition font-medium px-3 py-2 rounded-xl border border-gray-200 hover:border-red-200"
-          >
+          <button type="button" onClick={reset} className="text-xs text-gray-400 hover:text-red-500 transition font-medium px-3 py-2 rounded-xl border border-gray-200 hover:border-red-200">
             ✕ Réinitialiser
           </button>
         )}

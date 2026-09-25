@@ -1,4 +1,5 @@
 'use client'
+import CvDownload from '@/components/shared/CvDownload';
 
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/context/AuthContext'
@@ -6,6 +7,7 @@ import axios from 'axios'
 import { useToast } from '@/context/ToastContext'
 import { candidateProfileService } from '@/services/candidateProfileService'
 import { ALL_REGIONS, citiesByRegion } from '@/components/shared/FilterPanel'
+import { isStrongPassword, PASSWORD_MESSAGE } from '@/lib/passwordPolicy.mjs'
 
 const inputCls = "w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#A7D129]/40 focus:border-[#2D5016] transition bg-white"
 const disabledCls = "w-full border border-gray-100 rounded-xl px-3 py-2.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
@@ -232,17 +234,18 @@ export default function ProfilePage() {
       setPassError('Les mots de passe ne correspondent pas.')
       return
     }
-    if (passwords.newPassword.length < 6) {
-      setPassError('Le mot de passe doit faire au moins 6 caractères.')
+    if (!isStrongPassword(passwords.newPassword)) {
+      setPassError(PASSWORD_MESSAGE)
       return
     }
     setPassStatus('saving')
     try {
-      await axios.patch(
+      const res = await axios.patch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`,
         { currentPassword: passwords.currentPassword, newPassword: passwords.newPassword },
         { headers: { Authorization: `Bearer ${token}` } }
       )
+        updateUser(res.data.user, res.data.token)
       setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' })
       setPassStatus(null)
       toast.success('Mot de passe modifié avec succès !')
@@ -676,7 +679,7 @@ export default function ProfilePage() {
                 </span>
               )}
               {existingCvUrl && !cvFile && (
-                <a href={existingCvUrl} target="_blank" rel="noreferrer" className="text-xs text-[#2D5016] underline">Voir le CV actuel</a>
+                <CvDownload mine className="text-xs text-[#2D5016] underline">Voir le CV actuel</CvDownload>
               )}
             </div>
           </Field>

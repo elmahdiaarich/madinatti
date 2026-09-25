@@ -137,6 +137,7 @@ model User {
   avatar           String?
   city             String?
   roleId           String
+  tokenVersion Int @default(0)
   isActive         Boolean        @default(true)
   emailVerifiedAt  DateTime?
   createdAt        DateTime       @default(now())
@@ -205,6 +206,10 @@ model OAuthProvider {
   createdAt  DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
+
+  @@unique([provider, providerId])
+  @@unique([userId, provider])
+
 }
 
 model PasswordResetToken {

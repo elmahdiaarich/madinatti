@@ -107,7 +107,7 @@ const upsertMyCandidateProfile = async (req, res) => {
       }
       const cvUrl = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
-          { folder: "candidate-cv", resource_type: "auto", public_id: `cv_${userId}_${Date.now()}`, access_mode: "public" },
+          { folder: "candidate-cv", resource_type: "raw", public_id: `cv_${userId}_${Date.now()}.pdf`, type: "authenticated" },
           (error, result) => (error ? reject(error) : resolve(result.secure_url))
         );
         stream.end(req.file.buffer);

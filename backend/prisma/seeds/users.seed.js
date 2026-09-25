@@ -9,6 +9,12 @@ const CITIZENS = [
   { name: 'Karim Tazi',        email: 'karim.tazi@madinatti.ma',       city: 'Tanger',     phone: '0612345605' },
 ];
 
+const BUSINESSES = [
+  { name: 'Agence Demo Immo', email: 'business.immo@madinatti.ma', city: 'Casablanca', phone: '0620000001', companyName: 'Agence Demo Immo', companyWebsite: 'https://example.com' },
+  { name: 'Entreprise Demo Maroc', email: 'business.demo@madinatti.ma', city: 'Rabat', phone: '0620000002', companyName: 'Entreprise Demo Maroc', companyWebsite: 'https://example.com' },
+  { name: 'Services Demo Tanger', email: 'business.tanger@madinatti.ma', city: 'Tanger', phone: '0620000003', companyName: 'Services Demo Tanger', companyWebsite: 'https://example.com' },
+];
+
 async function seedUsers(prisma, roles) {
   console.log('🌱 Seeding citizen users...');
 
@@ -35,6 +41,37 @@ async function seedUsers(prisma, roles) {
   }
 
   console.log(`  ✅ ${created.length} citizen(s) ready (password: "citizen123" for all).`);
+  const businessPassword = process.env.SEED_BUSINESS_PASSWORD || 'business123';
+  const hashedBusinessPassword = await bcrypt.hash(businessPassword, 10);
+  const businessCreated = [];
+
+  for (const business of BUSINESSES) {
+    const user = await prisma.user.upsert({
+      where: { email: business.email },
+      update: {
+        roleId: roles.business.id,
+        isActive: true,
+        companyName: business.companyName,
+        companyWebsite: business.companyWebsite,
+      },
+      create: {
+        name: business.name,
+        email: business.email,
+        password: hashedBusinessPassword,
+        roleId: roles.business.id,
+        city: business.city,
+        phone: business.phone,
+        companyName: business.companyName,
+        companyWebsite: business.companyWebsite,
+        isActive: true,
+        emailVerifiedAt: new Date(),
+        profileCompleted: true,
+      },
+    });
+    businessCreated.push(user);
+  }
+
+  console.log(`  Business users ready: ${businessCreated.length} (password: "${businessPassword}")`);
   return created;
 }
 

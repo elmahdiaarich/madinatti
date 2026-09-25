@@ -1,4 +1,5 @@
 'use client';
+import CvDownload from '@/components/shared/CvDownload';
 
 import { useState, useEffect } from 'react';
 import { GraduationCap, Briefcase, MapPin, Languages, Heart, Clock, Lock, FileText, CheckCircle2, X } from 'lucide-react';
@@ -185,14 +186,11 @@ export default function CandidateCard({ candidate, onUnlock, unlocking, onSaveNo
           {isUnlocked ? (
             <>
              {candidate.cvUrl ? (
-                <a
-                  href={candidate.cvUrl}
-                  target="_blank"
-                  rel="noreferrer"
+                <CvDownload candidateId={candidate.id}
                   className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#2D5016] text-white font-bold rounded-xl hover:bg-[#3a6b1e] transition text-sm"
                 >
                   <FileText size={15} /> Voir le CV
-                </a>
+                </CvDownload>
               ) : (
                 <p className="text-xs text-gray-400 text-center italic">CV non fourni</p>
               )}

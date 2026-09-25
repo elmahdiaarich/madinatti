@@ -41,7 +41,6 @@ const geoRoutes = require("./routes/geo");
 const subscriptionRoutes = require('./routes/subscriptions');
 const shopRoutes = require('./routes/shops');
 
-const googleAuthRoutes = require("./routes/googleAuth")
 const pressRoutes = require('./routes/press');
 const { startPressScheduler } = require('./scheduled/scheduler');
 const prisma = require('./config/db');
@@ -106,7 +105,6 @@ async function seedEducationIfMissing() {
 }
 
 app.use('/api/auth', authRoutes)
-app.use("/api/auth", googleAuthRoutes)
 
 app.use('/api/real-estate', realEstateRoutes);
 app.use('/api/cars', carsRouter);

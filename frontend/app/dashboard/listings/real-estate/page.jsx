@@ -450,7 +450,7 @@ const [activeInquiryListingId, setActiveInquiryListingId] = useState(null);
         {/* Filters + Publish button */}
         <div className="flex items-center gap-3">
           <div className="flex-1 min-w-0">
-            <ListingFilters onChange={handleFiltersChange} showStatus={true} listings={listings} />
+            <ListingFilters onChange={handleFiltersChange} showStatus={true} listings={allListings} />
           </div>
           <Link
             href="/dashboard/listings/real-estate/create"

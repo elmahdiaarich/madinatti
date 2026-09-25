@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { cities } from 'morocco-cities';
+import { isStrongPassword, PASSWORD_MESSAGE } from '@/lib/passwordPolicy.mjs';
 
 // ─── Villes par région ────────────────────────────────────────────────────────
 const citiesByRegion = cities.reduce((acc, city) => {
@@ -58,7 +59,7 @@ export default function InlineRegisterSection({ jobTitle }) {
   const validate = () => {
     if (!formData.name) return 'Nom requis';
     if (!formData.email.includes('@')) return 'Email invalide';
-    if (formData.password.length < 6) return 'Mot de passe trop court (min. 6 caractères)';
+    if (!isStrongPassword(formData.password)) return PASSWORD_MESSAGE;
     if (!formData.phone) return 'Téléphone requis';
     if (!formData.city) return 'Ville requise';
     if (isBusiness && !formData.companyName) return 'Nom de la société requis';
@@ -158,8 +159,8 @@ export default function InlineRegisterSection({ jobTitle }) {
           </div>
         )}
 
-        {/* Role toggle */}
-        <div className="mb-4">
+        {/* Public registration always creates a citizen account. */}
+        <div className="hidden">
           <p className="text-[10px] font-bold uppercase tracking-widest text-[#7BA428] mb-1.5">Je suis</p>
           <div className="grid grid-cols-2 border-2 border-[#2D5016] rounded-xl overflow-hidden">
             {[{ v: 'citizen', label: '👤 Citoyen' }, { v: 'business', label: '🏢 Entreprise' }].map(({ v, label }) => (
