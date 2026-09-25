@@ -2,7 +2,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL + '/api';
 
 export const jobsService = {
   getJobs: async (params = {}) => {
-    const query = new URLSearchParams(params).toString();
+    // Strip undefined/null values — URLSearchParams converts them to the literal
+    // string "undefined" / "null" which breaks backend filters.
+    const clean = Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
+    );
+    const query = new URLSearchParams(clean).toString();
     const res = await fetch(`${API_URL}/jobs?${query}`);
     if (!res.ok) throw new Error('Erreur lors de la récupération des offres');
     return res.json();

@@ -33,28 +33,41 @@ const getJobs = async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // ── Location filter — same logic as real estate ─────────────────
+    // ── Location filter ──────────────────────────────────────────────
     let locationFilter = {};
     if (city) {
       locationFilter = { city: { contains: city, mode: 'insensitive' } };
     } else if (region) {
+      // Match directly on the stored `region` field (primary), OR fall back
+      // to expanding the region into its constituent cities for older listings
+      // that may not have the region field populated.
       const citiesInRegion = citiesByRegion[region] || [];
-      if (citiesInRegion.length > 0) {
-        locationFilter = { city: { in: citiesInRegion } };
-      }
+      locationFilter = {
+        OR: [
+          { region: { contains: region, mode: 'insensitive' } },
+          ...(citiesInRegion.length > 0
+            ? [{ city: { in: citiesInRegion } }]
+            : []),
+        ],
+      };
     }
     // ────────────────────────────────────────────────────────────────
 
     const where = {
       status: 'APPROVED',
-      ...locationFilter,
-      ...(search && {
-        OR: [
-          { title:       { contains: search, mode: 'insensitive' } },
-          { companyName: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } },
-        ],
-      }),
+      // Wrap location OR and search OR in AND so they don't overwrite each other
+      AND: [
+        ...(Object.keys(locationFilter).length > 0 ? [locationFilter] : []),
+        ...(search
+          ? [{
+              OR: [
+                { title:       { contains: search, mode: 'insensitive' } },
+                { companyName: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+              ],
+            }]
+          : []),
+      ],
       ...(categoryId     && { categoryId }),
       ...(contractType   && { contractType }),
       ...(educationLevel && { educationLevel: { hasSome: educationLevel.split(',') } }),

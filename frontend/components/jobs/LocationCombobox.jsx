@@ -5,14 +5,15 @@ import { cities } from 'morocco-cities';
 
 const ALL_CITIES = cities.map((c) => ({ name: c.name, region: c.region_name }));
 
-const REGION_CHIPS = [
-  { label: 'Rabat · Salé · Kénitra', value: 'Rabat-Salé-Kénitra' },
-  { label: 'Casablanca · Settat',     value: 'Casablanca-Settat' },
-  { label: 'Marrakech · Safi',        value: 'Marrakech-Safi' },
-  { label: 'Fès · Meknès',            value: 'Fès-Meknès' },
-  { label: 'Tanger · Tétouan',        value: 'Tanger-Tétouan-Al Hoceïma' },
-  { label: 'Souss · Massa',           value: 'Souss-Massa' },
-];
+// Derive all regions directly from the morocco-cities library so the list is
+// always complete and the value always exactly matches what's stored in the DB.
+const ALL_REGIONS = [...new Set(cities.map((c) => c.region_name))]
+  .sort((a, b) => a.localeCompare(b, 'fr'))
+  .map((region) => ({ label: region, value: region }));
+
+// Strip diacritics so typing "Kenitra" matches "Kénitra", "Sale" matches "Salé", etc.
+const normalize = (str) =>
+  str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 export default function LocationCombobox({ value, onChange, placeholder = 'Ville ou région...' }) {
   const [inputValue, setInputValue]   = useState(value?.label || '');
@@ -49,9 +50,9 @@ export default function LocationCombobox({ value, onChange, placeholder = 'Ville
       return;
     }
 
-    const q_lower = q.toLowerCase();
+    const q_lower = normalize(q);
     const matched = ALL_CITIES
-      .filter((c) => c.name.toLowerCase().includes(q_lower))
+      .filter((c) => normalize(c.name).includes(q_lower))
       .slice(0, 8);
     setSuggestions(matched);
     setOpen(true);
@@ -100,16 +101,16 @@ export default function LocationCombobox({ value, onChange, placeholder = 'Ville
       {/* Dropdown */}
       {open && (showChips || showSuggestions) && (
         <div
-          className="absolute top-full left-0 mt-1 z-50 bg-white rounded-xl shadow-lg overflow-hidden"
-          style={{ minWidth: '260px' }}
+          className="absolute top-full left-0 mt-1 z-50 bg-white rounded-xl shadow-lg overflow-y-auto"
+          style={{ minWidth: '260px', maxHeight: '320px' }}
         >
           {/* Region list */}
           {showChips && (
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 pt-3 pb-1">
-                Régions populaires
+                Toutes les régions
               </p>
-              {REGION_CHIPS.map((chip) => (
+              {ALL_REGIONS.map((chip) => (
                 <button
                   key={chip.value}
                   onMouseDown={(e) => { e.preventDefault(); selectRegion(chip); }}

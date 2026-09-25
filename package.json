@@ -11,6 +11,8 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
-    "concurrently": "^10.0.3"
+    "concurrently": "^10.0.3",
+    "marked": "^18.0.14",
+    "puppeteer": "^25.11.0"
   }
 }
