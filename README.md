@@ -2,6 +2,16 @@
 
 Plateforme locale multi-services avec frontend Next.js, backend Express, PostgreSQL et Prisma 6.
 
+## Screenshots
+
+| Home | Jobs |
+|---|---|
+| ![Home](docs/Home.png) | ![Jobs](docs/Jobs.png) |
+
+| Real estate | Cars |
+|---|---|
+| ![Real estate](docs/real-estate.png) | ![Cars](docs/cars.png) | 
+
 ## Installation
 
 ```bash
