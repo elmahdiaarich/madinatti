@@ -1,18 +1,21 @@
 # Madinatti
 
-**Live demo:** https://yourtown-eta.vercel.app
 
+## Screenshots
+
+| Home | Jobs |
+|---|---|
+| ![Home](docs/Home.png) | ![Jobs](docs/Jobs.png) |
+
+| Real estate | Cars |
+|---|---|
+| ![Real estate](docs/real-estate.png) | ![Cars](docs/cars.png) | 
+
+## Installation
 Madinatti is a local platform that brings everyday city services into one place. Users can find jobs, real estate, cars, health services (pharmacies, clinics, labs), events and more, while businesses and recruiters can publish listings and manage applications.
 
 > 🇫🇷 Plateforme locale multi-services avec frontend Next.js, backend Express, PostgreSQL et Prisma 6.
 
-<!-- Uncomment once the screenshots are added to the docs/ folder
-## Screenshots
-
-![Home page](docs/home.png)
-![Real estate listings](docs/real-estate.png)
-![Health module](docs/health.png)
--->
 
 ## Features
 
