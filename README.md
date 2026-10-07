@@ -1,6 +1,5 @@
-# Madinatti / YourTown
+# Madinatti
 
-Plateforme locale multi-services avec frontend Next.js, backend Express, PostgreSQL et Prisma 6.
 
 ## Screenshots
 
@@ -13,6 +12,46 @@ Plateforme locale multi-services avec frontend Next.js, backend Express, Postgre
 | ![Real estate](docs/real-estate.png) | ![Cars](docs/cars.png) | 
 
 ## Installation
+Madinatti is a local platform that brings everyday city services into one place. Users can find jobs, real estate, cars, health services (pharmacies, clinics, labs), events and more, while businesses and recruiters can publish listings and manage applications.
+
+> 🇫🇷 Plateforme locale multi-services avec frontend Next.js, backend Express, PostgreSQL et Prisma 6.
+
+
+## Features
+
+- **Jobs and recruitment:** job offers, applications, candidate profiles, CV upload and download, headhunter tools
+- **Real estate:** sale and rent listings with filters, admin moderation
+- **Cars:** vehicle listings and catalog
+- **Health:** pharmacies, clinics, laboratories, doctors, dentists and more, combining local listings with Google Places data on a map
+- **Events and media:** event listings, image viewer, analytics
+- **Education, shops and tourism** modules
+- **Authentication:** email/password and Google sign-in, password reset, token versioning, rate limiting
+- **Admin and moderation:** listings are reviewed before going live
+
+## Tech stack
+
+| Layer | Technologies |
+|---|---|
+| Frontend | Next.js, React, CSS |
+| Backend | Node.js, Express |
+| Database | PostgreSQL, Prisma 6 |
+| Services | Google Maps and Places API, Cloudinary |
+| Testing | Automated tests for auth and CV security |
+| Deployment | Vercel, GitHub Actions |
+
+## Team
+
+Built by a team of three:
+
+- [@MouhyiDS](https://github.com/MouhyiDS)
+- [@elmahdiaarich](https://github.com/elmahdiaarich)
+- [@Aymaneeeeeee](https://github.com/Aymaneeeeeee)
+
+**My contributions:** [Write 3 or 4 bullets about what you built, e.g. the health module, the deployment workflow, parts of the authentication system.]
+
+## Getting started
+
+### 1. Install dependencies
 
 ```bash
 npm install
@@ -20,7 +59,11 @@ npm install --prefix frontend
 npm install --prefix backend
 ```
 
-Copier les exemples d'environnement puis remplacer uniquement par vos propres valeurs locales:
+### 2. Configure environment variables
+
+Copy the example files and fill in **your own** values.
+
+Windows (PowerShell or cmd):
 
 ```bash
 copy .env.example .env.local
@@ -28,78 +71,80 @@ copy backend\.env.example backend\.env
 copy frontend\.env.example frontend\.env.local
 ```
 
-Ne commitez jamais de vrais secrets. Des secrets historiques ont ete exposes dans ce depot; ils doivent etre revoques dans Google Cloud, Cloudinary, l'email provider et tout service concerne.
-
-## Commandes
+macOS / Linux:
 
 ```bash
-npm run dev
-npm run build --prefix frontend
-npm run lint --prefix frontend
-npm run seed --prefix backend
-npx.cmd prisma generate --schema backend/prisma/schema.prisma
-npx.cmd prisma migrate dev --schema backend/prisma/schema.prisma
+cp .env.example .env.local
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env.local
 ```
 
-Le frontend tourne sur `http://localhost:3000` et le backend sur `http://localhost:5000`.
-
-## Module Sante
-
-La route frontend `/sante` affiche les sept sous-categories:
-
-- `pharmacy`
-- `hospital-clinic`
-- `medical-laboratory`
-- `doctor-office`
-- `dentist`
-- `radiology-center`
-- `parapharmacy`
-
-Le backend expose:
-
-- `GET /api/health/subcategories`
-- `GET /api/health/places`
-- `GET /api/health/places/:id`
-- `POST /api/health/places`
-- `PUT /api/health/places/:id`
-- `POST /api/health/places/:id/claim`
-- `PATCH /api/health/places/:id/moderate`
-
-Les resultats combinent les fiches locales MADINATI approuvees et, si la cle serveur est configuree, Google Places API (New). Les donnees Google sont recuperees a la demande avec Field Masks minimaux, timeout, cache court, rayon limite et deduplication par `googlePlaceId`.
-
-## Google Cloud
-
-Activer la facturation Google Cloud et les APIs suivantes:
-
-- Maps JavaScript API pour la carte navigateur.
-- Places API (New) pour Nearby Search, Text Search et Place Details cote backend.
-
-Restrictions recommandees:
-
-- `GOOGLE_MAPS_SERVER_API_KEY`: restriction par adresse IP serveur, API restriction sur Places API (New), jamais exposee au frontend, jamais en `NEXT_PUBLIC_*`.
-- `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY`: restriction HTTP referrers sur localhost et domaines de production, API restriction sur Maps JavaScript API.
-- Configurer quotas, budgets et alertes de facturation.
-
-Nearby Search est limitee par rayon et ne fournit pas une liste exhaustive du Maroc. La recherche est dynamique autour du GPS, d'une ville ou du centre de la carte.
-
-## Prisma
-
-Appliquer les migrations en developpement:
+### 3. Set up the database
 
 ```bash
 cd backend
-npx.cmd prisma migrate dev
-npx.cmd prisma generate
+npx prisma migrate dev
+npx prisma generate
 npm run seed
 ```
 
-En production, utiliser `prisma migrate deploy`.
+On Windows, use `npx.cmd` if `npx` is blocked by PowerShell. In production, use `prisma migrate deploy`.
 
-## Securite
+### 4. Run the project
 
-- Ne reutilisez aucun secret ancien du README historique.
-- Revoquez les anciennes cles exposees.
-- Ne journalisez pas les cles Google.
-- Ne placez jamais `GOOGLE_CLIENT_SECRET` ou une cle serveur dans une variable `NEXT_PUBLIC_*`.
- 
- testing frontend auto deploy prob  tourism vid
+```bash
+npm run dev
+```
+
+- Frontend: http://localhost:3000
+- Backend: http://localhost:5000
+
+### Other commands
+
+```bash
+npm run build --prefix frontend
+npm run lint --prefix frontend
+npm run seed --prefix backend
+```
+
+## Health module
+
+The `/sante` page shows seven subcategories:
+
+`pharmacy`, `hospital-clinic`, `medical-laboratory`, `doctor-office`, `dentist`, `radiology-center`, `parapharmacy`
+
+API endpoints:
+
+| Method | Route | Description |
+|---|---|---|
+| GET | `/api/health/subcategories` | List subcategories |
+| GET | `/api/health/places` | List places |
+| GET | `/api/health/places/:id` | Place details |
+| POST | `/api/health/places` | Create a place |
+| PUT | `/api/health/places/:id` | Update a place |
+| POST | `/api/health/places/:id/claim` | Claim a listing |
+| PATCH | `/api/health/places/:id/moderate` | Approve or reject (admin) |
+
+Results combine approved local listings with Google Places API (New) when a server key is configured. Google data is fetched on demand with minimal field masks, a timeout, short caching, a limited search radius, and deduplication by `googlePlaceId`.
+
+## Google Cloud setup
+
+Enable billing and these APIs:
+
+- **Maps JavaScript API** for the browser map
+- **Places API (New)** for Nearby Search, Text Search and Place Details on the backend
+
+Recommended key restrictions:
+
+- `GOOGLE_MAPS_SERVER_API_KEY`: restrict by server IP and to Places API (New). Never expose it to the frontend or in a `NEXT_PUBLIC_*` variable.
+- `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY`: restrict by HTTP referrer (localhost and your production domains) and to Maps JavaScript API.
+- Set quotas, budgets and billing alerts.
+
+Nearby Search is limited by radius and does not return an exhaustive list. Search is dynamic around the user's GPS position, a city, or the map center.
+
+## Security
+
+- Never commit real secrets. Keep them in `.env` files, which are git-ignored.
+- Never put `GOOGLE_CLIENT_SECRET` or any server key in a `NEXT_PUBLIC_*` variable.
+- Do not log API keys.
+- Revoke and rotate any key that has ever been shared or committed.
